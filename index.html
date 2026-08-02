@@ -106,9 +106,22 @@
   /* ---- bottom controls ---- */
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
     bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
-  #menuRow { display: flex; gap: 6px; margin-bottom: 7px; }
-  #menuRow button { flex: 1; padding: 7px 4px; font-size: var(--fs-sm);
-    display: flex; align-items: center; justify-content: center; gap: 6px; }
+  /* Four entries with four different weights instead of four identical slabs.
+     Row 1: the thing you KEEP (small square) beside the RHYTHM you are running (wide
+     readout). Row 2: the things you BUILD with, stacked at the side, beside the main
+     action, which takes the rest of the block. Whatever this row ends up measuring,
+     --hControles is read off the real block on load and on resize — see medirControles(). */
+  #linhaTopo { display: flex; gap: 6px; margin-bottom: 6px; }
+  #linhaMain { display: flex; gap: 6px; align-items: stretch; }
+  #controls button { display: flex; align-items: center; justify-content: center; gap: 6px; }
+  /* the thing you keep: an icon, and only an icon */
+  .btnIcone { flex: 0 0 auto; width: 46px; padding: 8px 0; }
+  /* the things you build with: a stacked pair, named, at the side */
+  #colLado { display: flex; flex-direction: column; gap: 6px; flex: 0 0 37%; max-width: 176px; min-width: 0; }
+  #colLado button { flex: 1 1 0; min-height: 34px; padding: 5px 8px; font-size: var(--fs-sm);
+    justify-content: flex-start; gap: 5px; }
+  #colLado b { font-weight: 700; font-size: var(--fs-sm); }
+  #colLado .rot { font-size: 8px; letter-spacing: .5px; opacity: .8; margin-left: auto; }
   /* Poster chrome from the estetica pass; the components below it are the jogabilidade
      pass's new UI, kept because they are structure, not style. */
   button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno); border-radius: 2px;
@@ -116,8 +129,9 @@
     box-shadow: 0 3px 0 var(--contorno); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   button:disabled { opacity: .5; cursor: default; }
   button:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--contorno); }
-  /* the mode button is a STATE readout, not an icon that swaps */
-  #modeQuick { gap: 5px; padding: 6px 3px; }
+  /* the mode button is a STATE readout, not an icon that swaps — and it is the decision
+     this whole prototype exists to measure, so it gets a line of its own */
+  #modeQuick { flex: 1 1 auto; min-width: 0; gap: 6px; padding: 6px 8px; justify-content: flex-start; }
   #modeQuick .mq { display: flex; flex-direction: column; align-items: flex-start; min-width: 0;
     line-height: 1.25; overflow: hidden; }
   #modeQuick .mq b { font-size: 9px; font-weight: normal; }
@@ -127,7 +141,9 @@
   /* it is costing you right now: say so without words */
   #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
   @keyframes doendo { 0% { box-shadow: 0 3px 0 var(--contorno) } 50% { box-shadow: 0 3px 0 var(--contorno), 0 0 16px rgba(255,107,87,.85) } 100% { box-shadow: 0 3px 0 var(--contorno) } }
-  #btnClique { width: 100%; padding: 11px 10px; font-size: var(--fs-lg); font-weight: 800;
+  /* the main action: the rest of the block, and the only thing in it with weight */
+  #btnClique { flex: 1 1 auto; min-width: 0; min-height: 74px; padding: 11px 10px;
+    font-size: var(--fs-lg); font-weight: 800;
     background: #ffc23d; color: var(--contorno); border-width: 3px;
     display: flex; align-items: center; justify-content: center; gap: 10px;
     box-shadow: 0 5px 0 var(--contorno); position: relative; }
@@ -297,15 +313,24 @@
 <div id="alerta"></div>
 <div id="fato"></div>
 
+<!-- Four entries, four different jobs, and they used to be four identical slabs in a row.
+     Now the block says what each one is: the RHYTHM you are running is a wide readout (it
+     is the one decision this prototype exists to measure), the TORCH is a small keepsake
+     button beside it, the two things you BUILD with are a stacked pair at the side, and
+     the main action takes the whole rest of the block under your thumb. -->
 <div id="controls">
-  <div id="menuRow">
-    <button id="openProjects"><canvas class="pi" data-i="house" width="12" height="12"></canvas><span id="nGeradores">0</span></button>
-    <button id="openUpgrades"><canvas class="pi" data-i="up" width="12" height="12"></canvas></button>
-    <button id="openTorch"><canvas class="pi" data-i="torch" width="12" height="12"></canvas></button>
+  <div id="linhaTopo">
+    <button id="openTorch" class="btnIcone" aria-label="torch"><canvas class="pi" data-i="torch" width="12" height="12"></canvas></button>
     <button id="modeQuick"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas><span
       class="mq"><b id="modeNome">FAST</b><i id="modeSub"></i></span></button>
   </div>
-  <button id="btnClique"><div id="foco"></div><span id="cargaSuper" class="cs"></span><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
+  <div id="linhaMain">
+    <div id="colLado">
+      <button id="openProjects"><canvas class="pi" data-i="house" width="12" height="12"></canvas><b id="nGeradores">0</b><span class="rot">PROJECTS</span></button>
+      <button id="openUpgrades"><canvas class="pi" data-i="up" width="12" height="12"></canvas><span class="rot">UPGRADES</span></button>
+    </div>
+    <button id="btnClique"><div id="foco"></div><span id="cargaSuper" class="cs"></span><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
+  </div>
 </div>
 
 <div class="sheet" id="sheetProjects">

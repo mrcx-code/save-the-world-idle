@@ -504,17 +504,52 @@ function chromiumPath() {
   });
   if (/GO STEADY —/.test(decaiu)) errors.push('the mode line never goes away');
 
-  // NOTES records this regression once already: no panel may cover the menu bar
+  // NOTES records this regression once already: no panel may cover the control block.
+  // Measured against #controls, not one row inside it, so re-planning the block cannot
+  // quietly move the thing the test is protecting.
   const cobre = await page.evaluate(async () => {
     document.getElementById('openProjects').click();
     await new Promise(r => setTimeout(r, 350));
     const s = document.getElementById('sheetProjects').getBoundingClientRect();
-    const m = document.getElementById('menuRow').getBoundingClientRect();
-    return { fundoFolha: s.bottom, topoMenu: m.top, altura: s.height, jan: window.innerHeight };
+    const m = document.getElementById('controls').getBoundingClientRect();
+    const f = document.getElementById('fato').getBoundingClientRect();
+    const h = getComputedStyle(document.documentElement).getPropertyValue('--hControles');
+    return { fundoFolha: s.bottom, topoMenu: m.top, altura: s.height, jan: window.innerHeight,
+      hVar: parseFloat(h), hReal: m.height, fundoFato: f.bottom };
   });
-  console.log('projects sheet bottom', Math.round(cobre.fundoFolha), 'vs menu top', Math.round(cobre.topoMenu),
+  console.log('projects sheet bottom', Math.round(cobre.fundoFolha), 'vs controls top', Math.round(cobre.topoMenu),
     '| sheet height', Math.round(cobre.altura), 'of', cobre.jan);
-  if (cobre.fundoFolha > cobre.topoMenu) errors.push('the projects sheet covers the menu bar');
+  console.log('  --hControles', Math.round(cobre.hVar), 'measured from a', Math.round(cobre.hReal),
+    'px control block | REAL DATA ends at', Math.round(cobre.fundoFato));
+  if (cobre.fundoFolha > cobre.topoMenu) errors.push('the projects sheet covers the control block');
+  if (cobre.fundoFato > cobre.topoMenu) errors.push('the REAL DATA ticker covers the control block');
+  // the variable has to keep coming from the real block, not from a hardcoded number
+  if (!(cobre.hVar >= cobre.hReal && cobre.hVar <= cobre.hReal + 24)) {
+    errors.push('--hControles is no longer measured from the control block');
+  }
+
+  // ...and it has to be re-measured on resize, which is the other half of that rule
+  const aposResize = await page.evaluate(async () => {
+    const c = document.getElementById('controls');
+    const antes = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles'));
+    const cresce = document.createElement('div');   // a row growing by 40px, the way a button that gains a line would
+    cresce.style.height = '40px';
+    c.appendChild(cresce);
+    window.dispatchEvent(new Event('resize'));
+    await new Promise(r => setTimeout(r, 120));
+    const depois = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles'));
+    const alto = c.getBoundingClientRect().height;
+    c.removeChild(cresce);
+    window.dispatchEvent(new Event('resize'));
+    await new Promise(r => setTimeout(r, 120));
+    return { antes, depois, alto,
+      volta: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles')) };
+  });
+  console.log('  a button that grows ->', Math.round(aposResize.antes), '->', Math.round(aposResize.depois),
+    '(block', Math.round(aposResize.alto) + 'px), back to', Math.round(aposResize.volta));
+  if (!(aposResize.depois >= aposResize.alto)) errors.push('--hControles did not follow a control block that grew');
+  if (!(aposResize.depois >= aposResize.antes + 38)) errors.push('--hControles did not grow with the block');
+  if (Math.abs(aposResize.volta - aposResize.antes) > 1) errors.push('--hControles did not come back down');
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-ritmo.png') });
   await page.evaluate(() => {
     fecharTudo();
