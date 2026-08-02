@@ -15,20 +15,22 @@ const TOQUE_HUMANO = 5;                // taps/s of ordinary poking, not holding
 // the first one. Runs that are not holding tap by hand until project #1 is paid for and
 // then keep their hands off.
 
-// Candidate balance fixes, so a change can be measured before it is written into the
-// game. `none` must behave exactly like the shipped clicar() — asserted at startup.
-//   tapCansa  — a swing in GO FAST tires the team, like one more project ticking
-//   curaCap   — U2 still heals 2 per tap, but no faster than 3 tiredness per second
-//   u2Steady  — U2 heals only in GO STEADY: you recover by organising, not by flailing
+// Balance variants, so a change can be measured before it is written into the game.
+// `none` must behave exactly like the shipped clicar() — asserted at startup.
+//   u2Sempre  — what shipped before 2026-08-02: U2 healed on every tap, in any mode.
+//               Held at 6.9 taps/s that is 13.8 tiredness/s, more than 43 projects
+//               emit, so GO FAST became free. Kept here so the regression stays visible.
+//   tapCansa  — rejected: a swing in GO FAST tires the team, like one more project
+//   curaCap   — rejected: U2 heals 2 per tap but never faster than 3 tiredness/s
 const PATCHES = {
-  none: { cura: () => 2, cansa: () => 0 },
+  none: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0 },
+  u2Sempre: { cura: () => 2, cansa: () => 0 },
   tapCansa: { cura: () => 2, cansa: S => (S.modo === 'carvao' ? F.CFG.poluicaoPorGerador * (S.u1 ? 1.5 : 1) : 0) },
   curaCap: {
     limite: 3,
     cura(S, st) { const c = Math.min(2, st.curaBudget); st.curaBudget -= c; return c; },
     cansa: () => 0
-  },
-  u2Steady: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0 }
+  }
 };
 
 // one swing, with a candidate patch applied
@@ -120,10 +122,14 @@ const hms = s => {
 
 // with no patch the lab tap must match the shipped one exactly
 (function conferir() {
-  const a = F.novoEstado({ u2: true, poluicao: 10 }), b = F.novoEstado({ u2: true, poluicao: 10 });
-  F.clicar(a); tocar(b, PATCHES.none, {});
-  if (a.poluicao !== b.poluicao || a.energiaTotal !== b.energiaTotal) {
-    throw new Error('sim tap drifted from index.html clicar()');
+  for (const modo of ['carvao', 'limpo']) {
+    for (const u2 of [false, true]) {
+      const a = F.novoEstado({ u2, modo, poluicao: 10 }), b = F.novoEstado({ u2, modo, poluicao: 10 });
+      F.clicar(a); tocar(b, PATCHES.none, {});
+      if (a.poluicao !== b.poluicao || a.energiaTotal !== b.energiaTotal) {
+        throw new Error(`sim tap drifted from clicar() (modo=${modo} u2=${u2})`);
+      }
+    }
   }
 })();
 
@@ -161,8 +167,11 @@ if (melhor.tempoSegurando === 0) {
 } else {
   console.log(`  Fastest run holds: ${melhor.nome} — ${(semHold.t / melhor.t).toFixed(1)}× faster than`
     + ` the best hands-off run (${semHold.nome}).`);
-  console.log(`  While holding, the team never drops below ${(melhor.piorSaude * 100).toFixed(0)}%`
-    + ` — tiredness costs that run nothing.`);
+  console.log(melhor.piorSaude > 0.95
+    ? `  Its team never drops below ${(melhor.piorSaude * 100).toFixed(0)}% — holding erases tiredness,`
+      + ` so the fast/steady decision costs that run nothing.`
+    : `  Its team still bottoms out at ${(melhor.piorSaude * 100).toFixed(0)}% — holding helps,`
+      + ` but tiredness is still a real cost.`);
 }
 console.log('');
 module.exports = { jogar, ESTRATEGIAS };

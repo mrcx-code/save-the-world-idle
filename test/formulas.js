@@ -71,7 +71,7 @@ function simular(S, dt) {
 function clicar(S) {
   const g = ganhoClique(S);
   S.energia += g; S.energiaTotal += g;
-  if (S.u2) S.poluicao = Math.max(0, S.poluicao - 2);
+  if (S.u2 && S.modo === 'limpo') S.poluicao = Math.max(0, S.poluicao - 2);
   return g;
 }
 

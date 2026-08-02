@@ -204,7 +204,7 @@
   </div>
   <div class="upgrade" id="cardU2">
     <div class="info"><div class="nome">Friends help friends</div>
-      <div class="desc">each tap heals 2 tired</div></div>
+      <div class="desc">taps heal 2 tired in GO STEADY</div></div>
     <span class="check">✓</span><button id="btnU2"></button>
   </div>
   <div class="upgrade" id="cardU3">
@@ -361,7 +361,9 @@ function impacto(x) {             // the slam lands: shockwave, dust fan, sparks
 function clicar() {
   const g = ganhoClique();
   S.energia += g; S.energiaTotal += g;
-  if (S.u2) S.poluicao = Math.max(0, S.poluicao - 2);
+  // the team recovers while you organise together, not while you burn them out:
+  // healing only in GO STEADY is what keeps holding the button from erasing tiredness
+  if (S.u2 && S.modo === "limpo") S.poluicao = Math.max(0, S.poluicao - 2);
   // 3-hit combo: slash, upper slash, then a big SPIN
   attackType = combo; combo = (combo + 1) % 3;
   attackT = attackType === 2 ? JUMPF : 9;
