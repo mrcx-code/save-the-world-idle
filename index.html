@@ -32,12 +32,9 @@
   /* ---- the game world fills the screen ---- */
   #scene { position: fixed; inset: 0; width: 100%; height: 100%;
     image-rendering: pixelated; z-index: 0; }
-  #crt { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .34;
-    background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px); }
-  /* the canvas already lays down a dithered vignette; this one only takes the corners the
-     last few percent, otherwise the two stack and the whole frame goes muddy */
-  #vig { position: fixed; inset: 0; z-index: 2; pointer-events: none;
-    background: radial-gradient(ellipse at 50% 45%, transparent 66%, rgba(8,9,16,.26) 100%); }
+  /* the CRT scanlines and the CSS vignette are gone: at opacity .34 the scanlines greyed
+     down the whole frame, and the vignette stacked on the canvas one. Direction C has no
+     post-processing anywhere — the look has to hold up on form and colour alone. */
 
   /* ---- HUD on top of the game ---- */
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0;
@@ -155,8 +152,6 @@
 <body>
 
 <canvas id="scene" width="320" height="180"></canvas>
-<div id="crt"></div>
-<div id="vig"></div>
 
 <div id="lore" class="escondido">
   <div class="loreBox">
@@ -590,24 +585,16 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 function lerpC(c1, c2, t) {
   return "rgb(" + Math.round(lerp(c1[0], c2[0], t)) + "," + Math.round(lerp(c1[1], c2[1], t)) + "," + Math.round(lerp(c1[2], c2[2], t)) + ")";
 }
-// ---------- the hi-bit pass: dithering, haze, light ----------
-// More colours is not what makes pixel art look expensive — spending them on depth is.
-// An 8x8 ordered dither turns a banded gradient into texture, distance dissolves things
-// into the horizon (aerial perspective), and one warm light direction gives every solid
-// a lit edge and a shadow on the ground. All of it is plain fillRect on the same canvas.
-const BAYER8 = [
-  0, 48, 12, 60, 3, 51, 15, 63,
-  32, 16, 44, 28, 35, 19, 47, 31,
-  8, 56, 4, 52, 11, 59, 7, 55,
-  40, 24, 36, 20, 43, 27, 39, 23,
-  2, 50, 14, 62, 1, 49, 13, 61,
-  34, 18, 46, 30, 33, 17, 45, 29,
-  10, 58, 6, 54, 9, 57, 5, 53,
-  42, 26, 38, 22, 41, 25, 37, 21
-];
+// ---------- colour ----------
+// The ordered dither that used to live here is gone with the rest of the post-processing.
+// Reference art in this genre carries no dithering at all: what buys fidelity is three to
+// five tones per material, a dark outline, and distance eating contrast toward a LIGHT
+// horizon. Grain was standing in for tones we had not authored.
 function mixA(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; }
 function rgbS(c) { return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + ")"; }
-function horizonC(h) { return mixA([104, 92, 92], [168, 220, 250], h); }
+// The horizon colour is light in BOTH states — bleached ochre when sick, pale sky when
+// healed. Everything distant washes toward it, which is the value architecture.
+function horizonC(h) { return mixA([220, 213, 198], [208, 242, 255], h); }
 // aerial perspective: dist 0 = at your feet, 1 = dissolved into the horizon
 function longe(c, dist, h) { return rgbS(mixA(c, horizonC(h), dist)); }
 // a solid sitting on the ground casts a little weight under itself
@@ -620,8 +607,22 @@ function sombra(cxp, y, w, a) {
   cx.globalAlpha = 1;
 }
 
-// The sky is rebuilt only when the world's health moves a step, so the per-pixel
-// dither and the sun's glow cost nothing on a normal frame — it is one drawImage.
+// ---------- DIRECTION C: CLEAR SKY ----------
+// High-key poster pixel art. The sick world is BLEACHED, not dark: smoke scatters light,
+// so a polluted sky is warm, opaque and too bright, never black. The whole sick-to-healed
+// arc therefore runs on SATURATION, which is the channel the eye reads fastest — it still
+// works on a phone at 30% brightness, outdoors, in half a second. No dithering, no bloom,
+// no colour grade, no vignette: fidelity here comes from form and chroma, and every one of
+// those effects was working against it.
+const CEU_SAO = [[31, 143, 216], [63, 171, 230], [108, 203, 240], [168, 228, 248], [216, 244, 255]];
+const CEU_DOENTE = [[154, 148, 136], [170, 164, 151], [187, 181, 167], [203, 197, 182], [220, 213, 198]];
+function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the horizon
+  const f = Math.min(0.999, Math.max(0, t)) * (CEU_SAO.length - 1);
+  const i = Math.floor(f), k = f - i;
+  return mixA(mixA(CEU_DOENTE[i], CEU_SAO[i], h), mixA(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h), k);
+}
+// The sky is baked and rebuilt only when world health moves a step, so a normal frame is
+// one drawImage. Without the dither it is also two thirds cheaper to bake.
 let skyCv = null, skyKey = "";
 function skyCanvas(h) {
   const key = W + "," + GROUND + "," + Math.round(h * 48);
@@ -630,89 +631,32 @@ function skyCanvas(h) {
   skyCv.width = W; skyCv.height = GROUND + 2;
   skyKey = key;
   const g = skyCv.getContext("2d");
-  // Three stops, not two. A straight top-to-horizon ramp gives one flat slab of navy over
-  // most of the frame; a pale band above the horizon is what a real sky does and it is
-  // what lets the far ridge sit against something instead of on top of a wall.
-  const topC = mixA([64, 56, 84], [46, 112, 198], h);
-  const midC = mixA([100, 88, 98], [110, 178, 232], h);
-  const horC = horizonC(h);
-  const QUEBRA = 0.60;
-  const brilho = mixA([188, 176, 150], [255, 238, 186], h);
-  const sunX = Math.round(W * 0.68), sunY = Math.round(GROUND * 0.19);
-  const alcance = GROUND * 0.62;
-  const NIV = 13;                    // few levels + dither reads as 16-bit, not as 24-bit
-  const img = g.createImageData(W, GROUND + 2);
-  const d = img.data;
   for (let y = 0; y <= GROUND + 1; y++) {
-    const t = Math.pow(y / (GROUND + 1), 1.35);   // sky compresses toward the horizon
-    const base = t < QUEBRA ? mixA(topC, midC, t / QUEBRA) : mixA(midC, horC, (t - QUEBRA) / (1 - QUEBRA));
-    const dy = y - sunY;
-    for (let x = 0; x < W; x++) {
-      const dx = x - sunX;
-      const bloom = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / alcance);
-      const c = mixA(base, brilho, Math.pow(bloom, 3.0) * (0.26 + 0.36 * h));
-      const thr = (BAYER8[(y & 7) * 8 + (x & 7)] + 0.5) / 64;
-      const o = (y * W + x) * 4;
-      for (let ch = 0; ch < 3; ch++) {
-        const v = c[ch] / 255 * NIV, fl = Math.floor(v);
-        d[o + ch] = Math.min(255, Math.round(((v - fl > thr ? fl + 1 : fl)) / NIV * 255));
-      }
-      d[o + 3] = 255;
-    }
+    g.fillStyle = rgbS(rampaCeu(h, Math.pow(y / (GROUND + 1), 1.15)));
+    g.fillRect(0, y, W, 1);
   }
-  g.putImageData(img, 0, 0);
-  g.fillStyle = "#fff2c8";                          // god rays, fading out well before the ground
-  for (let rI = 0; rI < 3; rI++) {
-    const alc = (GROUND - sunY) * 0.72;
-    for (let yy = 0; yy < alc; yy += 2) {
-      g.globalAlpha = 0.055 * (1 - yy / alc);
-      g.fillRect(sunX + 6 - (10 + rI * 16) - yy * (0.5 + rI * 0.22), sunY + yy, 6, 2);
+  // The sun as a real disc with a corona, not a plus sign. Sick, it is a flat pale wafer
+  // showing through smoke — no glow at all, which is most of why the sick sky reads wrong
+  // when it is dark instead of blinding.
+  const sunX = Math.round(W * 0.70), sunY = Math.round(GROUND * 0.17), r = Math.max(7, Math.round(GROUND * 0.045));
+  const disco = function (cor, rr) {
+    g.fillStyle = cor;
+    for (let y = -rr; y <= rr; y++) {
+      const w = Math.round(Math.sqrt(Math.max(0, rr * rr - y * y)));
+      if (w > 0) g.fillRect(sunX - w, sunY + y, w * 2, 1);
     }
-  }
+  };
+  g.globalAlpha = 0.16 + 0.22 * h; disco(rgbS(mixA([226, 220, 204], [255, 236, 150], h)), r + 5);
+  g.globalAlpha = 0.34 + 0.30 * h; disco(rgbS(mixA([230, 224, 208], [255, 240, 168], h)), r + 2);
   g.globalAlpha = 1;
-  g.fillStyle = rgbS(mixA([158, 148, 120], [255, 226, 118], h));
-  g.fillRect(sunX, sunY, 12, 12); g.fillRect(sunX + 3, sunY - 3, 6, 18); g.fillRect(sunX - 3, sunY + 3, 18, 6);
-  g.fillStyle = rgbS(mixA([196, 186, 158], [255, 248, 206], h));   // hot core, punches through the grade
-  g.fillRect(sunX + 2, sunY + 2, 8, 8);
-  g.fillStyle = "#ffffff";
-  g.globalAlpha = 0.5 + 0.4 * h;
-  g.fillRect(sunX + 4, sunY + 4, 4, 4);
-  g.globalAlpha = 1;
+  disco(rgbS(mixA([216, 208, 188], [255, 228, 136], h)), r);
+  disco(rgbS(mixA([228, 222, 206], [255, 252, 232], h)), Math.max(2, r - 3));
   return skyCv;
 }
 
-// Vignette, dithered so it stays pixel art instead of a smooth photographic falloff.
-// Depends only on the viewport, so it survives every frame until a resize.
-let vinCv = null, vinKey = "";
-function vinheta() {
-  const key = W + "," + H;
-  if (vinCv && vinKey === key) return vinCv;
-  if (!vinCv) vinCv = document.createElement("canvas");
-  vinCv.width = W; vinCv.height = H;
-  vinKey = key;
-  const g = vinCv.getContext("2d");
-  const img = g.createImageData(W, H);
-  const d = img.data;
-  const cxp = W / 2, cyp = H / 2, raio = Math.sqrt(cxp * cxp + cyp * cyp);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const dx = (x - cxp) / raio, dy = (y - cyp) / raio;
-      const f = Math.pow(Math.sqrt(dx * dx + dy * dy) * 1.42, 3.0);
-      const a = Math.min(0.24, Math.max(0, f - 0.34));
-      const thr = (BAYER8[(y & 7) * 8 + (x & 7)] + 0.5) / 64;
-      const v = a * 10, fl = Math.floor(v);
-      const o = (y * W + x) * 4;
-      d[o] = 6; d[o + 1] = 6; d[o + 2] = 16;
-      d[o + 3] = Math.round(((v - fl > thr ? fl + 1 : fl)) / 10 * 255);
-    }
-  }
-  g.putImageData(img, 0, 0);
-  return vinCv;
-}
-
-// The ground was three hard bands over a big slab of the frame — the flattest thing on
-// screen. Same trick as the sky: a dithered gradient, lit where it meets the horizon and
-// falling into shadow toward the viewer. Cached, so the scrolling detail still draws hot.
+// The ground is the dark slab at the bottom of the value architecture: light sky, mid
+// background, a light separator band at the horizon, then this. The character straddles
+// that boundary, which is what makes him readable without any local contrast tricks.
 let chaoCv = null, chaoKey = "";
 function chaoCanvas(h) {
   const alt = H - GROUND;
@@ -722,25 +666,12 @@ function chaoCanvas(h) {
   chaoCv.width = W; chaoCv.height = alt;
   chaoKey = key;
   const g = chaoCv.getContext("2d");
-  const perto = mixA([64, 49, 35], [34, 92, 58], h);    // shadowed, at your feet
-  const longeC = mixA([98, 77, 55], [74, 164, 102], h); // catching the sky at the horizon
-  const NIV = 11;
-  const img = g.createImageData(W, alt);
-  const d = img.data;
+  const perto = mixA([90, 80, 64], [23, 84, 55], h);     // at your feet
+  const longeC = mixA([138, 128, 104], [55, 151, 90], h); // where it meets the path
   for (let y = 0; y < alt; y++) {
-    const t = Math.pow(y / alt, 0.72);
-    const base = mixA(longeC, perto, t);
-    for (let x = 0; x < W; x++) {
-      const thr = (BAYER8[(y & 7) * 8 + (x & 7)] + 0.5) / 64;
-      const o = (y * W + x) * 4;
-      for (let ch = 0; ch < 3; ch++) {
-        const v = base[ch] / 255 * NIV, fl = Math.floor(v);
-        d[o + ch] = Math.min(255, Math.round(((v - fl > thr ? fl + 1 : fl)) / NIV * 255));
-      }
-      d[o + 3] = 255;
-    }
+    g.fillStyle = rgbS(mixA(longeC, perto, Math.pow(y / alt, 0.62)));
+    g.fillRect(0, y, W, 1);
   }
-  g.putImageData(img, 0, 0);
   return chaoCv;
 }
 
@@ -1308,9 +1239,9 @@ function drawScene() {
   // Clouds. They were three flat rectangles of one grey — the crudest thing in the sky and
   // the sky is most of the frame. Now lobes with a sunlit crown and a shaded belly, and the
   // lower they hang the smaller and hazier they get, which puts distance in the sky too.
-  const nubB = lerpC([120, 114, 126], [230, 236, 248], h);
-  const nubT = lerpC([156, 148, 158], [255, 255, 255], h);
-  const nubD = lerpC([88, 84, 100], [176, 192, 218], h);
+  const nubB = lerpC([198, 192, 178], [184, 232, 251], h);
+  const nubT = lerpC([222, 216, 202], [255, 255, 255], h);
+  const nubD = lerpC([176, 170, 156], [127, 196, 232], h);
   const ck0 = Math.floor(worldX * 0.12 / 52) - 1;
   for (let k = ck0; k < ck0 + Math.ceil(W / 52) + 2; k++) {
     const sx = Math.round(k * 52 - worldX * 0.12);
@@ -1357,14 +1288,25 @@ function drawScene() {
     }
   }
   // aerial perspective: the far ridge is nearly swallowed by the horizon, the near one less
-  mountainLayer(0.10, 64, 54, Math.round(H * 0.06), Math.round(H * 0.11), longe(mixA([70, 66, 78], [96, 148, 176], h), 0.38, h), false);
-  mountainLayer(0.22, 96, 72, Math.round(H * 0.09), Math.round(H * 0.16), longe(mixA([56, 50, 56], [44, 106, 96], h), 0.20, h), true);
+  mountainLayer(0.10, 64, 54, Math.round(H * 0.06), Math.round(H * 0.11), longe(mixA([186, 180, 166], [147, 185, 212], h), 0.52, h), false);
+  mountainLayer(0.22, 96, 72, Math.round(H * 0.09), Math.round(H * 0.16), longe(mixA([166, 159, 144], [110, 158, 190], h), 0.30, h), true);
+  // THE SEPARATOR BAND. The one cheap trick that carries the whole value architecture:
+  // light sky, mid background, a bright strip exactly on the horizon line, dark ground.
+  // Everything in front of it now reads as a silhouette against light, and the character
+  // straddles the boundary — dark against light above the waist, light against dark below.
+  // Local contrast tricks stop being necessary once this band is there.
+  cx.globalAlpha = 0.55;
+  cx.fillStyle = rgbS(mixA(horizonC(h), [255, 255, 255], 0.30));
+  cx.fillRect(0, GROUND - 26, W, 18);
+  cx.globalAlpha = 0.85;
+  cx.fillRect(0, GROUND - 12, W, 5);
+  cx.globalAlpha = 1;
   // the city on the horizon, being rebuilt: windows light up as the world heals
   {
     // the skyline used to be the darkest, highest-contrast thing on screen while standing
     // furthest away — it fought the hero for the eye. More haze, and its windows are a
     // texture on a mass now instead of black holes punched through it.
-    const cityC = longe(mixA([54, 48, 60], [66, 82, 108], h), 0.46, h);
+    const cityC = longe(mixA([93, 88, 80], [63, 111, 158], h), 0.24, h);
     const spacing = 420, speed = 0.16;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
@@ -1433,22 +1375,22 @@ function drawScene() {
       cx.fillRect(c0 + cw - 3, GROUND - th - 5, 3, 4);
     }
   }
-  faixaVerde(0.26, 18, 18, 10, 21, [64, 60, 72], [50, 108, 84], 0.30, 41);   // far ridge forest
-  faixaVerde(0.44, 22, 22, 8, 17, [52, 47, 54], [38, 104, 72], 0.10, 11);    // mid tree line
-  faixaVerde(0.66, 30, 30, 6, 14, [38, 32, 30], [24, 76, 48], 0.00, 23);     // near bushes
+  faixaVerde(0.26, 18, 18, 10, 21, [99, 95, 72], [99, 201, 119], 0.42, 41);  // far ridge forest
+  faixaVerde(0.44, 22, 22, 8, 17, [74, 72, 56], [47, 156, 92], 0.20, 11);    // mid tree line
+  faixaVerde(0.66, 30, 30, 6, 14, [58, 56, 44], [28, 107, 66], 0.04, 23);    // near bushes
   // the bushes sit down onto the ground instead of floating on it
-  cx.fillStyle = lerpC([26, 21, 20], [16, 52, 34], h);
+  cx.fillStyle = lerpC([70, 66, 52], [18, 74, 46], h);
   cx.fillRect(0, GROUND - 2, W, 2);
   // ground: dithered gradient, lit at the horizon and falling into shadow toward the viewer
   cx.drawImage(chaoCanvas(h), 0, GROUND);
   // The dirt path he runs on: it used to be one flat 5px band straight across the widest
   // part of the frame. Now a sunlit crown, ruts and pebbles that scroll with the world, and
   // a shadow where the grass leans over the edge.
-  cx.fillStyle = lerpC([112, 90, 64], [130, 106, 74], h);
+  cx.fillStyle = lerpC([168, 156, 128], [216, 184, 120], h);
   cx.fillRect(0, GROUND, W, 8);
-  cx.fillStyle = lerpC([142, 116, 84], [164, 138, 96], h);
+  cx.fillStyle = lerpC([196, 186, 158], [244, 216, 150], h);
   cx.fillRect(0, GROUND, W, 2);
-  const rutA = lerpC([84, 65, 45], [96, 76, 50], h), rutB = lerpC([158, 138, 108], [176, 156, 118], h);
+  const rutA = lerpC([136, 126, 102], [176, 142, 88], h), rutB = lerpC([222, 214, 192], [255, 238, 194], h);
   const rk0 = Math.floor(worldX / 9) - 1;
   for (let k = rk0; k < rk0 + Math.ceil(W / 9) + 2; k++) {
     const gx = Math.round(k * 9 - worldX), r2 = hash01(k * 31 + 7);
@@ -1658,12 +1600,12 @@ function drawScene() {
      [0.70, 12, 0.28, 13, 0.90], [0.18, 52, 0.34, 9, 0.65]].forEach(function (c, i) {
       const bx2 = ((c[0] * W + off * (0.7 + i * 0.16)) % (W + 60)) - 40;
       const bw = Math.round(c[2] * W), bh = c[3];
-      cx.globalAlpha = smog * c[4] * 0.9;
-      cx.fillStyle = "#6b6470";
-      cx.fillRect(bx2 + 7, c[1], bw - 14, bh);
+      cx.globalAlpha = smog * c[4] * 0.55;
+      cx.fillStyle = "#cbc3b2";                  // smoke SCATTERS light: haze lightens the
+      cx.fillRect(bx2 + 7, c[1], bw - 14, bh);   // sky and flattens it, it does not darken it
       cx.fillRect(bx2, c[1] + 3, bw, bh - 6);
-      cx.globalAlpha = smog * c[4] * 0.45;
-      cx.fillStyle = "#8f8896";
+      cx.globalAlpha = smog * c[4] * 0.40;
+      cx.fillStyle = "#e8e1d2";
       cx.fillRect(bx2 + 12, c[1], bw - 26, 3);
       cx.globalAlpha = 1;
     });
@@ -1784,8 +1726,8 @@ function drawScene() {
   // a row of identical blocks with a hard straight top — a picket fence. Same idea, but the
   // edge is now broken up by clumps and blades of varying height, and the very top catches
   // a thread of light so the band reads as grass close to the camera, not as a black bar.
-  const fgC = lerpC([32, 27, 26], [17, 46, 30], h);
-  const fgL = lerpC([54, 45, 40], [34, 78, 48], h);
+  const fgC = lerpC([74, 68, 52], [20, 68, 44], h);
+  const fgL = lerpC([104, 96, 74], [44, 110, 62], h);
   const fgTop = Math.min(H - 8, GROUND + 20);
   const fk0 = Math.floor(worldX * 1.45 / 34) - 1;
   for (let k = fk0; k < fk0 + Math.ceil(W / 34) + 2; k++) {
@@ -1808,18 +1750,10 @@ function drawScene() {
     }
   }
 
-  // ---- final pass: grade, then vignette ----
-  // one tint over the whole frame ties the palette together: cold and leaden while the
-  // world is sick, warm while it heals. Cheap, and it does more than any extra sprite.
-  // 'overlay' deepens the darks and lifts the lights instead of veiling everything in
-  // grey, which is what a flat source-over tint was doing
-  cx.globalCompositeOperation = "overlay";
-  cx.globalAlpha = 0.16;
-  cx.fillStyle = rgbS(mixA([70, 84, 128], [255, 190, 110], h));
-  cx.fillRect(0, 0, W, H);
-  cx.globalCompositeOperation = "source-over";
-  cx.globalAlpha = 1;
-  cx.drawImage(vinheta(), 0, 0);
+  // No final pass. There used to be an 'overlay' grade and a dithered vignette here, and
+  // a CSS vignette and scanlines on top of those. Direction C is clean by choice: the look
+  // has to come out of value architecture and chroma, and every one of those four layers
+  // was quietly pulling the frame back toward the mud they were meant to fix.
 }
 
 // ---------- HUD ----------
