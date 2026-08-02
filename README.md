@@ -30,7 +30,12 @@ O teste roda headless num viewport de celular (390×844) e falha se: houver erro
 console, o segurar-para-atacar não repetir, algum upgrade não aplicar, o terceiro
 golpe não pular, o baque não gerar onda de choque, o toque longo não abrir o painel de
 retenção, aparecer qualquer diálogo do navegador, ou o ganho offline voltar a usar a
-taxa congelada. Ele também mede FPS e salva prints (`shot-*.png`) para inspeção visual.
+taxa congelada. Também cobre o mundo tocável: um toque na cena golpear igual ao botão,
+segurar a cena repetir, segurar os dois ao mesmo tempo **não** dobrar a cadência, o
+toque com folha aberta só fechar, o monstro andar e bloquear produção, o item cair e
+ser recolhido no toque, a chamada da comunidade abrir e o mutirão subir a produção, e o
+bônus por dia bater com o `CFG`. Ele mede FPS e salva prints (`shot-*.png`) —
+**sempre olhe os prints**: o teste garante que não quebrou, não que ficou bom.
 
 Além do smoke, dois medidores sem navegador — só as fórmulas em Node, lendo o `CFG`
 direto do `index.html` para não divergirem:
@@ -80,7 +85,26 @@ descansado o time, mais Sabedoria.
 Sete upgrades: campanhas grandes, ajuda mútua, treino do time, vizinhos que ajudam
 sozinhos, ferramentas para todos, divisão justa dos ganhos e dias de descanso.
 
+## O mundo responde
+
+A cena inteira é botão: tocar nela golpeia igual ao CTA de baixo (mesmo combo, mesmo
+salto) e ainda acerta o que estiver embaixo do dedo. Com uma folha aberta, o toque só
+fecha a folha.
+
+- **Problemas andam.** Fumaça, tambor e saco de dinheiro caminham até você e formam
+  fila. Parado na frente, cada um bloqueia 10% da produção até alguém resolver — é
+  multiplicador, nunca cansaço, então não muda a conta de GO FAST × GO STEADY.
+- **O que cai fica no chão.** Derrubar um deixa um item que precisa ser **recolhido no
+  toque**. Os vizinhos (U4) recolhem sozinhos depois de 5s, pela metade.
+- **A comunidade chama.** De tempos em tempos a panela pede mãos e há uma janela de
+  12s. Aparecer dispara um **mutirão**: ×1,35 em tudo por 20s e a rua limpa o caminho.
+  Perder a chamada não custa nada.
+- **Voltar amanhã vale.** Cada dia distinto jogado dá +2% permanente (teto de 10 dias),
+  e quem volta depois de uma noite — ou num dia novo — encontra uma chamada guardada,
+  que vale dobrado.
+
 ## Combo
 
 Toques encadeiam três golpes: corte horizontal, corte ascendente e um **salto com
-baque no chão** que abre uma onda de choque. Segurar o botão mantém o herói golpeando.
+baque no chão** que abre uma onda de choque. Segurar o botão (ou a cena) mantém o herói
+golpeando; segurar os dois ao mesmo tempo não acelera nada — a cadência é uma só.

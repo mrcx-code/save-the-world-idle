@@ -22,6 +22,9 @@ const TOQUE_HUMANO = 5;                // taps/s of ordinary poking, not holding
 //               emit, so GO FAST became free. Kept here so the regression stays visible.
 //   tapCansa  — rejected: a swing in GO FAST tires the team, like one more project
 //   curaCap   — rejected: U2 heals 2 per tap but never faster than 3 tiredness/s
+//   semMundo  — turns off everything added on 2026-08-02 (troubles that block the work,
+//               drops, community calls, the per-day bonus), so the table from before that
+//               session can be reproduced on demand and the delta stays measurable.
 const PATCHES = {
   none: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0 },
   u2Sempre: { cura: () => 2, cansa: () => 0 },
@@ -30,8 +33,68 @@ const PATCHES = {
     limite: 3,
     cura(S, st) { const c = Math.min(2, st.curaBudget); st.curaBudget -= c; return c; },
     cansa: () => 0
-  }
+  },
+  semMundo: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0, mundo: false }
 };
+
+// ---- the world, mirrored ----
+// A nominal phone viewport decides how long a trouble takes to walk in, computed the way
+// fitCanvas() computes it on a 390px screen. Everything else comes straight from CFG.
+const VP_W = Math.max(160, Math.ceil(390 / 2));
+const VP_HX = Math.round(VP_W * 0.26);
+const VIAGEM = (VP_W + 12 - (VP_HX + 26)) / F.CFG.mobVel;   // seconds of warning before it blocks
+const HP_MEDIO = 3.3;               // barrels have 4, the rest 3, weighted by the spawn mix
+const DANO_TOQUE = 4 / 3;           // the 3-hit combo deals 1, 1, 2
+const MIRA_POR_SEG = 1;             // aimed presses a world-tapper makes per second
+const DANO_MIRA = 2;                // ...each landing double a blind swing on what it hits
+
+function novoMundo() {
+  return { mobs: [], drops: [], spawnT: 0, chamadaT: 0, chamada: 0, atendidas: 0, perdidas: 0 };
+}
+// one tick of troubles, drops and calls. `toques` is how many swings happened this tick —
+// swings hit everything already standing in front of the hero, exactly like clicar() does.
+function passoMundo(S, est, m, DT, toques) {
+  const smog = Math.min(0.8, (1 - F.eficiencia(S)) * 1.6);
+  m.spawnT += DT;
+  if (m.spawnT >= F.CFG.mobIntervalo / (1 + smog)) {
+    m.spawnT = 0;
+    if (m.mobs.length < F.CFG.mobMax) m.mobs.push({ viagem: VIAGEM, hp: HP_MEDIO });
+  }
+  const dano = toques * DANO_TOQUE;
+  let ganho = 0, mira = est.mundo ? DANO_MIRA * MIRA_POR_SEG * DT : 0;
+  for (const mob of m.mobs) {
+    if (mob.viagem > 0) { mob.viagem -= DT; continue; }
+    mob.hp -= dano;
+    if (mira > 0) { mob.hp -= mira; mira = 0; }        // the aim goes to the front one
+    if (mob.hp <= 0) { mob.morto = true; m.drops.push({ t: 0, valor: F.valorDrop(S) }); }
+  }
+  m.mobs = m.mobs.filter(x => !x.morto);
+  S.mobsParados = m.mobs.filter(x => x.viagem <= 0).length;
+
+  for (const d of m.drops) {
+    d.t += DT;
+    if (est.mundo) { ganho += d.valor; d.morto = true; }                       // picked up by hand
+    else if (S.u4 && d.t >= F.CFG.dropAuto) { ganho += d.valor * F.CFG.dropAutoValor; d.morto = true; }
+    else if (d.t >= F.CFG.dropVida) d.morto = true;
+  }
+  S.energia += ganho; S.energiaTotal += ganho;
+  m.drops = m.drops.filter(d => !d.morto);
+
+  if (S.mutirao > 0) S.mutirao = Math.max(0, S.mutirao - DT);
+  if (m.chamada > 0) {
+    m.chamada -= DT;
+    if (est.mundo) {                                   // someone is watching: they show up
+      m.chamada = 0; m.atendidas++;
+      S.mutirao = F.CFG.mutiraoSeg;
+      for (const mob of m.mobs) m.drops.push({ t: 0, valor: F.valorDrop(S) });
+      m.mobs = []; S.mobsParados = 0;
+    } else if (m.chamada <= 0) m.perdidas++;
+  } else {
+    m.chamadaT += DT;
+    if (m.chamadaT >= F.CFG.chamadaIntervalo) { m.chamadaT = 0; m.chamada = F.CFG.chamadaJanela; }
+  }
+  return ganho;
+}
 
 // one swing, with a candidate patch applied
 function tocar(S, patch, st) {
@@ -66,15 +129,30 @@ const ESTRATEGIAS = [
     nome: 'rhythm + hold', hold: 1, projetos: true, compras: ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7'],
     modo: S => (S.modo === 'carvao' ? (F.eficiencia(S) < 0.75 ? 'limpo' : 'carvao')
       : (F.eficiencia(S) > 0.95 ? 'carvao' : 'limpo'))
-  }
+  },
+  // ---- runs that actually look at the screen (added 2026-08-02) ----
+  // `mundo` means the player taps the world too: aims at what is in the way, picks up
+  // what it drops, and shows up when the kitchen calls.
+  {
+    nome: 'rhythm + hold + world', hold: 1, mundo: true, projetos: true,
+    compras: ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7'],
+    modo: S => (S.modo === 'carvao' ? (F.eficiencia(S) < 0.75 ? 'limpo' : 'carvao')
+      : (F.eficiencia(S) > 0.95 ? 'carvao' : 'limpo'))
+  },
+  { nome: 'projects STEADY + hold + world', hold: 1, mundo: true, projetos: true, modo: () => 'limpo', compras: ['u3', 'u4', 'u5', 'u6'] },
+  { nome: 'projects FAST + hold + world', hold: 1, mundo: true, projetos: true, modo: () => 'carvao', compras: ['u1', 'u2', 'u4', 'u5', 'u6', 'u7'] },
+  // idle answer to the new pressure: U4 keeps the road clear without you
+  { nome: 'projects, GO STEADY + U4', hold: 0, projetos: true, modo: () => 'limpo', compras: ['u3', 'u4', 'u6'] }
 ];
 
 function jogar(est, patch = PATCHES.none) {
   const S = F.novoEstado();
   const compraveis = F.UPGRADES.filter(u => est.compras.includes(u.id));
   const st = { curaBudget: patch.limite || 0 };
-  let t = 0, tapAcc = 0, autoAcc = 0;
-  let deToque = 0, deProjeto = 0, tempoSegurando = 0, piorSaude = 1;
+  const m = novoMundo();
+  const comMundo = patch.mundo !== false;
+  let t = 0, tapAcc = 0, autoAcc = 0, miraAcc = 0;
+  let deToque = 0, deProjeto = 0, deMundo = 0, tempoSegurando = 0, piorSaude = 1;
 
   while (S.energiaTotal < META && t < LIMITE) {
     const novoModo = est.modo(S);
@@ -85,18 +163,26 @@ function jogar(est, patch = PATCHES.none) {
 
     // holding the main button repeats at HOLD_TPS; duty cycle < 1 means the player
     // only holds part of the time (nobody holds a phone button for three hours)
+    let toques = 0;
     if (est.hold > 0) {
       tapAcc += DT * F.HOLD_TPS * est.hold;
       tempoSegurando += DT * est.hold;
-      while (tapAcc >= 1) { deToque += tocar(S, patch, st); tapAcc--; }
+      while (tapAcc >= 1) { deToque += tocar(S, patch, st); tapAcc--; toques++; }
     } else if (est.projetos && S.geradores === 0) {
       tapAcc += DT * TOQUE_HUMANO;       // bootstrap: poke until project #1 is affordable
-      while (tapAcc >= 1) { deToque += tocar(S, patch, st); tapAcc--; }
+      while (tapAcc >= 1) { deToque += tocar(S, patch, st); tapAcc--; toques++; }
     }
     if (S.u4) {                          // neighbours keep tapping on their own
       autoAcc += DT * F.CFG.autoTapsPorSeg;
-      while (autoAcc >= 1) { deToque += tocar(S, patch, st); autoAcc--; }
+      while (autoAcc >= 1) { deToque += tocar(S, patch, st); autoAcc--; toques++; }
     }
+    // a tap on the world is also a swing on the CTA, so aiming pays its own way
+    if (comMundo && est.mundo) {
+      miraAcc += DT * MIRA_POR_SEG;
+      while (miraAcc >= 1) { deToque += tocar(S, patch, st); miraAcc--; toques++; }
+    }
+    if (comMundo) deMundo += passoMundo(S, est, m, DT, toques);
+    else { S.mobsParados = 0; S.mutirao = 0; }
     piorSaude = Math.min(piorSaude, F.eficiencia(S));
 
     // spend: next upgrade first, otherwise another project
@@ -109,7 +195,7 @@ function jogar(est, patch = PATCHES.none) {
   return {
     nome: est.nome, t, chegou: S.energiaTotal >= META,
     geradores: S.geradores, poluicao: S.poluicao, eficiencia: F.eficiencia(S), piorSaude,
-    deToque, deProjeto, tempoSegurando,
+    deToque, deProjeto, deMundo, tempoSegurando, mutiroes: m.atendidas,
     upgrades: F.UPGRADES.filter(u => S[u.id]).map(u => u.id).join(' ')
   };
 }
@@ -142,18 +228,22 @@ console.log(`\nTime to ${META.toLocaleString('en-US')} total impact — hold rep
   + (arg === 'none' ? ' — as shipped\n' : ` — PATCH: ${arg}\n`));
 const linhas = ESTRATEGIAS.map(e => jogar(e, patch)).sort((a, b) => (a.chegou ? a.t : Infinity) - (b.chegou ? b.t : Infinity));
 const largura = Math.max(...linhas.map(r => r.nome.length));
-console.log('  ' + 'strategy'.padEnd(largura) + '   time      projects  worst team  tap share');
-console.log('  ' + '-'.repeat(largura + 42));
+console.log('  ' + 'strategy'.padEnd(largura) + '   time      projects  worst team  tap share  world share');
+console.log('  ' + '-'.repeat(largura + 54));
 for (const r of linhas) {
-  const total = r.deToque + r.deProjeto;
+  const total = r.deToque + r.deProjeto + r.deMundo;
   const share = total > 0 ? r.deToque / total * 100 : 0;
+  const shareM = total > 0 ? r.deMundo / total * 100 : 0;
   console.log('  ' + r.nome.padEnd(largura) + '   ' + (r.chegou ? hms(r.t) : '>24h    ')
     + '  ' + String(r.geradores).padStart(6)
     + '  ' + (r.piorSaude * 100).toFixed(0).padStart(8) + '%'
-    + '  ' + share.toFixed(0).padStart(7) + '%');
+    + '  ' + share.toFixed(0).padStart(7) + '%'
+    + '  ' + shareM.toFixed(0).padStart(9) + '%');
   if (detalhe) {
     console.log('    '.padEnd(largura) + `     taps ${Math.round(r.deToque).toLocaleString('en-US')}`
       + ` · projects ${Math.round(r.deProjeto).toLocaleString('en-US')}`
+      + ` · world ${Math.round(r.deMundo).toLocaleString('en-US')}`
+      + ` · mutirões ${r.mutiroes}`
       + ` · held ${hms(r.tempoSegurando)} · bought ${r.upgrades || '(none)'}`);
   }
 }

@@ -12,6 +12,11 @@ output, taps included. Torch at 50K total impact: `wisdom = ⌊√(total/2500) �
 +10% forever per point. Offline integrates in 1s slices (12h cap, ~8ms) instead of
 billing one frozen rate, so the team wearing out — or resting — while you sleep counts.
 
+On top of that the world multiplies output three more ways, none of them touching
+tiredness: `bloqueioMundo()` (−10% per trouble standing in your way, three at most),
+`bonusMutirao()` (×1.35 for 20s after answering a community call) and `bonusDias()`
+(+2% per distinct day played, capped at ten days).
+
 ## Upgrades (7)
 
 | # | name | cost | effect |
@@ -25,7 +30,35 @@ billing one frozen rate, so the team wearing out — or resting — while you sl
 | U7 | Rest days | 30,000 | tiredness heals 3× faster |
 
 All seven reset on prestige. Old saves without `u4..u7` load fine (missing keys read
-as falsy).
+as falsy). U4 grew a second job on 2026-08-02: the neighbours' auto-taps also clear the
+troubles blocking the road, and they pick up what is left on the ground (at half value,
+after 5s). It is the purchasable answer for someone who does not want to watch.
+
+## The world answers back
+
+| thing | number | where it lands |
+|---|---|---|
+| a trouble walks in | 34 world px/s, ~3.8s of warning | `atualizarMobs(dt)` |
+| arrivals | one per 7s ÷ (1+smog), 3 alive at most | a worn-out team draws more |
+| queue | 20px apart, at HX+26/+46/+66 | all inside a swing's reach (80/96) |
+| standing in the way | **−10% production each**, −30% at three | multiplier, *never* tiredness |
+| a drop | `3 + 0.55 × projects`, ×wisdom ×health ×fair-share | picked up by tapping it |
+| drop life | 9s (U4 auto-collects at 5s for half) | |
+| community call | every 110s, 12s window | missing it costs nothing |
+| mutirão | ×1.35 to everything for 20s, road cleared | doubled when a call was kept for you |
+| coming back | +2% per distinct day, cap 10 days | reads `R.dias`, the retention record |
+
+The whole scene is the attack button: a tap on it swings exactly like the CTA (same
+combo, same leap, same sprout) *and* hits whatever was under the thumb — an aimed tap
+deals 2 damage on top of the swing's 1. Both surfaces share **one** repeat timer, so
+holding the button and the world at once cannot double the hit rate. With a sheet open a
+scene tap only dismisses it, so "tap outside to close" never costs a stray swing.
+
+The one rule the whole layer obeys: **nothing here heals tiredness and nothing here
+changes how tiredness is made.** Tapping the team's exhaustion away is exactly what
+erased the GO FAST / GO STEADY decision once already (see below), so every reward is a
+multiplier on output or a lump of impact — both still multiplied by team health, so a
+worn-out team gets less out of the world too.
 
 ## Balance: what holding the button actually did
 
@@ -70,6 +103,34 @@ Holding is still worth doing (1.2× over the best hands-off run) but no longer r
 the decision. `--patch=u2Sempre` restores the old behaviour so the regression stays
 measurable.
 
+### After the world started answering back (2026-08-02)
+
+| strategy | time | worst team | world share |
+|---|---|---|---|
+| rhythm + hold + **world** | **6m41s** | 75% | 3% |
+| projects STEADY + hold + world | 6m57s | 100% | 2% |
+| rhythm + hold | 7m28s | 75% | 1% |
+| projects STEADY + hold | 7m35s | 100% | 1% |
+| projects, GO STEADY + U4 | 10m58s | 100% | 1% |
+| projects, GO STEADY | 12m02s | 100% | 0% |
+| rhythm, hands off | 14m01s | 75% | 0% |
+| hold only, no projects | 43m02s | 100% | 1% |
+| projects FAST + hold + world | 49m20s | 5% | 3% |
+| projects FAST + hold | 54m25s | 5% | 1% |
+| projects, GO FAST | 1h25m30s | 5% | 0% |
+
+Read it as two columns. Playing the world is worth **1.12×** (7m28s → 6m41s) — enough to
+be worth a thumb, small enough that the run did not collapse. Ignoring it costs **1.4×**
+(8m37s → 12m02s for hands-off steady), because three troubles standing in the road take
+30% of the work. `--patch=semMundo` turns the whole layer off and reproduces the previous
+table to the second, so the delta stays measurable.
+
+The fast/steady decision is untouched, by construction: every new term is a multiplier
+applied to both modes, so the health gap between them is exactly what it was — 100% for
+steady, 5% for fast, and the run that swaps modes still wins. `--patch=u2Sempre` still
+collapses the table to 4m17s with the team at 35%, so the detector for the old failure
+still fires.
+
 ## Retention counters
 
 Long-press the torch icon (600ms) to open THREE-DAY TEST: distinct days played, total
@@ -87,8 +148,15 @@ The smoke test covers the long-press, the suppressed tap and the corrupt-record 
 
 Taps chain a 3-hit combo: horizontal slash → rising slash → **leap slam** (hero jumps
 ~26px, drives the sword down, lands with a white flash, an expanding shockwave and
-cracked dirt). Holding the main button repeats at ~7 hits/s. Sprouts are capped at 40
-so holding in steady mode doesn't flood the scene.
+cracked dirt). Holding the main button — or the scene — repeats at ~7 hits/s, from a
+single shared timer. Sprouts are capped at 40 so holding in steady mode doesn't flood
+the scene.
+
+One line under the top chips says what the world wants right now, and only ever one
+thing: a call beats a mutirão beats a complaint. Drops carry a dark keyline and four
+breathing ticks; the pot carries a nodding chevron and a countdown bar that turns red
+under a third. All of that is drawn *after* the colour grade, on purpose — an affordance
+has to stay legible even when the frame is being tinted.
 
 The hi-bit pass: sky and ground are dithered gradients (8×8 Bayer, ~12 levels) baked into
 offscreen canvases and rebuilt only when world health crosses a 1/48 step, so a normal
@@ -114,7 +182,13 @@ floating sheets above the character; type scales with `clamp()`.
 3. ~~Taps may outpace projects~~ — **measured: taps are 4–7% of total impact** in every
    run that also builds projects. Tap income was never the problem; U2's healing was.
 4. Hold-to-attack at 7/s was picked by feel, not tuned against retention.
-5. **GO FAST is dominated by GO STEADY once projects pile up.** At equilibrium a fast
+5. **Monsters now cost 1.4× to ignore, and that cost lands hardest on the idle player.**
+   The block is a multiplier, so it does not touch the fast/steady maths — but a run that
+   never looks at the screen and never buys U4 eats −30% for the whole game. U4 is the
+   answer and it costs 3,000, which is late. Worth checking whether the block should
+   fade as the world heals (`worldHealth()` is right there) instead of holding at full
+   strength forever.
+6. **GO FAST is dominated by GO STEADY once projects pile up.** At equilibrium a fast
    project settles at `100/(100 + 44.9n)` health, so at n=43 it produces 0.3/s against
    steady's 4/s. Fast only wins in short bursts before tiredness accumulates. The
    fast/steady choice is really "burst then recover", not "pick a lane" — worth deciding
@@ -248,6 +322,59 @@ toda sessão começa lendo a última entrada.
   árvores e arbustos — ainda lê como mingau verde; separar aqueles dois planos por valor
   é o próximo ganho grande. **Próximo passo: continuar o visual pelo miolo (separar os
   planos verdes), ou voltar para a fila (f) e o dia 2 — o dono decide o que vale mais.**
+
+- **2026-08-02 · fila (f), lente *Volta no dia 2*: o mundo passou a responder.** O jogo
+  era segurar um botão e comprar coisas; os monstros nasciam, paravam e viravam cenário.
+  Agora: (1) **eles andam** até você e formam fila, e cada um parado na frente bloqueia
+  10% da produção (−30% com três) até alguém resolver; (2) **derrubar deixa um item no
+  chão** que precisa ser recolhido com o dedo, na cena; (3) a cena inteira virou botão —
+  a pedido do dono, tocar na tela golpeia igual ao CTA de baixo, mesmo combo e mesmo
+  salto, e ainda acerta o que estiver embaixo do dedo (mira dá 2 de dano além do golpe);
+  (4) **chamada da comunidade** a cada 110s com janela de 12s: aparecer dispara um
+  mutirão de ×1,35 por 20s e limpa a rua; perder não custa nada; (5) **voltar amanhã
+  vale**: +2% permanente por dia distinto jogado (teto de 10), e quem volta depois de uma
+  noite — ou num dia novo — encontra uma chamada guardada, que vale dobrado.
+  **Regra que segurei o tempo todo: nada disso cura cansaço nem muda como o cansaço é
+  gerado.** Todo ganho novo é multiplicador de saída ou impacto avulso, e ambos continuam
+  multiplicados pela saúde do time — foi exatamente curar cansaço no toque (o U2 antigo)
+  que matou a decisão GO FAST × GO STEADY na sessão de agosto.
+  **Medido** (`node test/sim.js --detail`, 13 estratégias): a corrida mais rápida virou
+  **rhythm + hold + world, 6m41s**, contra 7m28s de quem segura mas ignora o mundo —
+  jogar o mundo vale **1,12×**. Ignorar custa **1,4×**: o steady de mãos livres foi de
+  8m37s para **12m02s**, e o GO FAST de mãos livres de 56m58s para **1h25m30s**. A
+  decisão fast × steady ficou intacta por construção: o pior estado do time continua 100%
+  no steady e 5% no fast, e a corrida que alterna modos continua ganhando. Guardas de
+  regressão: **`--patch=semMundo` reproduz a tabela antiga segundo a segundo** (7m28s /
+  7m35s / 8m37s / 9m59s / 43m34s / 54m17s / 54m18s / 56m13s / 56m58s), e o
+  `--patch=u2Sempre` ainda derruba tudo para 4m17s com o time a 35%, ou seja, o detector
+  do erro antigo continua funcionando. Primeira calibragem ficou forte demais: com item a
+  `3 + 0,8×projetos` e mutirão ×1,5, a corrida mais rápida caiu para **6m26s** (14% mais
+  rápida) — como o NOTES já registra que a primeira tocha em ~8min é a maior ameaça à
+  pergunta dos três dias, cortei para `3 + 0,55×projetos` e ×1,35 e o número voltou para
+  6m41s (10%). O U4 ganhou função nova sem custar linha de UI: os vizinhos limpam a rua
+  sozinhos e recolhem o que ficou no chão pela metade — o steady de mãos livres com U4 faz
+  10m58s contra 12m02s sem ele.
+  **Quebrou no caminho, três coisas.** (a) Os monstros paravam todos na *mesma*
+  coordenada e ficavam desenhados um dentro do outro — o print entregou na hora; agora
+  fazem fila de 20px em 20px, e por causa disso o alcance do golpe teve de subir de 46/62
+  para 80/96, senão o último da fila era inalcançável pelo botão e a rua nunca limpava.
+  (b) O primeiro teste do item falhava de vez em quando: o toque que recolhe **também é
+  um golpe**, e esse golpe derrubava outro monstro e deixava um item novo, então "sobrou
+  0 item" era asserção errada — passei a conferir o item específico. (c) O aviso novo
+  cobria o resumo da noite justamente no caso mais comum (voltar de manhã, quando os dois
+  aparecem juntos); o painel desce sozinho enquanto o resumo estiver no ar, e o smoke test
+  agora compara os dois retângulos e falha se encostarem. Smoke cresceu para 10 checagens
+  novas — inclusive a que o dono pediu explicitamente: segurar o botão **e** a cena ao
+  mesmo tempo não dobra a cadência (8 contra 7 golpes em 1s, e os 8 são os dois toques
+  iniciais, não o dobro do intervalo), porque as duas superfícies dividem um `setInterval`
+  só. Verde, 61 FPS, load de 97ms.
+  **Dúvida nova:** o bloqueio é um multiplicador fixo e não afrouxa nunca — quem joga
+  ocioso e não compra o U4 (3.000, que chega tarde) paga −30% a partida inteira. Talvez
+  ele devesse encolher conforme o mundo cura, já que `worldHealth()` está ali do lado.
+  **Próximo passo: medir de verdade a curva do dia 2 — hoje o incentivo de voltar é +2%
+  por dia e uma chamada dobrada, e isso foi escolhido no papel, não medido. A lente é
+  *Medir*: simular três dias de sessões curtas e ver se o dia 2 tem mais a oferecer que o
+  dia 1.**
 
 ## Would cut with one more day
 

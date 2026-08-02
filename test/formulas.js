@@ -28,7 +28,9 @@ const novoEstado = (over = {}) => Object.assign({
   energia: 0, energiaTotal: 0, poluicao: 0,
   geradores: 0, modo: 'carvao', tempoLimpo: 0,
   u1: false, u2: false, u3: false, u4: false, u5: false, u6: false, u7: false,
-  inovacao: 0, transicoes: 0
+  inovacao: 0, transicoes: 0,
+  // the world answering back: troubles standing in the way, a mutirão running, days played
+  mobsParados: 0, mutirao: 0, dias: 1
 }, over);
 
 const eficiencia = S => 100 / (100 + S.poluicao);
@@ -36,7 +38,14 @@ const bonusInovacao = S => 1 + 0.1 * S.inovacao;
 const custoGerador = S => Math.ceil(CFG.custoGeradorBase * Math.pow(CFG.custoGeradorFator, S.geradores));
 const bonusJusto = S => (S.u6 ? CFG.bonusJustoU6 : 1);
 const forcaToque = S => (S.u5 ? CFG.forcaToqueU5 : 1);
-const ganhoClique = S => 1 * forcaToque(S) * bonusInovacao(S) * eficiencia(S) * bonusJusto(S);
+// a trouble that reached you blocks part of the work — a multiplier, never tiredness
+const bloqueioMundo = S => Math.max(0, 1 - Math.min(S.mobsParados || 0, CFG.mobMax) * CFG.bloqueioPorMob);
+const bonusMutirao = S => (S.mutirao > 0 ? CFG.mutiraoMult : 1);
+const bonusDias = S => 1 + CFG.bonusDia * Math.min(Math.max(0, (S.dias || 1) - 1), CFG.diasMax);
+const valorDrop = S => (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
+  * bonusInovacao(S) * eficiencia(S) * bonusJusto(S) * bonusMutirao(S) * bonusDias(S);
+const ganhoClique = S => 1 * forcaToque(S) * bonusInovacao(S) * eficiencia(S) * bonusJusto(S)
+  * bonusMutirao(S) * bonusDias(S);
 
 const tetoLimpoAtual = S => (S.u3 ? 4 : CFG.tetoLimpo);
 function rampaAtual(S) {
@@ -47,7 +56,8 @@ function prodPorSegundo(S) {
   const porGerador = S.modo === 'carvao'
     ? CFG.prodCarvao * (S.u1 ? 2 : 1)
     : CFG.prodLimpoBase * rampaAtual(S);
-  return S.geradores * porGerador * bonusInovacao(S) * eficiencia(S) * bonusJusto(S);
+  return S.geradores * porGerador * bonusInovacao(S) * eficiencia(S) * bonusJusto(S)
+    * bloqueioMundo(S) * bonusMutirao(S) * bonusDias(S);
 }
 function poluicaoPorSegundo(S) {
   if (S.modo !== 'carvao') return 0;
@@ -110,6 +120,7 @@ const UPGRADES = [
 module.exports = {
   CFG, HOLD_TPS, UPGRADES, novoEstado,
   eficiencia, bonusInovacao, custoGerador, bonusJusto, forcaToque, ganhoClique,
+  bloqueioMundo, bonusMutirao, bonusDias, valorDrop,
   tetoLimpoAtual, rampaAtual, prodPorSegundo, poluicaoPorSegundo,
   inovacaoAoTransicionar, simular, simularOffline, clicar, comprarGerador, comprar
 };

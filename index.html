@@ -57,6 +57,18 @@
     background: #234d2c; border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #38b764;
     color: #c9f5d4; padding: 8px 10px; font-size: var(--fs-xs); line-height: 1.7; }
 
+  /* one line that says what the world wants from you right now */
+  #alerta { display: none; position: fixed; z-index: 11; left: 50%; transform: translateX(-50%);
+    top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
+    border: 3px solid var(--ink); padding: 7px 9px; font-size: var(--fs-xs); line-height: 1.7;
+    text-align: center; background: rgba(14,15,26,.9); }
+  #alerta.mostra { display: block; }
+  #alerta.perigo { background: #4a1f2b; box-shadow: inset 0 0 0 2px var(--bad); color: #ffb0b0; }
+  #alerta.chama { background: #4a3a12; box-shadow: inset 0 0 0 2px var(--gold); color: #ffe9b0;
+    animation: pulsa .9s steps(2, end) infinite; }
+  #alerta.festa { background: #1c4a2e; box-shadow: inset 0 0 0 2px var(--good); color: #b7ffce; }
+  @keyframes pulsa { 0% { opacity: 1 } 50% { opacity: .62 } 100% { opacity: 1 } }
+
   #fato { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
     bottom: calc(128px + env(safe-area-inset-bottom)); width: min(520px, 94vw);
     font-size: var(--fs-xs); color: #dfe9f2; line-height: 1.8;
@@ -162,7 +174,7 @@
     <h2>YEAR 2026</h2>
     <p>You wake up in a world that is <i>in really bad shape</i>. The sky is gray. The rivers are dirty. The trees have no leaves. The people are tired.</p>
     <p>Everyone says it is too late. You are <i>THE SPARK</i> — and you believe it can get better. <i>Nobody is saved alone.</i></p>
-    <p>Tap to help. Start projects. Share what you win. Don't let your team get too tired. <i>Watch the world get better as you run.</i></p>
+    <p>Tap anywhere to help — the button or the world itself. Start projects. Clear what gets in the way, pick up what it drops, and show up when the kitchen calls. <i>Don't let your team get too tired.</i></p>
     <button id="btnBegin">▶ START</button>
   </div>
 </div>
@@ -178,6 +190,7 @@
 </div>
 
 <div id="offline"></div>
+<div id="alerta"></div>
 <div id="fato"></div>
 
 <div id="controls">
@@ -305,7 +318,22 @@ const CFG = {
   custoU4: 3000, custoU5: 8000, custoU6: 18000, custoU7: 30000,
   autoTapsPorSeg: 2, forcaToqueU5: 3, bonusJustoU6: 1.3, descansoU7: 3,
   metaPrestigio: 50000, divisorInovacao: 2500,
-  capOfflineHoras: 12
+  capOfflineHoras: 12,
+  // --- the world answers back: troubles walk in, drops are picked up by hand,
+  // the neighbourhood calls you. None of this touches tiredness: healing the team by
+  // tapping is exactly what erased the GO FAST / GO STEADY decision once already.
+  mobVel: 34,              // world px/s a trouble advances toward you
+  mobIntervalo: 7,         // seconds between arrivals (shorter when the team is worn out)
+  mobMax: 3, mobFila: 20,  // ...and they queue up, one body-width apart
+  bloqueioPorMob: 0.10,    // production a trouble blocks while it stands in your way
+  dropVida: 9,             // seconds a drop waits on the ground
+  dropBase: 3, dropPorProjeto: 0.55,
+  dropAuto: 5, dropAutoValor: 0.5,   // U4: neighbours pick up what you leave, for half
+  chamadaIntervalo: 110,   // seconds between community calls
+  chamadaJanela: 12,       // how long you have to show up
+  chamadaVolta: 3600,      // away this long and a call is waiting when you get back
+  mutiraoSeg: 20, mutiraoMult: 1.35,
+  bonusDia: 0.02, diasMax: 10        // the neighbourhood remembers you: +2% per day played
 };
 
 let S = {
@@ -324,7 +352,19 @@ const bonusInovacao = () => 1 + 0.1 * S.inovacao;
 const custoGerador = () => Math.ceil(CFG.custoGeradorBase * Math.pow(CFG.custoGeradorFator, S.geradores));
 const bonusJusto = () => (S.u6 ? CFG.bonusJustoU6 : 1);   // shared work pays off for everyone
 const forcaToque = () => (S.u5 ? CFG.forcaToqueU5 : 1);
-const ganhoClique = () => 1 * forcaToque() * bonusInovacao() * eficiencia() * bonusJusto();
+// A trouble that reaches you stands in the way of the work until someone deals with it.
+// It is a *multiplier*, never tiredness — so it costs GO FAST and GO STEADY the same
+// share and cannot quietly pay for burning the team out.
+function bloqueioMundo() {
+  let n = 0;
+  for (let i = 0; i < mobs.length; i++) if (mobs[i].parado && mobs[i].dying <= 0) n++;
+  return Math.max(0, 1 - Math.min(n, CFG.mobMax) * CFG.bloqueioPorMob);
+}
+const bonusMutirao = () => (mutiraoT > 0 ? CFG.mutiraoMult : 1);   // the whole street shows up
+// coming back on a new day is worth something: the neighbourhood knows you now
+const bonusDias = () => 1 + CFG.bonusDia * Math.min(Math.max(0, R.dias.length - 1), CFG.diasMax);
+const ganhoClique = () => 1 * forcaToque() * bonusInovacao() * eficiencia() * bonusJusto()
+  * bonusMutirao() * bonusDias();
 
 function tetoLimpoAtual() { return S.u3 ? 4 : CFG.tetoLimpo; }
 function rampaAtual() {
@@ -339,7 +379,8 @@ function prodPorSegundo() {
   let porGerador;
   if (S.modo === "carvao") porGerador = CFG.prodCarvao * (S.u1 ? 2 : 1);
   else porGerador = CFG.prodLimpoBase * rampaAtual();
-  return S.geradores * porGerador * bonusInovacao() * eficiencia() * bonusJusto();
+  return S.geradores * porGerador * bonusInovacao() * eficiencia() * bonusJusto()
+    * bloqueioMundo() * bonusMutirao() * bonusDias();
 }
 function poluicaoPorSegundo() {
   if (S.modo !== "carvao") return 0;
@@ -387,6 +428,154 @@ function impacto(x) {             // the slam lands: shockwave, dust fan, sparks
       life: 0.45 + Math.random() * 0.35, c: i % 3 === 0 ? "#ffe9b0" : "#9b8468", grav: 130 });
   }
 }
+// ============================================================
+// THE WORLD ANSWERS BACK
+// Monsters used to spawn, stop and stand there: scenery with hit points. Now they walk
+// in, and one that reaches you blocks part of the work until it is dealt with. Beating
+// one leaves something on the ground that has to be *picked up by hand* — a tap on the
+// world itself, not on the big button. And every couple of minutes the neighbourhood
+// calls: show up inside the window and the whole street works with you for a while.
+//
+// Deliberate rule for all of it: nothing here heals tiredness and nothing here changes
+// how tiredness is made. Tapping away the team's exhaustion is exactly what erased the
+// GO FAST / GO STEADY decision once before (see NOTES). Every reward below is a
+// multiplier on output or a lump of impact, both of which are still multiplied by team
+// health — so a worn-out team gets less out of the world too.
+// ============================================================
+let drops = [], mutiraoT = 0, chamada = null, chamadaT = 0, mobT = 0;
+let chamadaDobrada = false, diaNovo = false, voltouDepoisDe = 0;
+
+function soltarDrop(m, sx) {
+  drops.push({
+    wx: worldX + sx + 5, type: m.type, t: 0,
+    valor: (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
+      * bonusInovacao() * eficiencia() * bonusJusto() * bonusMutirao() * bonusDias()
+  });
+  if (drops.length > 8) drops.shift();
+}
+function coletarDrop(d, auto) {
+  const v = d.valor * (auto ? CFG.dropAutoValor : 1);
+  S.energia += v; S.energiaTotal += v;
+  const sx = Math.round(d.wx - worldX);
+  floats.push({ x: sx - 10, y: GROUND - 30, txt: "+" + Math.round(v), life: 38 });
+  if (!auto) floats.push({ x: sx - 18, y: GROUND - 46,
+    txt: d.type === "cash" ? "SHARED!" : d.type === "barrel" ? "CLEAN!" : "CLEAR!", life: 30 });
+  burst(sx, GROUND - 16, auto ? 5 : 10, d.type === "cash" ? ["#ffcd75", "#ffe9b0"]
+    : d.type === "barrel" ? ["#6fdd94", "#b5e08c"] : ["#e8edf6", "#8d5bd6"]);
+  d.morto = true;
+}
+
+// Movement, spawning and state. Drawing lives in drawMobs() and is not touched here.
+function atualizarMobs(dt) {
+  const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
+  mobT += dt;
+  const espera = CFG.mobIntervalo / (1 + smog);   // a worn-out team draws more trouble
+  if (mobT >= espera) {
+    mobT = 0;
+    if (mobs.filter(function (m) { return !m.dying; }).length < CFG.mobMax) {
+      const r = Math.random(), dirty = S.modo === "carvao";
+      const tipo = r < (dirty ? 0.45 : 0.20) ? "smog" : r < (dirty ? 0.75 : 0.42) ? "barrel" : "cash";
+      mobs.push({ wx: worldX + W + 12, type: tipo, hp: tipo === "barrel" ? 4 : 3,
+        flash: 0, dying: 0, parado: false });
+    }
+  }
+  // They walk in and queue up in front of the hero instead of standing on each other.
+  // The one in front takes the first slot; whoever is behind stops a body-width back and
+  // shuffles forward when the road clears.
+  let limite = HX + 26;
+  mobs.filter(function (m) { return m.dying <= 0; })
+    .sort(function (a, b) { return a.wx - b.wx; })
+    .forEach(function (m) {
+      const sx = m.wx - worldX;
+      const novo = Math.max(limite, sx - CFG.mobVel * dt);   // it walks in on you
+      m.wx = worldX + novo;
+      if (novo <= limite + 0.001) {
+        if (!m.parado) { m.parado = true; floats.push({ x: novo + 2, y: GROUND - 42, txt: "!", life: 26 }); }
+        limite += CFG.mobFila;
+      }
+    });
+  mobs = mobs.filter(function (m) { return m.wx - worldX > -24 && !m.dead; });
+}
+
+function atualizarDrops(dt) {
+  drops.forEach(function (d) {
+    d.t += dt;
+    // U4: the neighbours pick up what you walk past, and share half of it
+    if (S.u4 && d.t > CFG.dropAuto && !d.morto) coletarDrop(d, true);
+    if (d.t > CFG.dropVida) d.morto = true;
+  });
+  drops = drops.filter(function (d) { return !d.morto && d.wx - worldX > -20; });
+}
+
+// The community call: a window you either show up for or miss. Missing it costs nothing —
+// the punishment for being away is the troubles piling up, not a scolding.
+function abrirChamada(dobrada) {
+  chamada = { sx: Math.round(W * 0.62), t: 0, janela: CFG.chamadaJanela, dobrada: !!dobrada };
+  chamadaT = 0;
+  floats.push({ x: Math.round(W * 0.62) - 20, y: GROUND - 52, txt: "HELP!", life: 50 });
+  desenhar();   // the strip announces it now, not at the next HUD tick
+}
+function atenderChamada() {
+  if (!chamada) return false;
+  mutiraoT = CFG.mutiraoSeg * (chamada.dobrada ? 2 : 1);
+  const sx = chamada.sx;
+  chamada = null; chamadaT = 0;
+  floats.push({ x: sx - 34, y: GROUND - 54, txt: "MUTIRAO!", life: 55 });
+  burst(sx, GROUND - 18, 22, ["#ffcd75", "#6fdd94", "#e8edf6"]);
+  // everyone showing up clears what was in the way, and nothing is wasted
+  mobs.forEach(function (m) {
+    if (m.dying > 0) return;
+    m.hp = 0; m.dying = 8;
+    soltarDrop(m, Math.round(m.wx - worldX));
+  });
+  desenhar();
+  return true;
+}
+function atualizarChamada(dt) {
+  if (mutiraoT > 0) mutiraoT = Math.max(0, mutiraoT - dt);
+  if (chamada) {
+    chamada.t += dt;
+    if (chamada.t > chamada.janela) {
+      floats.push({ x: chamada.sx - 30, y: GROUND - 44, txt: "...", life: 26 });
+      chamada = null; chamadaT = 0;
+    }
+    return;
+  }
+  chamadaT += dt;
+  if (chamadaT >= CFG.chamadaIntervalo) { abrirChamada(chamadaDobrada); chamadaDobrada = false; }
+}
+
+// A tap on the world itself: hit what is in front of you, pick up what was left, or show
+// up for the call. Anything else closes the sheets, which is all a canvas tap used to do.
+function tocarMundo(px, py) {
+  if (chamada) {
+    const dx = px - chamada.sx, dy = py - (GROUND - 14);
+    if (dx * dx / 400 + dy * dy / 576 < 1.6) { atenderChamada(); return true; }
+  }
+  for (let i = drops.length - 1; i >= 0; i--) {
+    const d = drops[i];
+    if (d.morto) continue;
+    const sx = d.wx - worldX;
+    if (Math.abs(px - sx) < 16 && py > GROUND - 34 && py < GROUND + 10) { coletarDrop(d, false); return true; }
+  }
+  if (py > GROUND - 34 && py < GROUND + 10) {       // the thumb landed on the road
+    let alvo = null, perto = 18;
+    mobs.forEach(function (m) {
+      if (m.dying > 0) return;
+      const d = Math.abs(px - (m.wx - worldX + 5));
+      if (d < perto) { perto = d; alvo = m; }        // whichever one is actually under the thumb
+    });
+    if (alvo) {
+      const sx = alvo.wx - worldX;
+      alvo.hp -= 2; alvo.flash = 5;                  // an aimed hit lands harder than a blind swing
+      burst(sx + 8, GROUND - 14, 6, ["#ffe9b0", "#e8edf6"]);
+      if (alvo.hp <= 0) { alvo.dying = 8; soltarDrop(alvo, sx); }
+      return true;
+    }
+  }
+  return false;
+}
+
 function clicar() {
   const g = ganhoClique();
   S.energia += g; S.energiaTotal += g;
@@ -397,7 +586,9 @@ function clicar() {
   attackType = combo; combo = (combo + 1) % 3;
   attackT = attackType === 2 ? JUMPF : 9;
   if (attackType === 2 && jumpT <= 0) jumpT = JUMPF;   // third hit: leap and slam
-  const range = attackType === 2 ? 62 : 46, dmg = attackType === 2 ? 2 : 1;
+  // reach covers the whole queue (three troubles, one body-width apart) — otherwise the
+  // one at the back is unhittable from the button and the road never clears
+  const range = attackType === 2 ? 96 : 80, dmg = attackType === 2 ? 2 : 1;
   mobs.forEach(function (m) {
     if (m.dying > 0) return;
     const sx = m.wx - worldX;
@@ -407,9 +598,9 @@ function clicar() {
         : m.type === "barrel" ? ["#7fb356", "#b5e08c"] : ["#9a92aa", "#7a7288"]);
       if (m.hp <= 0) {
         m.dying = 8;
+        soltarDrop(m, sx);          // what it was holding stays on the ground until picked up
         burst(sx + 8, GROUND - 14, 16, m.type === "cash" ? ["#ffcd75", "#ffe9b0", "#e8edf6"]
           : m.type === "barrel" ? ["#7fb356", "#b5e08c", "#6fdd94"] : ["#9a92aa", "#8d5bd6", "#6fdd94"]);
-        floats.push({ x: sx - 6, y: GROUND - 34, txt: m.type === "cash" ? "SHARED!" : m.type === "barrel" ? "CLEAN!" : "PUFF!", life: 35 });
       }
     }
   });
@@ -460,6 +651,7 @@ function transicionar() {
   S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
   S.geradores = 0; S.modo = "carvao"; S.tempoLimpo = 0;
   S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
+  drops = []; mobs = []; chamada = null; chamadaT = 0; mutiraoT = 0;   // the road starts clear
   R.tochas++; salvarRetencao();
   salvar(); desenhar();
 }
@@ -492,6 +684,7 @@ function carregar() {
   if (!bruto) return;
   try { Object.assign(S, JSON.parse(bruto)); } catch (e) { return; }
   const dt = Math.min((Date.now() - S.salvoEm) / 1000, CFG.capOfflineHoras * 3600);
+  voltouDepoisDe = dt;
   if (dt > 60 && S.geradores > 0) {
     const antes = S.poluicao;
     const ganho = simularOffline(dt);
@@ -500,7 +693,9 @@ function carregar() {
     el.style.display = "block";
     el.textContent = "🌙 WHILE YOU WERE AWAY (" + h + "h" + String(m).padStart(2, "0") + "): +" +
       fmt(ganho) + " impact" +
-      (S.poluicao > antes ? ", +" + fmt(S.poluicao - antes) + " tiredness." : ".");
+      (S.poluicao > antes ? ", +" + fmt(S.poluicao - antes) + " tiredness." : ".")
+      + (R.dias.length > 1 ? " DAY " + R.dias.length + " — the neighbourhood knows you: ×"
+        + bonusDias().toFixed(2) + " to everything." : "");
     setTimeout(function () { el.style.display = "none"; }, 12000);
   }
 }
@@ -521,7 +716,11 @@ function salvarRetencao() {
 }
 function marcarDia() {
   const d = diaLocal();
-  if (R.dias.indexOf(d) < 0) { R.dias.push(d); R.dias.sort(); salvarRetencao(); }
+  if (R.dias.indexOf(d) < 0) {
+    const primeira = R.dias.length === 0;
+    R.dias.push(d); R.dias.sort(); salvarRetencao();
+    if (!primeira) diaNovo = true;   // a day the player came *back* — worth a welcome
+  }
 }
 function carregarRetencao() {
   let bruto = null;
@@ -550,7 +749,8 @@ function mostrarRetencao() {
     linha("distinct days played", dias + (dias === 1 ? " day" : " days"))
     + linha("total time played", duracao(R.segundos))
     + linha("torches passed", String(R.tochas))
-    + linha("first session &middot; span", primeiro + " &middot; " + vao + (vao === 1 ? " day" : " days"));
+    + linha("first session &middot; span", primeiro + " &middot; " + vao + (vao === 1 ? " day" : " days"))
+    + linha("the neighbourhood knows you", "×" + bonusDias().toFixed(2) + " to everything");
 }
 
 // ---------- the world (fullscreen side-scroller) ----------
@@ -784,14 +984,8 @@ const BARREL_MOB = { pal: { B: "#5a8a3c", H: "#7fb356", K: "#10121c", W: "#b5e08
   ".KKKKKK.", "KBBBBBBK", "KBHHHHBK", "KBKBBKBK", "KBBBBBBK", "KWBBBBWK", "KBHHHHBK", "KBBBBBBK", ".KKKKKK."] };
 let mobs = [];
 function drawMobs(smog) {
-  if (mobs.length < 3 && Math.random() < 0.010 + smog * 0.02) {
-    const r = Math.random(), dirty = S.modo === "carvao";
-    const tipo = r < (dirty ? 0.45 : 0.20) ? "smog" : r < (dirty ? 0.75 : 0.42) ? "barrel" : "cash";
-    mobs.push({ wx: worldX + W + 12, type: tipo, hp: tipo === "barrel" ? 4 : 3, flash: 0, dying: 0 });
-  }
-  mobs = mobs.filter(function (m) { return m.wx - worldX > -24 && !m.dead; });
+  // spawning, walking in and dying are handled by atualizarMobs(dt) on the frame loop
   mobs.forEach(function (m) {
-    if (m.wx - worldX < HX + 36) m.wx = worldX + HX + 36; // they hold their ground in front of the hero
     const sx = Math.round(m.wx - worldX);
     const bob = Math.floor(tick / 8) % 2;
     // mobs rendered at 2x, anchored at the ground; death = squash + fade
@@ -1398,6 +1592,76 @@ function drawScene() {
   cx.drawImage(vinheta(), 0, 0);
 }
 
+// ---------- things you can put a thumb on ----------
+// Drawn after drawScene() on purpose: an affordance has to stay legible, so it sits on
+// top of the colour grade instead of inside it. Sprites are not touched here — these are
+// markers over the world, not monsters.
+function desenharMundo() {
+  const pulso = 0.6 + 0.4 * Math.sin(animT * 6);
+  // what a beaten trouble left behind, waiting for a thumb
+  drops.forEach(function (d) {
+    const sx = Math.round(d.wx - worldX);
+    if (sx < -12 || sx > W + 12) return;
+    const y = GROUND - 16 + Math.round(Math.sin(animT * 5 + d.wx * 0.1) * 2);
+    const fim = Math.max(0, Math.min(1, (CFG.dropVida - d.t) / 2));
+    const cor = d.type === "cash" ? ["#ffcd75", "#ffe9b0"]
+      : d.type === "barrel" ? ["#6fdd94", "#b5e08c"] : ["#c9c2d8", "#e8edf6"];
+    cx.globalAlpha = fim;
+    cx.fillStyle = "#10121c"; cx.fillRect(sx - 4, y - 1, 10, 9);   // dark keyline: it pops off any ground
+    cx.fillStyle = cor[0]; cx.fillRect(sx - 3, y, 8, 7);
+    cx.fillStyle = cor[1]; cx.fillRect(sx - 2, y + 1, 6, 2);
+    cx.fillStyle = "#10121c"; cx.fillRect(sx - 3, y + 3, 8, 1);
+    // four ticks breathing around it: pixel-art for "pick me up"
+    cx.globalAlpha = fim * pulso;
+    cx.fillStyle = cor[1];
+    const r = 6 + Math.round(pulso * 2);
+    cx.fillRect(sx + 1, y - r, 1, 3); cx.fillRect(sx + 1, y + 6 + r - 3, 1, 3);
+    cx.fillRect(sx - 3 - r, y + 3, 3, 1); cx.fillRect(sx + 5 + r - 3, y + 3, 3, 1);
+    cx.globalAlpha = 1;
+  });
+  // a trouble standing in the way: two ticks at its feet say "this one is tappable"
+  mobs.forEach(function (m) {
+    if (!m.parado || m.dying > 0) return;
+    const sx = Math.round(m.wx - worldX);
+    cx.globalAlpha = 0.5 + 0.5 * pulso;
+    cx.fillStyle = "#ff6b57";
+    cx.fillRect(sx - 6, GROUND + 1, 4, 2); cx.fillRect(sx + 12, GROUND + 1, 4, 2);
+    cx.fillRect(sx - 6, GROUND - 1, 2, 3); cx.fillRect(sx + 14, GROUND - 1, 2, 3);
+    cx.globalAlpha = 1;
+  });
+  // the community call: a pot, steam, and a window that is visibly closing
+  if (chamada) {
+    const sx = chamada.sx, resta = Math.max(0, 1 - chamada.t / chamada.janela);
+    cx.globalAlpha = 0.30 * pulso;
+    cx.fillStyle = "#ffcd75";
+    cx.fillRect(sx - 16, GROUND - 26, 32, 28);
+    cx.globalAlpha = 1;
+    cx.fillStyle = "#3a2f4a"; cx.fillRect(sx - 10, GROUND - 12, 20, 12);   // pot
+    cx.fillStyle = "#584a6e"; cx.fillRect(sx - 9, GROUND - 11, 18, 4);
+    cx.fillStyle = "#ffcd75"; cx.fillRect(sx - 12, GROUND - 14, 24, 3);    // gold rim
+    cx.fillStyle = "#7a5a3a"; cx.fillRect(sx - 7, GROUND, 4, 4); cx.fillRect(sx + 3, GROUND, 4, 4);
+    cx.globalAlpha = 0.6;
+    cx.fillStyle = "#e8edf6";
+    for (let s = 0; s < 3; s++) {                                          // steam
+      const t = (animT * 22 + s * 9) % 18;
+      cx.fillRect(sx - 6 + s * 6 + Math.round(Math.sin((animT * 4) + s) * 2), GROUND - 17 - t, 3, 3);
+    }
+    cx.globalAlpha = 1;
+    cx.fillStyle = "#10121c"; cx.fillRect(sx - 16, GROUND - 32, 32, 5);    // closing window
+    cx.fillStyle = resta > 0.35 ? "#6fdd94" : "#ff6b57";
+    cx.fillRect(sx - 15, GROUND - 31, Math.round(30 * resta), 3);
+    // a chevron nodding at the pot: the clearest "put your thumb here" there is
+    const bob = Math.round(Math.sin(animT * 7) * 2);
+    cx.fillStyle = "#ffcd75";
+    for (let i = 0; i < 5; i++) cx.fillRect(sx - 5 + i, GROUND - 42 + bob + Math.abs(i - 2), 1, 3 - Math.abs(i - 2));
+  }
+  // the mutirão: the street is working with you, so the ground is busier
+  if (mutiraoT > 0 && Math.random() < 0.3) {
+    parts.push({ x: HX + 20 + Math.random() * 60, y: GROUND - 4, vx: -20 - Math.random() * 20,
+      vy: -20 - Math.random() * 26, life: 0.5, c: Math.random() < 0.5 ? "#ffcd75" : "#6fdd94", grav: 90 });
+  }
+}
+
 // ---------- HUD ----------
 const $ = id => document.getElementById(id);
 function fmt(n) {
@@ -1467,6 +1731,33 @@ function desenhar() {
     $("inovacao").textContent = S.inovacao;
     $("bonus").textContent = bonusInovacao().toFixed(1);
   }
+  alertaMundo();
+}
+
+// The one line that tells you why the rate just moved, and what your thumb can do about
+// it. Only one thing at a time: a call beats a party, a party beats a complaint.
+function alertaMundo() {
+  const el = $("alerta");
+  let classe = "", txt = "";
+  const parados = mobs.filter(function (m) { return m.parado && m.dying <= 0; }).length;
+  if (chamada) {
+    classe = "chama";
+    txt = "THEY NEED HANDS — TAP THE POT · " + Math.ceil(chamada.janela - chamada.t) + "s";
+  } else if (mutiraoT > 0) {
+    classe = "festa";
+    txt = "MUTIRAO! EVERYONE IS WORKING · ×" + CFG.mutiraoMult + " · " + Math.ceil(mutiraoT) + "s";
+  } else if (parados > 0) {
+    classe = "perigo";
+    txt = parados + (parados === 1 ? " TROUBLE" : " TROUBLES") + " IN THE WAY — TAP IT · −"
+      + Math.round((1 - bloqueioMundo()) * 100) + "%";
+  }
+  el.className = classe ? "mostra " + classe : "";
+  if (classe) {
+    el.textContent = txt;
+    // the night's summary owns the top slot while it is up
+    el.style.top = $("offline").style.display === "block"
+      ? "calc(128px + env(safe-area-inset-top))" : "";
+  }
 }
 
 let fatoIdx = 0;
@@ -1487,19 +1778,52 @@ document.addEventListener("DOMContentLoaded", () => {
   fitCanvas();
   document.querySelectorAll("canvas.pi[data-i]").forEach(function (c) { renderIcon(c, c.dataset.i); });
   renderIcon($("modeIcon"), "flame");
-  // main attack: tap once, or HOLD to keep swinging
+  // Main attack: tap once, or HOLD to keep swinging — on the button *or* on the world.
+  // Both surfaces share ONE repeat timer, so two thumbs cannot double the hit rate: the
+  // set of surfaces being held decides whether the timer runs, never how fast it runs.
   const bc = $("btnClique");
+  const segurando = new Set();
   let holdT = null;
-  function soltar() { if (holdT) { clearInterval(holdT); holdT = null; } bc.classList.remove("segurando"); }
+  function comecarHold(src) {
+    segurando.add(src);
+    if (!holdT) holdT = setInterval(clicar, 145);   // ~7 hits per second while held
+    if (src === "btn") bc.classList.add("segurando");
+  }
+  function soltar(src) {
+    if (src) segurando.delete(src); else segurando.clear();
+    if (!segurando.size && holdT) { clearInterval(holdT); holdT = null; }
+    if (!segurando.has("btn")) bc.classList.remove("segurando");
+  }
   bc.addEventListener("pointerdown", function (e) {
     e.preventDefault();
     clicar();
-    soltar();
-    bc.classList.add("segurando");
-    holdT = setInterval(clicar, 145);   // ~7 hits per second while held
+    comecarHold("btn");
   });
-  ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) { bc.addEventListener(ev, soltar); });
-  window.addEventListener("blur", soltar);
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
+    bc.addEventListener(ev, function () { soltar("btn"); });
+  });
+  window.addEventListener("blur", function () { soltar(); });
+
+  // The world is the other half of the same button. A tap on the scene swings exactly
+  // like the CTA does — same combo, same leap, same sprout — and on the way there it
+  // hits whatever the thumb landed on. With a sheet open the tap only dismisses it, so
+  // "tap outside to close" never costs a stray swing.
+  function pontoDoMundo(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+  }
+  const algumaAberta = function () { return SHEETS.some(function (s) { return $(s).classList.contains("aberto"); }); };
+  cv.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (algumaAberta()) { fecharTudo(); return; }
+    const p = pontoDoMundo(e);
+    tocarMundo(p.x, p.y);
+    clicar();
+    comecarHold("mundo");
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
+    cv.addEventListener(ev, function () { soltar("mundo"); });
+  });
   $("btnGerador").onclick = comprarGerador;
   $("modoCarvao").onclick = () => definirModo("carvao");
   $("modoLimpo").onclick = () => definirModo("limpo");
@@ -1527,7 +1851,7 @@ document.addEventListener("DOMContentLoaded", () => {
     b.onclick = function () { $(b.dataset.close).classList.remove("aberto"); };
   });
   document.addEventListener("pointerdown", function (e) {
-    if (e.target === cv || e.target === document.body || e.target === document.documentElement) fecharTudo();
+    if (e.target === document.body || e.target === document.documentElement) fecharTudo();
   });
   // no zoom, no text selection: this is a game, not a website
   ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
@@ -1536,8 +1860,14 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("touchmove", function (e) { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   document.addEventListener("dblclick", function (e) { e.preventDefault(); });
 
+  carregarRetencao();   // before the save: the night that just passed is paid at today's rate
   carregar();
-  carregarRetencao();
+  // Coming back is an event, not a cold start: after a night away — or on a day you had
+  // not played yet — the kitchen has kept a call for you, and it is worth double.
+  if (diaNovo || voltouDepoisDe >= CFG.chamadaVolta) {
+    chamadaDobrada = true;
+    chamadaT = CFG.chamadaIntervalo - 6;
+  }
   girarFato();
   desenhar();
 
@@ -1552,6 +1882,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const dt = Math.max(0, Math.min(0.25, (agora - ultimo) / 1000));
     ultimo = agora;
     simular(dt);
+    atualizarMobs(dt);
+    atualizarDrops(dt);
+    atualizarChamada(dt);
     if (S.u4) { // neighbors keep helping on their own
       autoAcc += dt * CFG.autoTapsPorSeg;
       let n = Math.min(4, Math.floor(autoAcc));
@@ -1565,6 +1898,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (retAcc > 30) { retAcc = 0; marcarDia(); salvarRetencao(); }
     tick++; animT += dt;
     drawScene();
+    desenharMundo();
     hudAcc += dt;
     if (hudAcc > 0.2) { desenhar(); hudAcc = 0; }
     requestAnimationFrame(frame);
