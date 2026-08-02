@@ -1152,7 +1152,7 @@ let tick = 0, animT = 0;
 let W = 320, H = 180, GROUND = 108, HX = 90;
 function fitCanvas() {
   // finer world pixels (hi-bit); hero & mobs are drawn at 2x on top
-  const SCALE = 2;
+  const SCALE = 3;
   W = Math.max(160, Math.ceil(window.innerWidth / SCALE));
   H = Math.max(220, Math.ceil(window.innerHeight / SCALE));
   GROUND = Math.round(H * 0.68);
@@ -2730,10 +2730,11 @@ function drawScene() {
     cx.globalAlpha = 1;
   }
 
-  // floating numbers
+  // Floating numbers. At 1 world px = 3 screen px a 5x7 glyph at scale 2 covered the hero,
+  // so the world text is drawn at scale 1 now: 15x21 screen px, still crisp, no longer a sign.
   floats.forEach(function (f) {
     cx.globalAlpha = Math.min(1, f.life / 20);
-    texto(f.txt, f.x, f.y - 14, 2, f.txt.charAt(0) === "+" ? "#ffe488" : "#fdf6e6", "#12242e");
+    texto(f.txt, f.x, f.y - 12, 1, f.txt.charAt(0) === "+" ? "#ffe488" : "#fdf6e6", "#12242e");
     cx.globalAlpha = 1;
     f.y -= 0.7; f.life--;
   });
