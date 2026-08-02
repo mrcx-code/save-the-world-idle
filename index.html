@@ -1743,11 +1743,19 @@ let magias = [], ultAtkT = 0, ultAtkTipo = -1;
 // rather than an object that hums all day. Everything the light does is a function of this.
 let flashCast = 0;
 function lancarMagia(tipo, bx, y0) {
-  const vida = 0.34;
   flashCast = 1;
-  if (tipo === 0) magias.push({ wx: worldX + bx + 32, y: y0 + 14, vx: 190, vy: 0, t: 0, vida: vida, f: 1.5 });
-  else if (tipo === 1) magias.push({ wx: worldX + bx + 28, y: y0 + 6, vx: 150, vy: -95, t: 0, vida: vida, f: 1.35 });
-  else magias.push({ wx: worldX + bx + 30, y: y0 + 26, vx: 90, vy: 150, t: 0, vida: 0.24, f: 1.7 });
+  // The two everyday casts are both basic, but they must not be the same animation twice.
+  // One goes LOW and forward along the dirt; the other whips UP and throws a spread.
+  if (tipo === 0) {
+    magias.push({ wx: worldX + bx + 32, y: y0 + 30, vx: 215, vy: -14, t: 0, vida: 0.34, f: 1.45 });
+  } else if (tipo === 1) {
+    for (let i = -1; i <= 1; i++) {
+      magias.push({ wx: worldX + bx + 32, y: y0 + 4, vx: 132 + i * 26, vy: -128 + i * 44,
+        t: 0, vida: 0.30, f: 1.05 });
+    }
+  } else {
+    magias.push({ wx: worldX + bx + 30, y: y0 + 26, vx: 90, vy: 150, t: 0, vida: 0.24, f: 1.7 });
+  }
 }
 function desenharMagias() {
   for (let i = magias.length - 1; i >= 0; i--) {
@@ -1840,18 +1848,48 @@ function drawHero() {
     jumpT--;
     if (jumpT <= 0) impacto(mid);                 // touchdown
   }
-  // cape: a trailing sheet in three value bands with a lit top fold, waving half a beat
-  // behind the step. Drawn far strip first so the near ones overlap them.
-  const flap = air ? -2 : (fi % 2 ? 1 : 0);
-  const capa = ["#c9455c", "#a8384c", "#8b2c3d", "#6e2130", "#521825"];
-  for (let i = 5; i >= 0; i--) {
-    const sxx = bx + 3 - i * 3;
-    const hh = Math.max(4, 15 - i * 2);
-    const sy = y0 + 16 + i + (i > 2 ? flap : 0);
-    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy, 4, hh + 2);
-    cx.fillStyle = capa[Math.min(4, (i >> 1) + 1)]; cx.fillRect(sxx, sy + 1, 3, hh);
-    cx.fillStyle = capa[Math.max(0, i >> 1)]; cx.fillRect(sxx, sy + 1, 3, 2);
+  // THE BODY CAN TURN. Everything from here to the wand is drawn inside one transform, so
+  // hit 1 can pitch forward into its swing, hit 2 can lean back out of its flick, and hit 3
+  // can carry him through a full front flip. The angle is quantised to sixteenths of a turn
+  // so it reads as hand-drawn frames rather than a sprite on a smooth vector hinge.
+  const girando = attackT > 0 && attackType === 2 && air;
+  let rot = 0;
+  // the turn is finished by 62% of the airtime, so he comes down upright and drives the
+  // wand into the dirt from a landed pose instead of arriving sideways
+  if (girando) rot = Math.round(Math.min(1, pj / 0.62) * 16) / 16 * Math.PI * 2;
+  else if (attackT > 0 && attackType === 0) rot = 0.15 * Math.min(1, attackT / 5);
+  else if (attackT > 0 && attackType === 1) rot = -0.17 * Math.min(1, attackT / 5);
+  const pivoX = mid, pivoY = y0 + 26;
+  if (girando) {                                    // afterimages smeared along the arc
+    for (let i = 2; i >= 1; i--) {
+      cx.save();
+      cx.translate(pivoX, pivoY + i * 3); cx.rotate(rot - i * 0.42); cx.translate(-pivoX, -pivoY);
+      cx.globalAlpha = 0.30 - i * 0.10;
+      drawMap("hero", HERO_MAP, HERO_COLORS, bx, y0);
+      cx.globalAlpha = 1; cx.restore();
+    }
   }
+  if (rot) { cx.save(); cx.translate(pivoX, pivoY); cx.rotate(rot); cx.translate(-pivoX, -pivoY); }
+  // Not a cape — a windbreaker tail and a scarf. A cape put a knight in a 2026 street; this
+  // is a kid running through their own neighbourhood, and the silhouette still trails.
+  const flap = air ? -2 : (fi % 2 ? 1 : 0);
+  const capa = ["#e05a70", "#c9455c", "#a8384c", "#8b2c3d", "#6e2130"];
+  for (let i = 3; i >= 0; i--) {                    // the scarf, off the back of the neck
+    const sxx = bx + 2 - i * 4, hh = 3 + (i & 1);
+    const sy = y0 + 11 + i + (i > 1 ? flap : 0);
+    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy - 1, 6, hh + 2);
+    cx.fillStyle = capa[Math.min(4, i + 1)]; cx.fillRect(sxx, sy, 4, hh);
+    cx.fillStyle = capa[Math.max(0, i - 1)]; cx.fillRect(sxx, sy, 4, 1);
+  }
+  cx.fillStyle = "#0e0f18"; cx.fillRect(bx - 1, y0 + 15, 9, 13);    // the jacket tail, cut short
+  cx.fillStyle = "#a8384c"; cx.fillRect(bx, y0 + 16, 7, 11 + flap);
+  cx.fillStyle = "#c9455c"; cx.fillRect(bx, y0 + 16, 7, 2);
+  cx.fillStyle = "#6e2130"; cx.fillRect(bx, y0 + 24 + flap, 7, 3);
+  cx.fillStyle = "#0e0f18"; cx.fillRect(bx + 1, y0 + 13, 8, 12);    // the backpack he carries
+  cx.fillStyle = "#2f4a7a"; cx.fillRect(bx + 2, y0 + 14, 6, 10);
+  cx.fillStyle = "#41639d"; cx.fillRect(bx + 6, y0 + 14, 2, 10);
+  cx.fillStyle = "#1b2c4c"; cx.fillRect(bx + 2, y0 + 18, 6, 2);
+  cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 3, y0 + 21, 2, 2);
   // back arm swings behind the torso
   const abx = bx + 4 + Math.round(P[4] * 0.4);
   cx.fillStyle = "#0e0f18"; cx.fillRect(abx - 1, y0 + 16, 6, 10);
@@ -1900,57 +1938,26 @@ function drawHero() {
   if (attackT > 0 && (attackT > ultAtkT || attackType !== ultAtkTipo)) lancarMagia(attackType, bx, y0);
   ultAtkT = attackT; ultAtkTipo = attackType;
   flashCast = Math.max(0, flashCast - 0.11);           // the charge burns off in ~9 frames
+  // THE THREE CASTS, and no two of them look alike.
+  //   1 · a low sweep: he pitches forward and drags the wand down across the dirt
+  //   2 · an upward flick: he leans back and whips it over his shoulder, throwing a spread
+  //   3 · the leap: a full front flip through the air, then the wand driven into the ground
+  // Only the drawing differs — reach, damage and timing are decided elsewhere.
+  const q = attackT > 0 ? Math.min(1, attackT / 6) : 0;  // the cast fading out
   if (attackT > 0) {
     attackT--;
-    const q = Math.min(1, attackT / 6);                 // the cast fading out
-    braco(asx + 5, y0 + 19);                            // arm first: the wand sits on top of it
-    if (attackType === 0) {            // a flat crescent of light thrown ahead of him
-      vara(bx + 18, y0 + 16, bx + 33, y0 + 12, 1.1);
-      const cxx = bx + 34, cyy = y0 + 14;
-      cx.globalAlpha = q * 0.7; cx.fillStyle = LUZ_FORA;
-      for (let i = 0; i < 16; i++) {
-        const a2 = -1.0 + i * 0.133;
-        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14) - 2, cyy + Math.round(Math.sin(a2) * 18) - 2, 6, 6);
-      }
-      cx.globalAlpha = q * 0.95; cx.fillStyle = LUZ_MEIO;
-      for (let i = 0; i < 16; i++) {
-        const a2 = -1.0 + i * 0.133;
-        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14) - 1, cyy + Math.round(Math.sin(a2) * 18) - 1, 4, 4);
-      }
-      cx.globalAlpha = q; cx.fillStyle = LUZ_CORE;
-      for (let i = 3; i < 13; i++) {
-        const a2 = -1.0 + i * 0.133;
-        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14), cyy + Math.round(Math.sin(a2) * 18), 2, 2);
-      }
-      cx.globalAlpha = 1;
-    } else if (attackType === 1) {     // a spiral climbing off the tip
-      vara(bx + 17, y0 + 19, bx + 28, y0 + 1, 1.2);
-      for (let i = 0; i < 9; i++) {
-        const t2 = i / 8;
-        luz(bx + 28 + Math.round(Math.sin(t2 * 5.4 + tick * 0.2) * 9), y0 + 2 - Math.round(t2 * 32),
-          0.9 - t2 * 0.42, q * (1 - t2 * 0.5));
-      }
-    } else {                           // LEAP: gathered overhead, then driven into the ground
-      const subindo = pj < 0.5;
-      if (subindo) {                   // both hands up, light collecting above the tip
-        vara(bx + 18, y0 - 2, bx + 20, y0 - 24, 1.8 + pj * 2.4);
-        for (let i = 0; i < 5; i++) {  // motes falling in toward what he is gathering
-          const a2 = tick * 0.16 + i * 1.26, rr = 24 - pj * 30;
-          luz(bx + 19 + Math.round(Math.cos(a2) * rr), y0 - 26 + Math.round(Math.sin(a2) * rr * 0.5), 0.65, 0.8);
-        }
-      } else {                         // driven down and forward, a spear of light to the dirt
-        const qq = (pj - 0.5) * 2;
-        vara(bx + 18, y0 + 13, bx + 30, y0 + 30, 1.5);
-        const tx = bx + 29, ty = y0 + 32, alt = Math.max(0, GROUND - ty);
-        cx.globalAlpha = 0.30; cx.fillStyle = LUZ_FORA; cx.fillRect(tx - 3, ty, 11, alt);
-        cx.globalAlpha = 0.60; cx.fillStyle = LUZ_MEIO; cx.fillRect(tx - 1, ty, 7, alt);
-        cx.globalAlpha = 0.95; cx.fillStyle = LUZ_CORE; cx.fillRect(tx + 1, ty, 3, alt);
-        cx.globalAlpha = 1;
-        for (let i = 0; i < 6; i++) {  // the arc it swept through, still hanging in the air
-          const a2 = (-1.1 + qq * 1.7) - i * 0.16;
-          luz(bx + 15 + Math.round(Math.cos(a2) * 40), y0 + 4 + Math.round(Math.sin(a2) * 40), 0.65, 0.75 - i * 0.11);
-        }
-      }
+    if (attackType === 0) {
+      braco(asx + 6, y0 + 24);
+      vara(bx + 12, y0 + 10, bx + 32, y0 + 27, 1.15);
+    } else if (attackType === 1) {
+      braco(asx + 5, y0 + 12);
+      vara(bx + 19, y0 + 22, bx + 33, y0 + 1, 1.3);
+    } else if (pj < 0.62) {
+      braco(asx + 4, y0 + 8);
+      vara(bx + 17, y0 + 4, bx + 21, y0 - 20, 1.6 + pj * 1.6);
+    } else {
+      braco(asx + 6, y0 + 22);
+      vara(bx + 18, y0 + 13, bx + 30, y0 + 30, 1.5);
     }
   } else {
     // At rest it is a stick he is carrying. No glow, no motes, nothing — an object picked up
@@ -1958,6 +1965,60 @@ function drawHero() {
     // when he fires, and this way every cast reads as something happening.
     braco(bx + 18, y0 + 13);
     vara(bx + 19, y0 + 15, bx + 30, y0 - 3, 0);
+  }
+  if (rot) cx.restore();                             // out of the body's transform: the magic
+  if (attackT > 0) {                                 // lives in the world, not on the hero
+    if (attackType === 0) {
+      // a low arc raked along the ground, brightest where it scours the dirt
+      const cxx = bx + 12, cyy = y0 + 12;
+      for (let p2 = 0; p2 < 3; p2++) {
+        const raio = [30, 27, 24][p2], esp = [7, 4, 2][p2];
+        cx.globalAlpha = q * [0.55, 0.85, 1][p2];
+        cx.fillStyle = [LUZ_FORA, LUZ_MEIO, LUZ_CORE][p2];
+        for (let i = p2; i < 15 - p2; i++) {
+          const a2 = -0.15 + i * 0.085;
+          cx.fillRect(cxx + Math.round(Math.cos(a2) * raio * 1.15) - (esp >> 1),
+            cyy + Math.round(Math.sin(a2) * raio) - (esp >> 1), esp, esp);
+        }
+      }
+      cx.globalAlpha = 1;
+      if (attackT > 6 && tick % 2 === 0) {           // dirt and green kicked up along the rake
+        parts.push({ x: bx + 30 + Math.random() * 16, y: GROUND - 2, vx: 20 + Math.random() * 40,
+          vy: -30 - Math.random() * 40, life: 0.45, c: Math.random() < 0.5 ? "#9b8468" : LUZ_FORA, grav: 130 });
+      }
+    } else if (attackType === 1) {
+      // a fan opening upward and forward: three ribs of light, not one spiral
+      for (let r2 = -1; r2 <= 1; r2++) {
+        for (let i = 1; i < 13; i++) {
+          const t2 = i / 12, a2 = -1.32 + r2 * 0.34;
+          luz(bx + 32 + Math.round(Math.cos(a2) * t2 * 38), y0 + 4 + Math.round(Math.sin(a2) * t2 * 38),
+            0.95 - t2 * 0.5, q * (1 - t2 * 0.55));
+        }
+      }
+    } else if (pj < 0.62) {
+      for (let i = 0; i < 5; i++) {                  // motes falling in toward what he gathers
+        const a2 = tick * 0.16 + i * 1.26, rr = 24 - pj * 30;
+        luz(bx + 19 + Math.round(Math.cos(a2) * rr), y0 - 26 + Math.round(Math.sin(a2) * rr * 0.5), 0.65, 0.8);
+      }
+    } else {
+      const qq = (pj - 0.62) * 2.6;                  // a spear of light driven into the dirt
+      const tx = bx + 29, ty = y0 + 32, alt = Math.max(0, GROUND - ty);
+      cx.globalAlpha = 0.30; cx.fillStyle = LUZ_FORA; cx.fillRect(tx - 3, ty, 11, alt);
+      cx.globalAlpha = 0.60; cx.fillStyle = LUZ_MEIO; cx.fillRect(tx - 1, ty, 7, alt);
+      cx.globalAlpha = 0.95; cx.fillStyle = LUZ_CORE; cx.fillRect(tx + 1, ty, 3, alt);
+      cx.globalAlpha = 1;
+      for (let i = 0; i < 6; i++) {                  // the arc it swept through, still hanging
+        const a2 = (-1.1 + qq * 1.7) - i * 0.16;
+        luz(bx + 15 + Math.round(Math.cos(a2) * 40), y0 + 4 + Math.round(Math.sin(a2) * 40), 0.65, 0.75 - i * 0.11);
+      }
+    }
+  }
+  if (girando) {                                     // the ring of light the flip draws
+    for (let i = 0; i < 7; i++) {
+      const a2 = rot - i * 0.5;
+      luz(pivoX + Math.round(Math.cos(a2) * 26), pivoY + Math.round(Math.sin(a2) * 26),
+        0.8 - i * 0.07, 0.85 - i * 0.11);
+    }
   }
   // dust puffs at the feet on each step (fluid running feel)
   if (fi !== lastFi && fi % 2 === 0) {
