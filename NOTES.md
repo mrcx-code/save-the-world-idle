@@ -90,6 +90,12 @@ Taps chain a 3-hit combo: horizontal slash → rising slash → **leap slam** (h
 cracked dirt). Holding the main button repeats at ~7 hits/s. Sprouts are capped at 40
 so holding in steady mode doesn't flood the scene.
 
+The hi-bit pass: sky and ground are dithered gradients (8×8 Bayer, ~12 levels) baked into
+offscreen canvases and rebuilt only when world health crosses a 1/48 step, so a normal
+frame is one `drawImage`. Distance dissolves layers into the horizon colour (`longe()`),
+solids drop a contact shadow (`sombra()`), and the frame closes with an `overlay` grade —
+cold while the world is sick, warm while it heals — plus a dithered vignette.
+
 Presentation: fullscreen pixel side-scroller. The world renders at 1 world px = 2 screen
 px; hero and monsters are drawn at 2× on top of that, so they read as chunky sprites
 over a fine-grained world. Everything (sky bands, mountains, city windows, foliage,
@@ -218,6 +224,30 @@ toda sessão começa lendo a última entrada.
   fechada. **Próximo passo: fila (f) — trabalho novo, critério "faz alguém voltar
   amanhã?". A lente óbvia agora é *Volta no dia 2*: com a primeira tocha caindo em
   ~8min, o dia 2 precisa ter o que oferecer, e hoje não tem quase nada.**
+
+- **2026-08-02 · passe visual "hi-bit", a pedido do dono.** O dono disse que ainda está
+  feio e perguntou se "32 ou 64 bits" resolveria. Não resolve: 32/64 bits eram PS1/N64,
+  o começo do 3D poligonal, que envelheceu pior que o 2D anterior. O que faz pixel art
+  parecer cara é a direção SNES-pra-frente — gradiente com dithering em vez de banda,
+  distância comendo o contraste, uma direção de luz só, e uma correção de cor no fim.
+  Feito: céu e chão viraram gradientes com dithering ordenado 8×8 (~12 níveis), assados
+  em canvas offscreen e refeitos só quando a saúde do mundo cruza um passo de 1/48;
+  perspectiva aérea (`longe()`) dissolvendo montanhas, cidade, linha de árvores e
+  arbustos no tom do horizonte; sombra de contato (`sombra()`) sob árvores, casas,
+  pedras e o herói — a do herói aperta conforme ele sobe, que é o que vende o salto;
+  brilho do sol assado no próprio gradiente do céu, com núcleo quente; e um passe final
+  de `overlay` (frio doente / quente curado) mais vinheta com dithering. Medido: 61 FPS,
+  igual a antes; refazer o céu custa 5,90ms, o chão 1,80ms, a vinheta 3,80ms — e só a
+  vinheta depende do viewport, então roda uma vez por resize. Quebrou no caminho: a
+  primeira versão ficou **pior** que o original — vinheta forte demais (0,42) e uma
+  correção de cor chapada em `source-over` que virava um véu cinza por cima de tudo.
+  Comparei os prints de antes e depois de verdade e refiz: vinheta em 0,24 começando
+  mais longe do centro, correção em `overlay` (que aprofunda escuro e levanta claro em
+  vez de lavar), sol com núcleo branco e menos névoa nas montanhas. Dúvida nova: o
+  gradiente do chão melhorou muito a maior área chapada da tela, mas o miolo — linha de
+  árvores e arbustos — ainda lê como mingau verde; separar aqueles dois planos por valor
+  é o próximo ganho grande. **Próximo passo: continuar o visual pelo miolo (separar os
+  planos verdes), ou voltar para a fila (f) e o dia 2 — o dono decide o que vale mais.**
 
 ## Would cut with one more day
 
