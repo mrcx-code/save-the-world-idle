@@ -1328,9 +1328,9 @@ const ICONS = {
   // key stays `sword` because the markup names it; what it draws is the wand. Its star is
   // white-cored with a green halo, the same magic colours the wand uses in the world, and
   // green is the one hue that still reads on cream chrome AND on the yellow action button.
-  sword: { pal: { W: "#fffce8", G: "#6fdd94", B: "#9a6f42" }, map: [
+  sword: { pal: { W: "#fffce8", G: "#6fdd94", B: "#9a6f42", R: "#c3a878" }, map: [
     "........W...", "......G.W.G.", ".......WWW..", "....GWWWWWG.", ".......WWW..", "......G.B.G.",
-    "......BB....", ".....BB.....", "....BB......", "...BB.......", "..BB........", "............"] }
+    "......BB....", ".....BB.....", "....RB......", "...RR.......", "..BR........", "............"] }
 };
 function renderIcon(cnv, name) {
   const ic = ICONS[name]; if (!ic || !cnv) return;
@@ -1651,9 +1651,12 @@ function luz(x, y, f, a) {
                 [Math.round(r * 1.45), 0.42, LUZ_MEIO], [r, 0.88, LUZ_QUENTE]];
   for (let i = 0; i < anel.length; i++) {
     const rr = Math.max(2, anel[i][0]);
+    // The chamfer has to grow with the ring. It was a flat 1 px, which is an octagon at
+    // r=3 and a plain square at r=15 — so a bright cast used to bloom into a slab.
+    const ins = Math.max(1, Math.round(rr * 0.32));
     cx.globalAlpha = anel[i][1] * al; cx.fillStyle = anel[i][2];
-    cx.fillRect(x - rr, y - rr + 1, rr * 2, rr * 2 - 2);          // an octagon out of two
-    cx.fillRect(x - rr + 1, y - rr, rr * 2 - 2, rr * 2);          // crossed rectangles
+    cx.fillRect(x - rr, y - rr + ins, rr * 2, rr * 2 - ins * 2);  // an octagon out of two
+    cx.fillRect(x - rr + ins, y - rr, rr * 2 - ins * 2, rr * 2);  // crossed rectangles
   }
   cx.globalAlpha = al; cx.fillStyle = LUZ_CORE;
   cx.fillRect(x - 1, y - 1, 3, 3);
@@ -1665,8 +1668,13 @@ function luz(x, y, f, a) {
 // reaches and how hard it lands are decided elsewhere and are none of this code's business.
 // It is spawned off the attack state that is already there and drawn on top of it.
 let magias = [], ultAtkT = 0, ultAtkTipo = -1;
+// The charge lives here and nowhere else. It is set the instant a cast leaves the wand and
+// falls back to zero a few frames later, so the wand is a stick with a bright moment in it
+// rather than an object that hums all day. Everything the light does is a function of this.
+let flashCast = 0;
 function lancarMagia(tipo, bx, y0) {
   const vida = 0.34;
+  flashCast = 1;
   if (tipo === 0) magias.push({ wx: worldX + bx + 32, y: y0 + 14, vx: 190, vy: 0, t: 0, vida: vida, f: 1.5 });
   else if (tipo === 1) magias.push({ wx: worldX + bx + 28, y: y0 + 6, vx: 150, vy: -95, t: 0, vida: vida, f: 1.35 });
   else magias.push({ wx: worldX + bx + 30, y: y0 + 26, vx: 90, vy: 150, t: 0, vida: 0.24, f: 1.7 });
@@ -1693,28 +1701,58 @@ function desenharMagias() {
     }
   }
 }
-// The wand itself: a worn wooden shaft two pixels thick, a bound grip, a twist of green
-// cord below the tip, and a tip that is always a little alight. Walked one pixel at a time
-// along the line and drawn in three passes — outline, body, sunlit side — so it stays a
-// clean stick at any angle instead of a fat staircase of overlapping blocks.
+// The wand is an ordinary thing: a branch someone worked a little and bound at one end.
+// It is NOT an artefact — at rest it gives off no light at all, which is what lets a cast
+// be an event. Three things keep it from reading as a log, which it used to: it is walked
+// one pixel at a time and drawn in three passes (outline, body, sunlit side) so a diagonal
+// stays a stick; it **tapers**, two pixels thick at the grip down to one at the tip; and it
+// **bows** slightly across its span, because a branch that is perfectly straight is a dowel.
+// `brilho` is the charge, and it is only ever non-zero while he is casting.
 function vara(x0, y0v, x1, y1v, brilho) {
   const n = Math.max(2, Math.abs(x1 - x0), Math.abs(y1v - y0v));
-  const px = [], py = [];
+  const dx = x1 - x0, dy = y1v - y0v, len = Math.max(1, Math.hypot(dx, dy));
+  const nx = -dy / len, ny = dx / len;             // perpendicular, for the bow
+  const px = [], py = [], pw = [];
   for (let i = 0; i <= n; i++) {
-    px.push(Math.round(x0 + (x1 - x0) * i / n));
-    py.push(Math.round(y0v + (y1v - y0v) * i / n));
+    const t = i / n, arc = Math.sin(t * Math.PI) * 1.35;
+    px.push(Math.round(x0 + dx * t + nx * arc));
+    py.push(Math.round(y0v + dy * t + ny * arc));
+    pw.push(t < 0.62 ? 2 : 1);                     // thick at the hand, whittled at the tip
   }
-  cx.fillStyle = "#20160f";
-  for (let i = 0; i <= n; i++) cx.fillRect(px[i] - 1, py[i] - 1, 4, 4);
+  cx.fillStyle = "#22180f";
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i] - 1, py[i] - 1, pw[i] + 2, pw[i] + 2);
   cx.fillStyle = "#6b4a2e";
-  for (let i = 0; i <= n; i++) cx.fillRect(px[i], py[i], 2, 2);
-  cx.fillStyle = "#a87c4e";                        // the sun catches one side of the shaft
-  for (let i = 0; i <= n; i++) cx.fillRect(px[i] + 1, py[i], 1, 2);
-  cx.fillStyle = "#3f2a1a";                        // bound grip at the near end
-  for (let i = 0; i < Math.min(5, n); i++) cx.fillRect(px[i], py[i], 2, 2);
-  const c = Math.max(0, n - 4);                    // twist of green cord below the tip
-  cx.fillStyle = "#2ea36a"; cx.fillRect(px[c] - 1, py[c] - 1, 4, 3);
-  luz(px[n] + 1, py[n] + 1, brilho);
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i], py[i], pw[i], pw[i]);
+  cx.fillStyle = "#a2794c";                        // the sun catches one side of the shaft
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i] + pw[i] - 1, py[i], 1, pw[i]);
+  const wraps = Math.min(6, n - 1);                // the binding: cord wrapped round the grip
+  for (let i = 1; i <= wraps; i++) {
+    cx.fillStyle = i % 2 ? "#c3a878" : "#5c4a30";
+    cx.fillRect(px[i], py[i], 2, 2);
+  }
+  const kx = px[n], ky = py[n];                    // the tip is just a knot in the wood
+  cx.fillStyle = "#22180f"; cx.fillRect(kx - 1, ky - 1, 4, 4);
+  cx.fillStyle = "#7d5836"; cx.fillRect(kx, ky, 2, 2);
+  cx.fillStyle = "#a2794c"; cx.fillRect(kx + 1, ky, 1, 1);
+  if (brilho > 0) {                                // ...and only while he is casting, a fire
+    luz(kx + 1, ky + 1, Math.min(1.9, brilho + flashCast * 0.7), 1);
+    if (flashCast > 0.12) {
+      // The muzzle flash. It is a *star*, not a bloom: a bloom big enough to read as an
+      // event swallows the hero, while eight rays off the tip stay a pixel shape and let
+      // the wand keep its silhouette right through the brightest frame.
+      const r = Math.round(4 + flashCast * 13), d = Math.round(r * 0.6), a = flashCast;
+      cx.globalAlpha = a * 0.55; cx.fillStyle = LUZ_MEIO;
+      cx.fillRect(kx + 1 - r, ky, r * 2 + 2, 2); cx.fillRect(kx, ky + 1 - r, 2, r * 2 + 2);
+      for (let s = 2; s <= d; s++) {               // the diagonals, one pixel at a time
+        cx.fillRect(kx + 1 + s, ky + 1 - s, 1, 1); cx.fillRect(kx - s, ky + 1 - s, 1, 1);
+        cx.fillRect(kx + 1 + s, ky + s, 1, 1); cx.fillRect(kx - s, ky + s, 1, 1);
+      }
+      cx.globalAlpha = a; cx.fillStyle = LUZ_CORE;
+      const c = Math.max(2, r >> 1);
+      cx.fillRect(kx + 1 - c, ky + 1, c * 2, 1); cx.fillRect(kx + 1, ky + 1 - c, 1, c * 2);
+      cx.globalAlpha = 1;
+    }
+  }
 }
 function drawHero() {
   // the leap: rises fast, hangs, then drops hard onto the ground
@@ -1791,6 +1829,7 @@ function drawHero() {
   // nothing about what gets hit, how far or how hard is touched.
   if (attackT > 0 && (attackT > ultAtkT || attackType !== ultAtkTipo)) lancarMagia(attackType, bx, y0);
   ultAtkT = attackT; ultAtkTipo = attackType;
+  flashCast = Math.max(0, flashCast - 0.11);           // the charge burns off in ~9 frames
   if (attackT > 0) {
     attackT--;
     const q = Math.min(1, attackT / 6);                 // the cast fading out
@@ -1844,14 +1883,11 @@ function drawHero() {
       }
     }
   } else {
-    // at rest the wand is carried up and forward, tip lit — the silhouette anchor the
-    // blade used to be, and a reminder that the thing is always awake
+    // At rest it is a stick he is carrying. No glow, no motes, nothing — an object picked up
+    // off the ground. That is deliberate: a wand that is always lit has nowhere left to go
+    // when he fires, and this way every cast reads as something happening.
     braco(bx + 18, y0 + 13);
-    vara(bx + 19, y0 + 14, bx + 28, y0 - 4, 0.9 + Math.sin(tick * 0.09) * 0.16);
-    if (tick % 22 === 0) {             // one mote drifting off the tip now and then
-      parts.push({ x: bx + 29, y: y0 - 3, vx: 4 + Math.random() * 8, vy: -10 - Math.random() * 10,
-        life: 0.9, c: MOTES[Math.floor(Math.random() * MOTES.length)], aura: LUZ_MEIO, grav: -8 });
-    }
+    vara(bx + 19, y0 + 15, bx + 30, y0 - 3, 0);
   }
   // dust puffs at the feet on each step (fluid running feel)
   if (fi !== lastFi && fi % 2 === 0) {
