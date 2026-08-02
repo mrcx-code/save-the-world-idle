@@ -1361,9 +1361,12 @@ const ICONS = {
   up: { pal: { X: "#ffcd75" }, map: [
     "............", ".....XX.....", "....XXXX....", "...XXXXXX...", "..XXXXXXXX..", ".XXXXXXXXXX.",
     "....XXXX....", "....XXXX....", "....XXXX....", "....XXXX....", "............", "............"] },
-  torch: { pal: { X: "#ef7d57", W: "#ffcd75", K: "#8a5a3a" }, map: [
-    "............", ".....WW.....", "....WXXW....", "....XXXX....", "....XXXX....", ".....XX.....",
-    "....KKKK....", ".....KK.....", ".....KK.....", ".....KK.....", ".....KK.....", "............"] },
+  // A wooden stick with a burning rag on it is a dungeon prop, and this game is a street in
+  // 2026. Same meaning — the thing you keep and hand on — as a modern emblem: a flame inside
+  // a badge, in the purple the torch sheet and the skills already use.
+  torch: { pal: { X: "#ef7d57", W: "#ffcd75", K: "#2b1f4a", G: "#8d5bd6" }, map: [
+    "............", "...GGGGGG...", "..GKKKKKKG..", ".GKK.WW.KKG.", ".GK.WWWW.KG.", ".GK.WXXW.KG.",
+    ".GKWXXXXWKG.", ".GKWXWWXWKG.", "..GKWXXWKG..", "...GGGGGG...", "............", "............"] },
   flame: { pal: { X: "#ef7d57", W: "#ffcd75" }, map: [
     "............", ".....X......", "....XX......", "....XXX.....", "...XXXXX....", "...XWXXX....",
     "..XWWXXX....", "..XWWWXX....", "...XWWX.....", "....XX......", "............", "............"] },
@@ -2508,6 +2511,9 @@ function drawScene() {
       }
     } else if (kind === 9) { // mossy rocks, faceted and lit from the upper right
       sombra(sx + 20, GROUND, 20, 0.20);
+      cx.fillStyle = "#12242e";
+      cx.fillRect(sx + 12, GROUND - 9, 16, 9); cx.fillRect(sx + 16, GROUND - 10, 11, 3);
+      cx.fillRect(sx + 24, GROUND - 6, 9, 6);
       cx.fillStyle = "#3b3944"; cx.fillRect(sx + 13, GROUND - 8, 14, 8);
       cx.fillStyle = "#6d6a72"; cx.fillRect(sx + 14, GROUND - 7, 12, 7);
       cx.fillStyle = "#8b8794"; cx.fillRect(sx + 17, GROUND - 9, 9, 5);
@@ -2523,6 +2529,10 @@ function drawScene() {
     // community kitchen: a little stand where everyone eats (appears as the world heals)
     if (h > 0.45 && hash01(k * 61 + 7) > 0.78) {
       const kx = sx + 1;
+      cx.fillStyle = "#12242e";                       // keyline under the whole stand
+      cx.fillRect(kx - 1, GROUND - 12, 3, 12); cx.fillRect(kx + 13, GROUND - 12, 3, 12);
+      cx.fillRect(kx - 2, GROUND - 14, 19, 3); cx.fillRect(kx, GROUND - 7, 15, 7);
+      cx.fillRect(kx + 3, GROUND - 10, 8, 4);
       cx.fillStyle = "#4a3020"; cx.fillRect(kx, GROUND - 11, 1, 11); cx.fillRect(kx + 14, GROUND - 11, 1, 11); // posts
       for (let a = 0; a < 8; a++) { cx.fillStyle = a % 2 ? "#e8edf6" : "#c9455c"; cx.fillRect(kx - 1 + a * 2, GROUND - 13, 2, 2); } // striped awning
       cx.fillStyle = "#7d4f30"; cx.fillRect(kx + 1, GROUND - 6, 13, 6);   // counter
@@ -2558,12 +2568,18 @@ function drawScene() {
       const pxx = sx + 38, pc = ["#c9455c", "#2f8be0", "#38b764", "#ffcd75"][((k % 4) + 4) % 4];
       const pb = Math.floor((tick + k * 5) / 10) % 2;
       cx.fillStyle = "rgba(0,0,0,.2)"; cx.fillRect(pxx - 1, GROUND, 5, 1);
+      cx.fillStyle = "#12242e";                       // a person needs a keyline more than
+      cx.fillRect(pxx - 1, GROUND - 11, 5, 5);        // anything else out there: they are
+      cx.fillRect(pxx - 2, GROUND - 8, 7, 6);         // small and they stand against grass
       cx.fillStyle = "#f6cfa2"; cx.fillRect(pxx, GROUND - 10, 3, 3);
       cx.fillStyle = pc; cx.fillRect(pxx - 1, GROUND - 7, 5, 4);
       cx.fillStyle = "#2b2f45";
       cx.fillRect(pxx - 1, GROUND - 3, 2, 3); cx.fillRect(pxx + 2, GROUND - 3 + (pb ? -1 : 0), 2, 3 + (pb ? 1 : 0));
     }
     if (kind === 8) { // modern street lamp (solar!): lights up when the world heals
+      cx.fillStyle = "#12242e";                       // keyline first, one pixel proud
+      cx.fillRect(sx + 21, GROUND - 23, 4, 23); cx.fillRect(sx + 21, GROUND - 24, 10, 4);
+      cx.fillRect(sx + 26, GROUND - 27, 8, 5); cx.fillRect(sx + 27, GROUND - 22, 6, 5);
       cx.fillStyle = "#3e4760"; cx.fillRect(sx + 22, GROUND - 22, 2, 22);
       cx.fillRect(sx + 22, GROUND - 23, 8, 2);
       cx.fillStyle = "#2b2f45"; cx.fillRect(sx + 27, GROUND - 26, 6, 3); // solar panel on top
