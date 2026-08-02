@@ -764,6 +764,88 @@ toda sessão começa lendo a última entrada.
   medido com cuidado. Dúvida honesta: com a faixa separadora, a serra do fundo quase some;
   o próprio `DIRECAO.md` já tinha anotado isso como falha do mockup C.**
 
+- **2026-08-02 · a varinha ficou sem luz, o mundo ganhou sotaque, e a direção C finalmente
+  saiu do papel.** Sessão longa, com duas rodadas de correção do dono no meio dela.
+
+  **A varinha.** O dono disse que ela brilhava demais em repouso. Tirei a luz do estado
+  parado *inteira* — nada de ponta acesa, nada de cordão verde, nada de mote saindo a cada
+  22 quadros. Ela virou galho: afina de 2 px no cabo para 1 px na ponta, tem uma curvatura
+  de 0,95 px no meio do vão (era isso que fazia ela ler como tora no ângulo de repouso), um
+  nó de madeira na ponta e um cordão amarrado no cabo. Toda a energia foi para o disparo:
+  `flashCast` sobe a 1 no instante em que a magia sai e queima em ~9 quadros. **Quebrou no
+  caminho:** a primeira versão do clarão usava `luz()` com fator 2,8 e virou uma laje
+  amarela de 60×60 px cobrindo o herói — a causa é que o chanfro do octógono do `luz()` era
+  1 px fixo, o que é octógono em r=3 e **quadrado** em r=15. Corrigi o `luz()` (chanfro
+  proporcional, `r*0.32`), o que melhorou todo brilho do jogo, e troquei o clarão por uma
+  **estrela de oito raios**, que é forma de pixel e não engole a silhueta.
+
+  **Sotaque brasileiro, tudo no cenário, texto segue em inglês.** (1) **Ipê**: galho seco e
+  cinza com o mundo doente, coroa meio lavada a partir de 38% de saúde e amarelo ou rosa
+  cheio depois de 68%, com pétalas caindo. Três paletas autoradas em vez de interpolação —
+  "seco → botão → florada" é história, interpolação é borrão. Preso ao `worldHealth()` e não
+  só ao `alive` do segmento, senão aparecia árvore saturada em quadro desbotado roubando o
+  papel da varinha. (2) **Monumentos no horizonte**, um por trecho de mundo, na mesma
+  linguagem de silhueta da cidade: maciço com a figura de braços abertos no pico, parlamento
+  de cúpula e taça invertida entre as duas lâminas, museu pendurado em dois pórticos
+  vermelhos, elevador ligado ao alto da escarpa por uma passarela, e teatro com cúpula
+  nervurada. Lugares, nunca marcas nem pessoas. (3) **O morro**: casas pintadas empilhadas
+  na ladeira, telhado, caixa d'água e uma janela que acende. (4) **Bandeirinhas** da barraca
+  até um poste do outro lado da calçada, com mesa e dois banquinhos embaixo, e
+  **vitória-régia** no lago. **Medido:** os monumentos estavam enraizados em `GROUND-8` como
+  a cidade e a linha de árvores comia todos — subiram para `GROUND-29` e passaram a pisar na
+  faixa separadora, que é a arquitetura de valor funcionando em vez de brigando.
+
+  **Depois vieram os dois recados duros do dono** ("está patético, muito basiquinho", "não
+  quero 8 bit, quero atual", "os botões estão brancões e chapados", "os quatro botões têm o
+  mesmo peso", "os dois primeiros ataques estão iguais", "cuidado com a vibe medieval"), e a
+  sessão virou fechar o que a direção C nunca terminou:
+
+  - **Silhuetas de verdade.** A serra era pirâmide de 5 degraus repetindo num espaçamento
+    fixo; virou `serra()`, altura por coluna de três senos de períodos diferentes, contínua
+    no mundo inteiro (não repete nunca), com o sol pegando toda encosta virada para a
+    direita. **Medido: ~40 retângulos por camada em vez de 195**, porque corridas de altura
+    igual são fundidas. As nuvens eram três retângulos com lóbulos pregados; agora são
+    união de discos sobre uma base plana, topo por coluna, coroa iluminada e barriga.
+  - **Densidade 1:3, o passo que ninguém tinha ousado.** **Medido em 390×844: buffer de
+    195×422 (82.290 px) para 130×281 (36.530 px) — 56% menos preenchimento por quadro; o
+    herói de 10,4% para 15,7% da altura do quadro, que é a faixa da referência; FPS 61 antes
+    e 61 depois.** Ou seja: o pixel maior não custou nada e o buffer menor pagou os sprites
+    maiores. Junto teve de ir a fonte do mundo, que era escala 2 e virava um outdoor sobre o
+    peito do herói a 3 px por pixel de mundo — está em escala 1 (15×21 px de tela).
+  - **Três ataques que parecem três coisas.** O 1 virou varrida **baixa** (ele inclina para
+    frente, raspa a varinha no chão, arco de três tons levantando terra e verde); o 2 virou
+    chicotada **para cima** (inclina para trás, leque de três nervuras, e o projétil nasce
+    como três em leque). O 3 é o showpiece: o corpo passou a ser desenhado dentro de uma
+    transformação, então o salto carrega um **mortal completo** — giro quantizado em
+    dezesseis avos para ler como quadros desenhados, dois rastros na curva, anel de luz em
+    volta, e **o giro termina em 62% do tempo de ar** para ele descer em pé e cravar a
+    varinha no chão em vez de chegar de lado. Salto, `jumpT` e onda de choque intactos.
+  - **Medieval → 2026.** A capa saiu (capa põe cavaleiro numa rua de 2026): agora é aba
+    curta de jaqueta, cachecol saindo da nuca e mochila com fivela. O ícone da tocha era
+    graveto com trapo em chamas; virou emblema — chama dentro de um brasão, no roxo que a
+    folha da tocha e as skills já falam.
+  - **A HUD virou uma linguagem só, e escura.** Creme chapado em tudo lia lavado contra um
+    mundo saturado, e ainda deixava o jogo falando dois idiomas (creme por cima de folhas
+    marinho). Agora é um azul-tinta profundo com gradiente vertical de verdade, fio de luz
+    de 1 px no topo, contorno duro e sombra dura — a construção do passe de pôster ficou, só
+    o preenchimento e o valor mudaram. **O ouro virou reservado**: só o botão principal
+    (gradiente de três paradas, brilho interno em cima, sombra interna embaixo, sombra de
+    6 px). E o menu deixou de ser quatro lajes iguais: virou uma bandeja com divisórias de
+    fio e larguras que seguem o peso — leitura de ritmo 2,1 (é a decisão que o protótipo
+    existe para medir), projetos 1,35 e em ouro (é a compra que se repete), upgrades e tocha
+    0,8 (são lugares que se visita). **Sem tocar no markup** — largura, preenchimento e
+    valor só.
+  - **Contorno nos props**: poste, pedras, cozinha comunitária e as pessoas na rua eram
+    preenchimento chapado sobre grama; cada um desenha agora a silhueta 1 px maior antes do
+    corpo.
+
+  **O que não fiz e por quê:** as **duas paletas autoradas** (os ~40 `lerpC()` espalhados)
+  continuam de pé. É refatoração ampla e mecânica, e preferi gastar a sessão nos itens que o
+  dono viu e nomeou. É o maior item restante e é o que faz os estados intermediários de
+  `worldHealth()` deixarem de ser lama.
+  **Próximo passo: as duas paletas autoradas; depois, mais tons por material nos sprites do
+  herói e dos monstros — hoje eles têm 20 cores mas pouca modelagem, e a 1:3 isso aparece.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the

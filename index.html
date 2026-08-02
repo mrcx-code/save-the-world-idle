@@ -14,9 +14,16 @@
     --ink: #0e0f1a; --panel: #1f2b57; --panel2: #29366f;
     --texto: #f4f4f4; --sub: #94b0c2;
     --gold: #ffcd75; --gold2: #ef7d57;
-    /* poster chrome: solid cream, hard dark outline, hard offset shadow — no transparency,
-       no gradients on panels. It has to hold its own against a very bright world. */
-    --creme: #fdf6e6; --contorno: #12242e; --tinta: #12242e; --tinta2: #6b7a82;
+    /* The chrome is DARK and has depth. The poster pass made every surface flat cream and
+       against a saturated world it read washed out — and it also left the game speaking two
+       languages, cream chrome over navy sheets. One language now: a deep blue-ink fill with
+       a real vertical gradient, a 1px lit top edge, a hard ink outline and a hard offset
+       shadow. The construction the poster pass won is kept; only the fill and the value
+       changed. Gold is reserved for the one action that matters — contrast is the cheapest
+       way to say which button is the main button. */
+    --chromeA: #2c3a68; --chromeB: #18203d; --chromeT: #eaf0ff; --chromeS: #93a6cf;
+    --ouroA: #ffd873; --ouroB: #f0a22e;
+    --creme: #fdf6e6; --contorno: #0b1020; --tinta: #101a30; --tinta2: #6b7a82;
     --bad: #b13e53; --good: #38b764; --blue: #41a6f6; --purple: #8d5bd6;
     /* responsive type scale — grows with the screen */
     --ui: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", sans-serif;
@@ -45,18 +52,20 @@
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0;
     top: calc(6px + env(safe-area-inset-top));
     display: flex; gap: 5px; justify-content: center; padding: 0 6px; pointer-events: none; }
-  .chip { background: var(--creme); border: 2px solid var(--contorno); padding: 5px 8px; flex: 1 1 0;
-    max-width: 170px; min-width: 0; color: var(--tinta); box-shadow: 0 3px 0 var(--contorno);
+  .chip { background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
+    border: 2px solid var(--contorno); padding: 5px 8px; flex: 1 1 0;
+    max-width: 170px; min-width: 0; color: var(--chromeT);
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.16);
     display: flex; align-items: center; gap: 7px; }
   .cInfo { min-width: 0; flex: 1; }
-  .chip .rotulo { font-size: var(--fs-xs); color: var(--tinta2); white-space: nowrap; overflow: hidden;
+  .chip .rotulo { font-size: var(--fs-xs); color: var(--chromeS); white-space: nowrap; overflow: hidden;
     letter-spacing: .06em; font-weight: 700; }
-  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1.1;
-    font-variant-numeric: tabular-nums; }
+  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1.1; color: var(--chromeT);
+    font-variant-numeric: tabular-nums; text-shadow: 0 1px 0 rgba(0,0,0,.55); }
   .pi { image-rendering: pixelated; width: 22px; height: 22px; flex: 0 0 auto; }
   .pi.big { width: 30px; height: 30px; }
-  #energia { color: #c9741a; } #poluicao { color: var(--bad); } #worldPct { color: #177a45; }
-  .minibar { height: 5px; background: #ddd3bc; border: 1px solid var(--contorno); margin-top: 3px; }
+  #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: #7ce8a4; }
+  .minibar { height: 5px; background: #0d1226; border: 1px solid var(--contorno); margin-top: 3px; }
   .minibar > div { height: 100%; background: var(--bad); transition: width .3s; }
   /* where the team is heading, not just where it is */
   .chip .tend { margin-top: 4px; font-size: 7px; white-space: nowrap; }
@@ -95,44 +104,69 @@
      control block on load and on resize, and it is what stops this covering the menu bar. */
   #fato { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
     bottom: calc(var(--hControles, 122px) + env(safe-area-inset-bottom)); width: min(520px, 94vw);
-    font-size: var(--fs-xs); color: var(--tinta); line-height: 1.45;
-    background: var(--creme); border: 2px solid var(--contorno); border-left-width: 5px;
-    box-shadow: 0 3px 0 var(--contorno); padding: 5px 8px;
+    font-size: var(--fs-xs); color: #c6d4f0; line-height: 1.45;
+    background: linear-gradient(180deg, #202a4c, #141b33);
+    border: 2px solid var(--contorno); border-left: 5px solid var(--gold);
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.12); padding: 5px 8px;
     max-height: 3.9em; overflow: hidden; }
-  #fato b { color: #1668a8; }
+  #fato b { color: var(--gold); }
 
   /* ---- bottom controls ---- */
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
     bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
-  #menuRow { display: flex; gap: 6px; margin-bottom: 7px; }
-  #menuRow button { flex: 1; padding: 7px 4px; font-size: var(--fs-sm);
+  /* THE MENU IS A TRAY, NOT FOUR IDENTICAL SLABS. Four buttons of equal width and equal
+     weight told the eye they were four equal things, and they are not: the rhythm readout
+     is the decision the whole game exists to measure, projects is the purchase you make
+     over and over, and upgrades and the torch are places you visit occasionally. They get
+     width and value in that order, inside one dark tray with hairline dividers, so the row
+     reads as a menu bar rather than a shelf of buttons. Markup untouched — this is width,
+     fill and value only. */
+  #menuRow { display: flex; gap: 0; margin-bottom: 7px; padding: 3px;
+    background: linear-gradient(180deg, #202a4e, #10162c);
+    border: 2px solid var(--contorno); border-radius: 2px;
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.10); }
+  #menuRow button { flex: 1; padding: 7px 4px; font-size: var(--fs-sm); border: 0; border-radius: 0;
+    background: transparent; box-shadow: none; color: #b9c8e8;
     display: flex; align-items: center; justify-content: center; gap: 6px; }
-  /* Poster chrome from the estetica pass; the components below it are the jogabilidade
-     pass's new UI, kept because they are structure, not style. */
+  #menuRow button + button { border-left: 1px solid rgba(255,255,255,.09); }
+  #menuRow button:not(:disabled):active { transform: none; background: rgba(255,255,255,.09); box-shadow: none; }
+  #openProjects { flex: 1.35 !important; color: var(--gold); font-weight: 800; }
+  #openUpgrades, #openTorch { flex: .8 !important; }
   button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno); border-radius: 2px;
-    cursor: pointer; color: var(--tinta); background: var(--creme); text-transform: uppercase;
-    box-shadow: 0 3px 0 var(--contorno); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+    cursor: pointer; color: var(--chromeT); text-transform: uppercase;
+    background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14);
+    touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   button:disabled { opacity: .5; cursor: default; }
-  button:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--contorno); }
-  /* the mode button is a STATE readout, not an icon that swaps */
-  #modeQuick { gap: 5px; padding: 6px 3px; }
+  button:not(:disabled):active { transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14); }
+  /* the mode button is a STATE readout, not an icon that swaps — and it is the widest thing
+     in the row because it is the decision the prototype was built to measure */
+  #modeQuick { flex: 2.1 !important; gap: 5px; padding: 6px 5px; border: 2px solid var(--contorno) !important;
+    border-radius: 2px; margin-left: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.14) !important; }
   #modeQuick .mq { display: flex; flex-direction: column; align-items: flex-start; min-width: 0;
     line-height: 1.25; overflow: hidden; }
   #modeQuick .mq b { font-size: 9px; font-weight: normal; }
   #modeQuick .mq i { font-size: 8px; font-style: normal; opacity: .85; white-space: nowrap; }
-  #modeQuick.fast { background: #f6c9c1; border-color: var(--contorno); color: #8f2233; }
-  #modeQuick.steady { background: #c8ecc6; border-color: var(--contorno); color: #14582f; }
+  #modeQuick.fast { background: linear-gradient(180deg, #8c2c3e, #4b1622) !important; color: #ffd2cd; }
+  #modeQuick.steady { background: linear-gradient(180deg, #1f7043, #0e3a21) !important; color: #c9f5d4; }
   /* it is costing you right now: say so without words */
   #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
-  @keyframes doendo { 0% { box-shadow: 0 3px 0 var(--contorno) } 50% { box-shadow: 0 3px 0 var(--contorno), 0 0 16px rgba(255,107,87,.85) } 100% { box-shadow: 0 3px 0 var(--contorno) } }
-  #btnClique { width: 100%; padding: 11px 10px; font-size: var(--fs-lg); font-weight: 800;
-    background: #ffc23d; color: var(--contorno); border-width: 3px;
+  @keyframes doendo { 0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 16px rgba(255,107,87,.9) } 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } }
+  /* the one action of the game, and it should not be arguable which one it is */
+  #btnClique { width: 100%; padding: 13px 10px; font-size: var(--fs-lg); font-weight: 800;
+    background: linear-gradient(180deg, #ffe28f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
+    color: #2a1a06; border-width: 3px; letter-spacing: .02em;
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    box-shadow: 0 5px 0 var(--contorno); position: relative; }
+    text-shadow: 0 1px 0 rgba(255,255,255,.45);
+    box-shadow: 0 6px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.55),
+      inset 0 -3px 0 rgba(120,60,0,.28); position: relative; }
   #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
-    color: rgba(18,36,46,.5); letter-spacing: 1px; }
-  #btnClique.segurando { transform: translateY(3px); background: #ffd469; box-shadow: 0 2px 0 var(--contorno); }
-  #btnClique.segurando #dicaHold { color: rgba(18,36,46,.85); }
+    color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
+  #btnClique.segurando { transform: translateY(4px);
+    background: linear-gradient(180deg, #fff0b8 0%, #ffdd8c 34%, #f7b845 100%);
+    box-shadow: 0 2px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.6); }
+  #btnClique.segurando #dicaHold { color: rgba(42,26,6,.85); }
   /* the wand's charge, on the button that swings it */
   #foco { position: absolute; left: 0; top: 0; height: 4px; width: 0%; background: var(--purple);
     box-shadow: 0 0 6px rgba(141,91,214,.9); transition: width .2s; }
@@ -147,8 +181,9 @@
      again the moment a button grows a line of text */
   .sheet { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%) translateY(110%);
     bottom: calc(var(--hControles, 120px) + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
-    background: #1b2a4e; border: 3px solid var(--contorno); border-radius: 2px;
-    box-shadow: 0 5px 0 var(--contorno);
+    background: linear-gradient(180deg, #24325c 0%, #161e3a 55%, #121933 100%);
+    border: 3px solid var(--contorno); border-radius: 2px;
+    box-shadow: 0 5px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.13);
     /* the menu bar is protected by `bottom`, not by this: max-height only grows upward,
        so the projects sheet can hold its explanation without reaching the buttons below */
     padding: 12px; transition: transform .22s ease, opacity .22s ease; max-height: 62vh; overflow-y: auto;
@@ -156,12 +191,15 @@
   .sheet.aberto { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
   .sheetHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .sheetHead .t { font-size: var(--fs-sm); color: var(--gold); text-shadow: 1px 1px 0 var(--ink); }
-  .fechar { padding: 8px 12px; font-size: var(--fs-sm); background: #f6c9c1; color: #8f2233; }
+  .fechar { padding: 8px 12px; font-size: var(--fs-sm); color: #ffd2cd;
+    background: linear-gradient(180deg, #8c2c3e, #4b1622); }
 
   /* Buy button and mode buttons wear the poster palette; everything below is the
      jogabilidade pass's new UI and is kept as-is. */
   .btnCompra { width: 100%; padding: 13px 10px; font-size: var(--fs-sm); text-align: left; line-height: 1.5;
-    background: #ffc23d; color: var(--tinta); }
+    color: #2a1a06; text-shadow: 0 1px 0 rgba(255,255,255,.4);
+    background: linear-gradient(180deg, #ffe28f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
+    box-shadow: 0 4px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   /* what a project IS, in two short lines — the owner could not tell from the price alone */
   .explica { font-size: 8px; color: var(--sub); line-height: 1.9; margin-bottom: 8px; }
   .explica.sub { margin: 7px 0 0; }
@@ -170,18 +208,20 @@
   /* how many at once: three fixed targets read faster than a control you have to cycle */
   .selQtd { display: flex; gap: 6px; margin-bottom: 7px; }
   .selQtd button { flex: 1; padding: 10px 4px; font-size: var(--fs-xs); }
-  .selQtd button.ativo { background: #ffc23d; border-color: var(--contorno); color: var(--tinta); }
+  .selQtd button.ativo { color: #2a1a06;
+    background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
+    box-shadow: 0 3px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   .modo { display: flex; gap: 6px; margin-top: 8px; }
   .modo button { flex: 1; padding: 13px 6px; font-size: var(--fs-sm); }
-  #modoCarvao, #modoLimpo { background: #cfd6e4; color: #3d4a63; }
-  #modoCarvao.ativo { background: #f6c9c1; color: #8f2233; }
-  #modoLimpo.ativo { background: #c8ecc6; color: #14582f; }
+  #modoCarvao, #modoLimpo { background: linear-gradient(180deg, #2b3557, #171d33); color: #97a6c6; }
+  #modoCarvao.ativo { background: linear-gradient(180deg, #8c2c3e, #4b1622); color: #ffd2cd; }
+  #modoLimpo.ativo { background: linear-gradient(180deg, #1f7043, #0e3a21); color: #c9f5d4; }
   .descModo { font-size: 8px; color: var(--sub); margin-top: 8px; line-height: 1.8; }
   .descModo:empty { margin: 0; }
 
   /* the trade, side by side: what you are running now against what switching would do */
   .ritmo { display: flex; gap: 7px; margin-top: 9px; }
-  .rCol { flex: 1 1 0; min-width: 0; background: var(--ink); border: 2px solid #000; padding: 8px 7px; }
+  .rCol { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; padding: 8px 7px; }
   .rCol.quente { box-shadow: inset 0 0 0 1px var(--bad); }
   .rCol.fria { box-shadow: inset 0 0 0 1px var(--good); }
   .rTit { font-size: 8px; color: var(--sub); margin-bottom: 6px; white-space: nowrap;
@@ -201,23 +241,25 @@
   #barRampa { background-color: var(--good); width: 0%; }
   #barPrestigio { background-color: var(--purple); width: 0%; }
 
-  .upgrade { display: flex; align-items: center; gap: 8px; background: var(--ink);
+  .upgrade { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, #141b33, #0d1226);
     border: 2px solid #000; padding: 9px; margin-bottom: 7px; min-height: 54px; }
   .upgrade .info { flex: 1; }
   .upgrade .nome { font-size: var(--fs-sm); }
   .upgrade .desc { font-size: var(--fs-xs); color: var(--sub); margin-top: 4px; line-height: 1.7; }
-  .upgrade button { padding: 12px 12px; font-size: var(--fs-sm); background: #e8dfc8; color: var(--tinta); }
+  .upgrade button { padding: 12px 12px; font-size: var(--fs-sm); color: #2a1a06;
+    background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
+    box-shadow: 0 3px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   .upgrade.comprado { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
   .upgrade.comprado button { display: none; }
   .check { color: var(--good); font-size: 10px; display: none; }
   .upgrade.comprado .check { display: block; }
 
   #btnPrestigio, #btnConfirmaSim { width: 100%; padding: 14px 8px; font-size: var(--fs-sm); margin-top: 8px;
-    background: #b98cf0; color: var(--tinta); }
+    color: #f3e8ff; background: linear-gradient(180deg, #7f4fd4, #4b2a86); }
   #btnConfirmaNao { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 7px;
-    background: #cfd6e4; color: var(--tinta); }
+    color: #b9c8e8; background: linear-gradient(180deg, #2b3557, #171d33); }
   .placar { display: flex; gap: 7px; margin-bottom: 8px; }
-  .placar > div { flex: 1; background: var(--ink); border: 2px solid #000; padding: 9px; }
+  .placar > div { flex: 1; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; padding: 9px; }
   .placar .r { font-size: var(--fs-xs); color: var(--sub); line-height: 1.7; }
   .placar .v { font-size: var(--fs-sm); margin-bottom: 4px; }
   .placar .ganha .v { color: var(--good); }
@@ -1110,7 +1152,7 @@ let tick = 0, animT = 0;
 let W = 320, H = 180, GROUND = 108, HX = 90;
 function fitCanvas() {
   // finer world pixels (hi-bit); hero & mobs are drawn at 2x on top
-  const SCALE = 2;
+  const SCALE = 3;
   W = Math.max(160, Math.ceil(window.innerWidth / SCALE));
   H = Math.max(220, Math.ceil(window.innerHeight / SCALE));
   GROUND = Math.round(H * 0.68);
@@ -1319,18 +1361,21 @@ const ICONS = {
   up: { pal: { X: "#ffcd75" }, map: [
     "............", ".....XX.....", "....XXXX....", "...XXXXXX...", "..XXXXXXXX..", ".XXXXXXXXXX.",
     "....XXXX....", "....XXXX....", "....XXXX....", "....XXXX....", "............", "............"] },
-  torch: { pal: { X: "#ef7d57", W: "#ffcd75", K: "#8a5a3a" }, map: [
-    "............", ".....WW.....", "....WXXW....", "....XXXX....", "....XXXX....", ".....XX.....",
-    "....KKKK....", ".....KK.....", ".....KK.....", ".....KK.....", ".....KK.....", "............"] },
+  // A wooden stick with a burning rag on it is a dungeon prop, and this game is a street in
+  // 2026. Same meaning — the thing you keep and hand on — as a modern emblem: a flame inside
+  // a badge, in the purple the torch sheet and the skills already use.
+  torch: { pal: { X: "#ef7d57", W: "#ffcd75", K: "#2b1f4a", G: "#8d5bd6" }, map: [
+    "............", "...GGGGGG...", "..GKKKKKKG..", ".GKK.WW.KKG.", ".GK.WWWW.KG.", ".GK.WXXW.KG.",
+    ".GKWXXXXWKG.", ".GKWXWWXWKG.", "..GKWXXWKG..", "...GGGGGG...", "............", "............"] },
   flame: { pal: { X: "#ef7d57", W: "#ffcd75" }, map: [
     "............", ".....X......", "....XX......", "....XXX.....", "...XXXXX....", "...XWXXX....",
     "..XWWXXX....", "..XWWWXX....", "...XWWX.....", "....XX......", "............", "............"] },
   // key stays `sword` because the markup names it; what it draws is the wand. Its star is
   // white-cored with a green halo, the same magic colours the wand uses in the world, and
   // green is the one hue that still reads on cream chrome AND on the yellow action button.
-  sword: { pal: { W: "#fffce8", G: "#6fdd94", B: "#9a6f42" }, map: [
+  sword: { pal: { W: "#fffce8", G: "#6fdd94", B: "#9a6f42", R: "#c3a878" }, map: [
     "........W...", "......G.W.G.", ".......WWW..", "....GWWWWWG.", ".......WWW..", "......G.B.G.",
-    "......BB....", ".....BB.....", "....BB......", "...BB.......", "..BB........", "............"] }
+    "......BB....", ".....BB.....", "....RB......", "...RR.......", "..BR........", "............"] }
 };
 function renderIcon(cnv, name) {
   const ic = ICONS[name]; if (!ic || !cnv) return;
@@ -1485,6 +1530,34 @@ const PINE_MAP = [
   ".KKDDDDDBBBBBBHHHWWK",
   "KKDDDDDDBBBBBBHHHWWK",
   "....KKKDDDBBHHWKK..."];
+// THE IPÊ. It stands as bare grey wood while the world is sick and detonates into flower
+// as it heals — which is the whole sick→healed arc happening inside one object, and it is
+// true to the tree: an ipê blooms on leafless branches, so the same silhouette carries both
+// states. The crown is airier than the ordinary canopy (holes punched through it) because
+// what you are looking at is flowers hung on wood, not a solid mass of leaf.
+const IPE_MAP = [
+  "........KKKKK........."
+, "......KKDBBBHHWK......"
+, "....KKDDBBB.HHHHWK...."
+, "..KKDDDBBBBBHHH.HWWK.."
+, ".KDDDBB.BBBBHHHHHWWWK."
+, "KDDDBBBBBBBBB.HHHHWWK."
+, "KDDDBB.BBBBBBBHHHHHWWK"
+, "KDDDBBBBB.BBBBHHH.HHWK"
+, ".KDDDBBBBBBBBBHHHHHWK."
+, ".KDDDDBB.BBBBBHHH.HWK."
+, "..KKDDDBBBBBBBHHHHWK.."
+, "...KKDDDDB.BBBHHHWK..."
+, ".....KKDDDDBBBHHWK...."
+, "........KKKDDBHWK....."
+, "..........KKKKK......."];
+// Three authored states rather than a lerp, because "bare → budding → full bloom" is a
+// story and an interpolation is a smear. The pale pair is the bloom half-way through, sun-
+// bleached toward the ochre the whole sick palette runs on.
+const IPE_AMARELO = { K: "#6b4410", D: "#c4870d", B: "#f0ad14", H: "#ffd247", W: "#fff2ab" };
+const IPE_ROSA = { K: "#5e2440", D: "#bf5480", B: "#e77aa6", H: "#f6a4c6", W: "#ffd8e8" };
+const IPE_AMARELO_PAL = { K: "#8e7652", D: "#ba9851", B: "#d0ab54", H: "#d8bd6e", W: "#d8cd9f" };
+const IPE_ROSA_PAL = { K: "#87666a", D: "#b87e8a", B: "#cc919d", H: "#d3a6ad", W: "#d8c0be" };
 const TREE_PAL = { K: "#12331f", D: "#1c5c38", B: "#2e9b54", H: "#4fc272", W: "#8ff0ad" };
 const TREE_PAL2 = { K: "#16301a", D: "#256030", B: "#3aa14c", H: "#61c86c", W: "#9df0a4" };
 const PINE_PAL = { K: "#0d2a1a", D: "#175030", B: "#227a44", H: "#3aa25e", W: "#6fdd94" };
@@ -1651,9 +1724,12 @@ function luz(x, y, f, a) {
                 [Math.round(r * 1.45), 0.42, LUZ_MEIO], [r, 0.88, LUZ_QUENTE]];
   for (let i = 0; i < anel.length; i++) {
     const rr = Math.max(2, anel[i][0]);
+    // The chamfer has to grow with the ring. It was a flat 1 px, which is an octagon at
+    // r=3 and a plain square at r=15 — so a bright cast used to bloom into a slab.
+    const ins = Math.max(1, Math.round(rr * 0.32));
     cx.globalAlpha = anel[i][1] * al; cx.fillStyle = anel[i][2];
-    cx.fillRect(x - rr, y - rr + 1, rr * 2, rr * 2 - 2);          // an octagon out of two
-    cx.fillRect(x - rr + 1, y - rr, rr * 2 - 2, rr * 2);          // crossed rectangles
+    cx.fillRect(x - rr, y - rr + ins, rr * 2, rr * 2 - ins * 2);  // an octagon out of two
+    cx.fillRect(x - rr + ins, y - rr, rr * 2 - ins * 2, rr * 2);  // crossed rectangles
   }
   cx.globalAlpha = al; cx.fillStyle = LUZ_CORE;
   cx.fillRect(x - 1, y - 1, 3, 3);
@@ -1665,11 +1741,24 @@ function luz(x, y, f, a) {
 // reaches and how hard it lands are decided elsewhere and are none of this code's business.
 // It is spawned off the attack state that is already there and drawn on top of it.
 let magias = [], ultAtkT = 0, ultAtkTipo = -1;
+// The charge lives here and nowhere else. It is set the instant a cast leaves the wand and
+// falls back to zero a few frames later, so the wand is a stick with a bright moment in it
+// rather than an object that hums all day. Everything the light does is a function of this.
+let flashCast = 0;
 function lancarMagia(tipo, bx, y0) {
-  const vida = 0.34;
-  if (tipo === 0) magias.push({ wx: worldX + bx + 32, y: y0 + 14, vx: 190, vy: 0, t: 0, vida: vida, f: 1.5 });
-  else if (tipo === 1) magias.push({ wx: worldX + bx + 28, y: y0 + 6, vx: 150, vy: -95, t: 0, vida: vida, f: 1.35 });
-  else magias.push({ wx: worldX + bx + 30, y: y0 + 26, vx: 90, vy: 150, t: 0, vida: 0.24, f: 1.7 });
+  flashCast = 1;
+  // The two everyday casts are both basic, but they must not be the same animation twice.
+  // One goes LOW and forward along the dirt; the other whips UP and throws a spread.
+  if (tipo === 0) {
+    magias.push({ wx: worldX + bx + 32, y: y0 + 30, vx: 215, vy: -14, t: 0, vida: 0.34, f: 1.45 });
+  } else if (tipo === 1) {
+    for (let i = -1; i <= 1; i++) {
+      magias.push({ wx: worldX + bx + 32, y: y0 + 4, vx: 132 + i * 26, vy: -128 + i * 44,
+        t: 0, vida: 0.30, f: 1.05 });
+    }
+  } else {
+    magias.push({ wx: worldX + bx + 30, y: y0 + 26, vx: 90, vy: 150, t: 0, vida: 0.24, f: 1.7 });
+  }
 }
 function desenharMagias() {
   for (let i = magias.length - 1; i >= 0; i--) {
@@ -1693,28 +1782,58 @@ function desenharMagias() {
     }
   }
 }
-// The wand itself: a worn wooden shaft two pixels thick, a bound grip, a twist of green
-// cord below the tip, and a tip that is always a little alight. Walked one pixel at a time
-// along the line and drawn in three passes — outline, body, sunlit side — so it stays a
-// clean stick at any angle instead of a fat staircase of overlapping blocks.
+// The wand is an ordinary thing: a branch someone worked a little and bound at one end.
+// It is NOT an artefact — at rest it gives off no light at all, which is what lets a cast
+// be an event. Three things keep it from reading as a log, which it used to: it is walked
+// one pixel at a time and drawn in three passes (outline, body, sunlit side) so a diagonal
+// stays a stick; it **tapers**, two pixels thick at the grip down to one at the tip; and it
+// **bows** slightly across its span, because a branch that is perfectly straight is a dowel.
+// `brilho` is the charge, and it is only ever non-zero while he is casting.
 function vara(x0, y0v, x1, y1v, brilho) {
   const n = Math.max(2, Math.abs(x1 - x0), Math.abs(y1v - y0v));
-  const px = [], py = [];
+  const dx = x1 - x0, dy = y1v - y0v, len = Math.max(1, Math.hypot(dx, dy));
+  const nx = -dy / len, ny = dx / len;             // perpendicular, for the bow
+  const px = [], py = [], pw = [];
   for (let i = 0; i <= n; i++) {
-    px.push(Math.round(x0 + (x1 - x0) * i / n));
-    py.push(Math.round(y0v + (y1v - y0v) * i / n));
+    const t = i / n, arc = Math.sin(t * Math.PI) * 0.95;
+    px.push(Math.round(x0 + dx * t + nx * arc));
+    py.push(Math.round(y0v + dy * t + ny * arc));
+    pw.push(t < 0.62 ? 2 : 1);                     // thick at the hand, whittled at the tip
   }
-  cx.fillStyle = "#20160f";
-  for (let i = 0; i <= n; i++) cx.fillRect(px[i] - 1, py[i] - 1, 4, 4);
+  cx.fillStyle = "#22180f";
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i] - 1, py[i] - 1, pw[i] + 2, pw[i] + 2);
   cx.fillStyle = "#6b4a2e";
-  for (let i = 0; i <= n; i++) cx.fillRect(px[i], py[i], 2, 2);
-  cx.fillStyle = "#a87c4e";                        // the sun catches one side of the shaft
-  for (let i = 0; i <= n; i++) cx.fillRect(px[i] + 1, py[i], 1, 2);
-  cx.fillStyle = "#3f2a1a";                        // bound grip at the near end
-  for (let i = 0; i < Math.min(5, n); i++) cx.fillRect(px[i], py[i], 2, 2);
-  const c = Math.max(0, n - 4);                    // twist of green cord below the tip
-  cx.fillStyle = "#2ea36a"; cx.fillRect(px[c] - 1, py[c] - 1, 4, 3);
-  luz(px[n] + 1, py[n] + 1, brilho);
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i], py[i], pw[i], pw[i]);
+  cx.fillStyle = "#a2794c";                        // the sun catches one side of the shaft
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i] + pw[i] - 1, py[i], 1, pw[i]);
+  const wraps = Math.min(6, n - 1);                // the binding: cord wrapped round the grip
+  for (let i = 1; i <= wraps; i++) {
+    cx.fillStyle = i % 2 ? "#c3a878" : "#5c4a30";
+    cx.fillRect(px[i], py[i], 2, 2);
+  }
+  const kx = px[n], ky = py[n];                    // the tip is just a knot in the wood
+  cx.fillStyle = "#22180f"; cx.fillRect(kx - 1, ky - 1, 4, 4);
+  cx.fillStyle = "#7d5836"; cx.fillRect(kx, ky, 2, 2);
+  cx.fillStyle = "#a2794c"; cx.fillRect(kx + 1, ky, 1, 1);
+  if (brilho > 0) {                                // ...and only while he is casting, a fire
+    luz(kx + 1, ky + 1, Math.min(1.9, brilho + flashCast * 0.7), 1);
+    if (flashCast > 0.12) {
+      // The muzzle flash. It is a *star*, not a bloom: a bloom big enough to read as an
+      // event swallows the hero, while eight rays off the tip stay a pixel shape and let
+      // the wand keep its silhouette right through the brightest frame.
+      const r = Math.round(4 + flashCast * 13), d = Math.round(r * 0.6), a = flashCast;
+      cx.globalAlpha = a * 0.55; cx.fillStyle = LUZ_MEIO;
+      cx.fillRect(kx + 1 - r, ky, r * 2 + 2, 2); cx.fillRect(kx, ky + 1 - r, 2, r * 2 + 2);
+      for (let s = 2; s <= d; s++) {               // the diagonals, one pixel at a time
+        cx.fillRect(kx + 1 + s, ky + 1 - s, 1, 1); cx.fillRect(kx - s, ky + 1 - s, 1, 1);
+        cx.fillRect(kx + 1 + s, ky + s, 1, 1); cx.fillRect(kx - s, ky + s, 1, 1);
+      }
+      cx.globalAlpha = a; cx.fillStyle = LUZ_CORE;
+      const c = Math.max(2, r >> 1);
+      cx.fillRect(kx + 1 - c, ky + 1, c * 2, 1); cx.fillRect(kx + 1, ky + 1 - c, 1, c * 2);
+      cx.globalAlpha = 1;
+    }
+  }
 }
 function drawHero() {
   // the leap: rises fast, hangs, then drops hard onto the ground
@@ -1732,18 +1851,48 @@ function drawHero() {
     jumpT--;
     if (jumpT <= 0) impacto(mid);                 // touchdown
   }
-  // cape: a trailing sheet in three value bands with a lit top fold, waving half a beat
-  // behind the step. Drawn far strip first so the near ones overlap them.
-  const flap = air ? -2 : (fi % 2 ? 1 : 0);
-  const capa = ["#c9455c", "#a8384c", "#8b2c3d", "#6e2130", "#521825"];
-  for (let i = 5; i >= 0; i--) {
-    const sxx = bx + 3 - i * 3;
-    const hh = Math.max(4, 15 - i * 2);
-    const sy = y0 + 16 + i + (i > 2 ? flap : 0);
-    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy, 4, hh + 2);
-    cx.fillStyle = capa[Math.min(4, (i >> 1) + 1)]; cx.fillRect(sxx, sy + 1, 3, hh);
-    cx.fillStyle = capa[Math.max(0, i >> 1)]; cx.fillRect(sxx, sy + 1, 3, 2);
+  // THE BODY CAN TURN. Everything from here to the wand is drawn inside one transform, so
+  // hit 1 can pitch forward into its swing, hit 2 can lean back out of its flick, and hit 3
+  // can carry him through a full front flip. The angle is quantised to sixteenths of a turn
+  // so it reads as hand-drawn frames rather than a sprite on a smooth vector hinge.
+  const girando = attackT > 0 && attackType === 2 && air;
+  let rot = 0;
+  // the turn is finished by 62% of the airtime, so he comes down upright and drives the
+  // wand into the dirt from a landed pose instead of arriving sideways
+  if (girando) rot = Math.round(Math.min(1, pj / 0.62) * 16) / 16 * Math.PI * 2;
+  else if (attackT > 0 && attackType === 0) rot = 0.15 * Math.min(1, attackT / 5);
+  else if (attackT > 0 && attackType === 1) rot = -0.17 * Math.min(1, attackT / 5);
+  const pivoX = mid, pivoY = y0 + 26;
+  if (girando) {                                    // afterimages smeared along the arc
+    for (let i = 2; i >= 1; i--) {
+      cx.save();
+      cx.translate(pivoX, pivoY + i * 3); cx.rotate(rot - i * 0.42); cx.translate(-pivoX, -pivoY);
+      cx.globalAlpha = 0.30 - i * 0.10;
+      drawMap("hero", HERO_MAP, HERO_COLORS, bx, y0);
+      cx.globalAlpha = 1; cx.restore();
+    }
   }
+  if (rot) { cx.save(); cx.translate(pivoX, pivoY); cx.rotate(rot); cx.translate(-pivoX, -pivoY); }
+  // Not a cape — a windbreaker tail and a scarf. A cape put a knight in a 2026 street; this
+  // is a kid running through their own neighbourhood, and the silhouette still trails.
+  const flap = air ? -2 : (fi % 2 ? 1 : 0);
+  const capa = ["#e05a70", "#c9455c", "#a8384c", "#8b2c3d", "#6e2130"];
+  for (let i = 3; i >= 0; i--) {                    // the scarf, off the back of the neck
+    const sxx = bx + 2 - i * 4, hh = 3 + (i & 1);
+    const sy = y0 + 11 + i + (i > 1 ? flap : 0);
+    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy - 1, 6, hh + 2);
+    cx.fillStyle = capa[Math.min(4, i + 1)]; cx.fillRect(sxx, sy, 4, hh);
+    cx.fillStyle = capa[Math.max(0, i - 1)]; cx.fillRect(sxx, sy, 4, 1);
+  }
+  cx.fillStyle = "#0e0f18"; cx.fillRect(bx - 1, y0 + 15, 9, 13);    // the jacket tail, cut short
+  cx.fillStyle = "#a8384c"; cx.fillRect(bx, y0 + 16, 7, 11 + flap);
+  cx.fillStyle = "#c9455c"; cx.fillRect(bx, y0 + 16, 7, 2);
+  cx.fillStyle = "#6e2130"; cx.fillRect(bx, y0 + 24 + flap, 7, 3);
+  cx.fillStyle = "#0e0f18"; cx.fillRect(bx + 1, y0 + 13, 8, 12);    // the backpack he carries
+  cx.fillStyle = "#2f4a7a"; cx.fillRect(bx + 2, y0 + 14, 6, 10);
+  cx.fillStyle = "#41639d"; cx.fillRect(bx + 6, y0 + 14, 2, 10);
+  cx.fillStyle = "#1b2c4c"; cx.fillRect(bx + 2, y0 + 18, 6, 2);
+  cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 3, y0 + 21, 2, 2);
   // back arm swings behind the torso
   const abx = bx + 4 + Math.round(P[4] * 0.4);
   cx.fillStyle = "#0e0f18"; cx.fillRect(abx - 1, y0 + 16, 6, 10);
@@ -1791,66 +1940,87 @@ function drawHero() {
   // nothing about what gets hit, how far or how hard is touched.
   if (attackT > 0 && (attackT > ultAtkT || attackType !== ultAtkTipo)) lancarMagia(attackType, bx, y0);
   ultAtkT = attackT; ultAtkTipo = attackType;
+  flashCast = Math.max(0, flashCast - 0.11);           // the charge burns off in ~9 frames
+  // THE THREE CASTS, and no two of them look alike.
+  //   1 · a low sweep: he pitches forward and drags the wand down across the dirt
+  //   2 · an upward flick: he leans back and whips it over his shoulder, throwing a spread
+  //   3 · the leap: a full front flip through the air, then the wand driven into the ground
+  // Only the drawing differs — reach, damage and timing are decided elsewhere.
+  const q = attackT > 0 ? Math.min(1, attackT / 6) : 0;  // the cast fading out
   if (attackT > 0) {
     attackT--;
-    const q = Math.min(1, attackT / 6);                 // the cast fading out
-    braco(asx + 5, y0 + 19);                            // arm first: the wand sits on top of it
-    if (attackType === 0) {            // a flat crescent of light thrown ahead of him
-      vara(bx + 18, y0 + 16, bx + 33, y0 + 12, 1.1);
-      const cxx = bx + 34, cyy = y0 + 14;
-      cx.globalAlpha = q * 0.7; cx.fillStyle = LUZ_FORA;
-      for (let i = 0; i < 16; i++) {
-        const a2 = -1.0 + i * 0.133;
-        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14) - 2, cyy + Math.round(Math.sin(a2) * 18) - 2, 6, 6);
-      }
-      cx.globalAlpha = q * 0.95; cx.fillStyle = LUZ_MEIO;
-      for (let i = 0; i < 16; i++) {
-        const a2 = -1.0 + i * 0.133;
-        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14) - 1, cyy + Math.round(Math.sin(a2) * 18) - 1, 4, 4);
-      }
-      cx.globalAlpha = q; cx.fillStyle = LUZ_CORE;
-      for (let i = 3; i < 13; i++) {
-        const a2 = -1.0 + i * 0.133;
-        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14), cyy + Math.round(Math.sin(a2) * 18), 2, 2);
-      }
-      cx.globalAlpha = 1;
-    } else if (attackType === 1) {     // a spiral climbing off the tip
-      vara(bx + 17, y0 + 19, bx + 28, y0 + 1, 1.2);
-      for (let i = 0; i < 9; i++) {
-        const t2 = i / 8;
-        luz(bx + 28 + Math.round(Math.sin(t2 * 5.4 + tick * 0.2) * 9), y0 + 2 - Math.round(t2 * 32),
-          0.9 - t2 * 0.42, q * (1 - t2 * 0.5));
-      }
-    } else {                           // LEAP: gathered overhead, then driven into the ground
-      const subindo = pj < 0.5;
-      if (subindo) {                   // both hands up, light collecting above the tip
-        vara(bx + 18, y0 - 2, bx + 20, y0 - 24, 1.8 + pj * 2.4);
-        for (let i = 0; i < 5; i++) {  // motes falling in toward what he is gathering
-          const a2 = tick * 0.16 + i * 1.26, rr = 24 - pj * 30;
-          luz(bx + 19 + Math.round(Math.cos(a2) * rr), y0 - 26 + Math.round(Math.sin(a2) * rr * 0.5), 0.65, 0.8);
-        }
-      } else {                         // driven down and forward, a spear of light to the dirt
-        const qq = (pj - 0.5) * 2;
-        vara(bx + 18, y0 + 13, bx + 30, y0 + 30, 1.5);
-        const tx = bx + 29, ty = y0 + 32, alt = Math.max(0, GROUND - ty);
-        cx.globalAlpha = 0.30; cx.fillStyle = LUZ_FORA; cx.fillRect(tx - 3, ty, 11, alt);
-        cx.globalAlpha = 0.60; cx.fillStyle = LUZ_MEIO; cx.fillRect(tx - 1, ty, 7, alt);
-        cx.globalAlpha = 0.95; cx.fillStyle = LUZ_CORE; cx.fillRect(tx + 1, ty, 3, alt);
-        cx.globalAlpha = 1;
-        for (let i = 0; i < 6; i++) {  // the arc it swept through, still hanging in the air
-          const a2 = (-1.1 + qq * 1.7) - i * 0.16;
-          luz(bx + 15 + Math.round(Math.cos(a2) * 40), y0 + 4 + Math.round(Math.sin(a2) * 40), 0.65, 0.75 - i * 0.11);
-        }
-      }
+    if (attackType === 0) {
+      braco(asx + 6, y0 + 24);
+      vara(bx + 12, y0 + 10, bx + 32, y0 + 27, 1.15);
+    } else if (attackType === 1) {
+      braco(asx + 5, y0 + 12);
+      vara(bx + 19, y0 + 22, bx + 33, y0 + 1, 1.3);
+    } else if (pj < 0.62) {
+      braco(asx + 4, y0 + 8);
+      vara(bx + 17, y0 + 4, bx + 21, y0 - 20, 1.6 + pj * 1.6);
+    } else {
+      braco(asx + 6, y0 + 22);
+      vara(bx + 18, y0 + 13, bx + 30, y0 + 30, 1.5);
     }
   } else {
-    // at rest the wand is carried up and forward, tip lit — the silhouette anchor the
-    // blade used to be, and a reminder that the thing is always awake
+    // At rest it is a stick he is carrying. No glow, no motes, nothing — an object picked up
+    // off the ground. That is deliberate: a wand that is always lit has nowhere left to go
+    // when he fires, and this way every cast reads as something happening.
     braco(bx + 18, y0 + 13);
-    vara(bx + 19, y0 + 14, bx + 28, y0 - 4, 0.9 + Math.sin(tick * 0.09) * 0.16);
-    if (tick % 22 === 0) {             // one mote drifting off the tip now and then
-      parts.push({ x: bx + 29, y: y0 - 3, vx: 4 + Math.random() * 8, vy: -10 - Math.random() * 10,
-        life: 0.9, c: MOTES[Math.floor(Math.random() * MOTES.length)], aura: LUZ_MEIO, grav: -8 });
+    vara(bx + 19, y0 + 15, bx + 30, y0 - 3, 0);
+  }
+  if (rot) cx.restore();                             // out of the body's transform: the magic
+  if (attackT > 0) {                                 // lives in the world, not on the hero
+    if (attackType === 0) {
+      // a low arc raked along the ground, brightest where it scours the dirt
+      const cxx = bx + 12, cyy = y0 + 12;
+      for (let p2 = 0; p2 < 3; p2++) {
+        const raio = [30, 27, 24][p2], esp = [7, 4, 2][p2];
+        cx.globalAlpha = q * [0.55, 0.85, 1][p2];
+        cx.fillStyle = [LUZ_FORA, LUZ_MEIO, LUZ_CORE][p2];
+        for (let i = p2; i < 15 - p2; i++) {
+          const a2 = -0.15 + i * 0.085;
+          cx.fillRect(cxx + Math.round(Math.cos(a2) * raio * 1.15) - (esp >> 1),
+            cyy + Math.round(Math.sin(a2) * raio) - (esp >> 1), esp, esp);
+        }
+      }
+      cx.globalAlpha = 1;
+      if (attackT > 6 && tick % 2 === 0) {           // dirt and green kicked up along the rake
+        parts.push({ x: bx + 30 + Math.random() * 16, y: GROUND - 2, vx: 20 + Math.random() * 40,
+          vy: -30 - Math.random() * 40, life: 0.45, c: Math.random() < 0.5 ? "#9b8468" : LUZ_FORA, grav: 130 });
+      }
+    } else if (attackType === 1) {
+      // a fan opening upward and forward: three ribs of light, not one spiral
+      for (let r2 = -1; r2 <= 1; r2++) {
+        for (let i = 1; i < 13; i++) {
+          const t2 = i / 12, a2 = -1.32 + r2 * 0.34;
+          luz(bx + 32 + Math.round(Math.cos(a2) * t2 * 38), y0 + 4 + Math.round(Math.sin(a2) * t2 * 38),
+            0.95 - t2 * 0.5, q * (1 - t2 * 0.55));
+        }
+      }
+    } else if (pj < 0.62) {
+      for (let i = 0; i < 5; i++) {                  // motes falling in toward what he gathers
+        const a2 = tick * 0.16 + i * 1.26, rr = 24 - pj * 30;
+        luz(bx + 19 + Math.round(Math.cos(a2) * rr), y0 - 26 + Math.round(Math.sin(a2) * rr * 0.5), 0.65, 0.8);
+      }
+    } else {
+      const qq = (pj - 0.62) * 2.6;                  // a spear of light driven into the dirt
+      const tx = bx + 29, ty = y0 + 32, alt = Math.max(0, GROUND - ty);
+      cx.globalAlpha = 0.30; cx.fillStyle = LUZ_FORA; cx.fillRect(tx - 3, ty, 11, alt);
+      cx.globalAlpha = 0.60; cx.fillStyle = LUZ_MEIO; cx.fillRect(tx - 1, ty, 7, alt);
+      cx.globalAlpha = 0.95; cx.fillStyle = LUZ_CORE; cx.fillRect(tx + 1, ty, 3, alt);
+      cx.globalAlpha = 1;
+      for (let i = 0; i < 6; i++) {                  // the arc it swept through, still hanging
+        const a2 = (-1.1 + qq * 1.7) - i * 0.16;
+        luz(bx + 15 + Math.round(Math.cos(a2) * 40), y0 + 4 + Math.round(Math.sin(a2) * 40), 0.65, 0.75 - i * 0.11);
+      }
+    }
+  }
+  if (girando) {                                     // the ring of light the flip draws
+    for (let i = 0; i < 7; i++) {
+      const a2 = rot - i * 0.5;
+      luz(pivoX + Math.round(Math.cos(a2) * 26), pivoY + Math.round(Math.sin(a2) * 26),
+        0.8 - i * 0.07, 0.85 - i * 0.11);
     }
   }
   // dust puffs at the feet on each step (fluid running feel)
@@ -1871,54 +2041,75 @@ function drawScene() {
   const nubB = lerpC([198, 192, 178], [184, 232, 251], h);
   const nubT = lerpC([222, 216, 202], [255, 255, 255], h);
   const nubD = lerpC([176, 170, 156], [127, 196, 232], h);
-  const ck0 = Math.floor(worldX * 0.12 / 52) - 1;
-  for (let k = ck0; k < ck0 + Math.ceil(W / 52) + 2; k++) {
-    const sx = Math.round(k * 52 - worldX * 0.12);
+  const ck0 = Math.floor(worldX * 0.12 / 34) - 1;
+  for (let k = ck0; k < ck0 + Math.ceil(W / 34) + 2; k++) {
+    const sx = Math.round(k * 34 - worldX * 0.12);
     const prof = hash01(k * 3 + 1);                       // 0 = high overhead, 1 = near the horizon
     const cy = Math.round(H * 0.09 + prof * GROUND * 0.58);
     const cs = (1.15 - prof * 0.55) * (0.8 + hash01(k * 9 + 6) * 0.6);
-    const w0 = Math.max(12, Math.round(34 * cs)), h0 = Math.max(3, Math.round(6 * cs));
-    const wA = Math.round(w0 * 0.44), wB = Math.round(w0 * 0.34);
-    const xA = sx + Math.round(w0 * 0.12), xB = sx + Math.round(w0 * 0.5);
-    cx.globalAlpha = 0.86 - prof * 0.34;                  // haze eats the far ones
-    cx.fillStyle = nubB;
-    cx.fillRect(sx, cy, w0, h0);
-    cx.fillRect(xA, cy - h0, wA, h0 + 1);
-    cx.fillRect(xB, cy - h0 * 2, wB, h0 * 2 + 1);
-    cx.fillRect(sx + w0, cy + 1, Math.round(w0 * 0.3), Math.max(2, h0 - 3));   // wisp trailing off
-    cx.fillStyle = nubT;                                  // the sun is up and to the right
-    cx.fillRect(xB, cy - h0 * 2, wB, 2);
-    cx.fillRect(xA, cy - h0, wA, 2);
-    cx.fillRect(xB + wB - 2, cy - h0 * 2, 2, h0 * 2);
-    cx.fillStyle = nubD;                                  // shaded belly
-    cx.fillRect(sx, cy + h0 - 2, w0, 2);
-    cx.fillRect(sx, cy, Math.max(2, Math.round(w0 * 0.1)), h0);
+    // A cumulus is the union of a few discs sitting on one flat base, not a stack of
+    // rectangles. The top is found per column as the highest disc over that column, which
+    // is what gives the bulging crown and the notches between lobes that read as cloud.
+    const w0 = Math.max(16, Math.round(52 * cs));
+    const lobos = [[0.16, 0.10, 0.19], [0.37, -0.10, 0.25], [0.58, 0.03, 0.22],
+                   [0.78, 0.13, 0.17], [0.47, 0.06, 0.20]];
+    const topo = new Array(w0 + 1);
+    for (let x = 0; x <= w0; x++) {
+      let t2 = cy;
+      for (let l = 0; l < lobos.length; l++) {
+        const lx = lobos[l][0] * w0, lr = lobos[l][2] * w0, d = Math.abs(x - lx);
+        if (d < lr) t2 = Math.min(t2, cy + lobos[l][1] * w0 - Math.sqrt(lr * lr - d * d));
+      }
+      topo[x] = Math.round(t2);
+    }
+    cx.globalAlpha = 0.88 - prof * 0.36;                  // haze eats the far ones
+    let ini = 0;
+    for (let x = 1; x <= w0; x++) {                       // the mass, runs of equal height
+      if (x === w0 || topo[x] !== topo[ini]) {
+        if (topo[ini] < cy) {
+          cx.fillStyle = nubB; cx.fillRect(sx + ini, topo[ini], x - ini, cy - topo[ini] + 1);
+          cx.fillStyle = nubT; cx.fillRect(sx + ini, topo[ini], x - ini, 2);   // sunlit crown
+        }
+        ini = x;
+      }
+    }
+    cx.fillStyle = nubD;                                  // the belly it sits on
+    cx.fillRect(sx + Math.round(w0 * 0.06), cy - 1, Math.round(w0 * 0.88), 2);
+    cx.fillStyle = nubB;                                  // a wisp trailing off downwind
+    cx.fillRect(sx + w0, cy - 3, Math.round(w0 * 0.22), 2);
     cx.globalAlpha = 1;
   }
-  // mountains: proper pyramid silhouettes in two parallax layers
-  function mountainLayer(speed, spacing, baseW, hMin, hMax, color, snowOK) {
-    cx.fillStyle = color;
-    const q0 = Math.floor(worldX * speed / spacing) - 1;
-    for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
-      const sx = Math.round(k * spacing - worldX * speed);
-      const mh = hMin + Math.floor(hash01(k * 5 + 2) * (hMax - hMin));
-      const steps = 5;
-      for (let s = 0; s < steps; s++) {
-        const wRow = Math.round(baseW * (1 - s / steps));
-        const hRow = Math.ceil(mh / steps);
-        cx.fillRect(sx + Math.round((baseW - wRow) / 2), GROUND - 8 - hRow * (s + 1), wRow, hRow + 1);
-      }
-      if (snowOK && h > 0.45 && mh > hMin + (hMax - hMin) * 0.5) {
-        cx.fillStyle = "#e8f4ff";
-        const wTop = Math.round(baseW / steps);
-        cx.fillRect(sx + Math.round((baseW - wTop) / 2), GROUND - 8 - mh - 1, wTop, 3);
-        cx.fillStyle = color;
+  // The ridge was five stacked rectangles per tile — a staircase pyramid, repeating on a
+  // fixed spacing, and washed so far toward the horizon that the separator band ate it.
+  // Now it is a real skyline: a height per column from three sines at different periods,
+  // continuous across the whole world so it never tiles, with the sun catching the flanks
+  // that face right. Runs of equal height are merged, so a layer is ~40 rects, not 195.
+  function serra(speed, amp, alturaBase, semente, cor, corLuz) {
+    let x = 0, alt = -1, ini = 0;
+    const altura = function (xx) {
+      const wx = (xx + worldX * speed) * 0.6 + semente;
+      return Math.max(2, Math.round(alturaBase + amp * (
+        0.54 * Math.sin(wx * 0.029) + 0.29 * Math.sin(wx * 0.073 + 1.7) + 0.17 * Math.sin(wx * 0.013 + 4.1))));
+    };
+    for (x = 0; x <= W; x++) {
+      const a = x < W ? altura(x) : -1;
+      if (a !== alt) {
+        if (alt > 0) {
+          cx.fillStyle = cor;
+          cx.fillRect(ini, GROUND - 12 - alt, x - ini, alt + 12);
+          if (a >= 0 && a < alt) { cx.fillStyle = corLuz; cx.fillRect(ini, GROUND - 12 - alt, x - ini, 2); }
+        }
+        alt = a; ini = x;
       }
     }
   }
-  // aerial perspective: the far ridge is nearly swallowed by the horizon, the near one less
-  mountainLayer(0.10, 64, 54, Math.round(H * 0.06), Math.round(H * 0.11), longe(mixA([186, 180, 166], [147, 185, 212], h), 0.52, h), false);
-  mountainLayer(0.22, 96, 72, Math.round(H * 0.09), Math.round(H * 0.16), longe(mixA([166, 159, 144], [110, 158, 190], h), 0.30, h), true);
+  // aerial perspective: the far ridge is hazier and lower, the near one darker and taller
+  serra(0.09, Math.round(H * 0.045), Math.round(H * 0.085), 0,
+    longe(mixA([182, 176, 162], [143, 182, 210], h), 0.44, h),
+    longe(mixA([200, 194, 180], [176, 214, 236], h), 0.40, h));
+  serra(0.20, Math.round(H * 0.055), Math.round(H * 0.115), 320,
+    longe(mixA([158, 151, 137], [102, 152, 186], h), 0.25, h),
+    longe(mixA([184, 177, 162], [140, 188, 218], h), 0.21, h));
   // THE SEPARATOR BAND. The one cheap trick that carries the whole value architecture:
   // light sky, mid background, a bright strip exactly on the horizon line, dark ground.
   // Everything in front of it now reads as a silhouette against light, and the character
@@ -1977,6 +2168,139 @@ function drawScene() {
       // antenna with blinking light (very 2026)
       cx.fillStyle = "#8b96ad"; cx.fillRect(sx + 20, base - Math.round(H * 0.21) - 8, 1, 8);
       if (tick % 30 < 15) { cx.fillStyle = "#ff5a5a"; cx.fillRect(sx + 19, base - Math.round(H * 0.21) - 10, 3, 3); }
+    }
+  }
+  // ---- one landmark per stretch of world ----
+  // Places, never brands and never people: a hilltop statue, a modernist parliament, a
+  // museum hung off two portal frames, a lift up a cliff, an opera house in the forest.
+  // They are drawn in the same silhouette language and the same haze as the skyline so they
+  // read at parallax distance, and they bleach with the world like everything else at this
+  // depth — a monument that only works in the healed frame is half an asset. One profile
+  // per stretch, found while running, beats a crowded postcard.
+  {
+    // They stand ON the separator band, not behind it. Rooted at GROUND-8 like the skyline
+    // they were simply eaten by the tree line — distant things belong higher on the picture
+    // plane, and a silhouette whose feet sit on the light strip is the value architecture.
+    const spacing = 460, speed = 0.15, base = GROUND - 29;
+    const corpo = longe(mixA([102, 97, 88], [70, 112, 156], h), 0.19, h);
+    const claro = longe(mixA([136, 130, 118], [122, 168, 208], h), 0.15, h);
+    const escuro = longe(mixA([74, 70, 64], [44, 78, 116], h), 0.25, h);
+    const q0 = Math.floor(worldX * speed / spacing) - 1;
+    for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
+      const sx = Math.round(k * spacing - worldX * speed);
+      if (sx > W + 20 || sx < -110) continue;
+      // px(colour, x, y, w, h) — y is the height of the rect's BOTTOM above the horizon line
+      const px = function (c, x, y, w2, h2) { cx.fillStyle = c; cx.fillRect(sx + x, base - y - h2, w2, h2); };
+      // a half-round: flat side down (a dome) or flat side up (a saucer resting on its belly)
+      const cupula = function (x0, y0c, rx, ry, invertida) {
+        for (let i = -rx; i <= rx; i++) {
+          const hh = Math.round(ry * Math.sqrt(Math.max(0, 1 - (i / rx) * (i / rx))));
+          if (hh < 1) continue;
+          px(i > rx * 0.34 ? claro : corpo, x0 + i, invertida ? y0c - hh : y0c, 1, hh);
+        }
+      };
+      switch (((k % 5) + 5) % 5) {
+        case 0: {   // the massif: a rounded monolith, a steeper peak, a figure with its arms out
+          for (let i = 0; i < 30; i++) {
+            const t = i / 29;
+            px(i > 20 ? claro : corpo, i, 0, 1, Math.max(1, Math.round(40 * Math.pow(Math.sin(t * Math.PI), 0.42))));
+          }
+          for (let i = 0; i < 44; i++) {
+            const t = i / 43;
+            px(i > 26 ? claro : corpo, 30 + i, 0, 1, Math.max(1, Math.round(62 * Math.pow(1 - Math.abs(t * 2 - 1), 0.62))));
+          }
+          px(escuro, 50, 62, 4, 2);
+          px(claro, 51, 64, 2, 8); px(claro, 47, 69, 10, 2); px(claro, 51, 72, 2, 2);
+          break;
+        }
+        case 1: {   // the parliament: a dome, an upturned saucer, and the twin slabs between
+          px(corpo, 0, 0, 86, 5); px(claro, 0, 3, 86, 2);
+          cupula(19, 5, 14, 13, false);
+          cupula(68, 21, 17, 16, true);
+          px(escuro, 39, 5, 5, 52); px(claro, 43, 5, 1, 52);
+          px(escuro, 46, 5, 5, 52); px(claro, 50, 5, 1, 52);
+          break;
+        }
+        case 2: {   // the museum: a box hung under two portal frames, the span clear beneath
+          const vermelho = longe(mixA([140, 132, 120], [198, 62, 50], h), 0.18, h);
+          px(corpo, 8, 12, 56, 18); px(claro, 8, 28, 56, 2); px(escuro, 8, 12, 56, 1);
+          for (let i = 0; i < 5; i++) px(escuro, 13 + i * 10, 16, 6, 9);
+          px(vermelho, 4, 0, 4, 40); px(vermelho, 64, 0, 4, 40); px(vermelho, 4, 36, 64, 4);
+          break;
+        }
+        case 3: {   // the lift: a shaft in the lower town, bridged to the top of the escarpment
+          for (let i = 0; i < 48; i++) {                 // the escarpment, with a broken lip
+            const t = i / 47;
+            let hh = 44 + Math.round(8 * t) + (i % 7 === 3 ? 2 : 0);
+            if (t > 0.78) hh -= Math.round((t - 0.78) * 130);
+            px(i < 4 ? claro : corpo, 36 + i, 0, 1, Math.max(6, hh));
+          }
+          px(escuro, 6, 0, 12, 42); px(corpo, 7, 0, 10, 42); px(claro, 16, 0, 1, 42);
+          px(escuro, 3, 42, 18, 8); px(corpo, 4, 43, 16, 6); px(claro, 4, 48, 16, 1);
+          px(escuro, 18, 38, 20, 3); px(claro, 18, 40, 20, 1);   // the walkway across
+          break;
+        }
+        default: {  // the opera house: an arcaded block under a ribbed dome
+          px(corpo, 6, 0, 46, 22); px(claro, 48, 0, 4, 22);
+          for (let i = 0; i < 5; i++) { px(escuro, 11 + i * 8, 3, 5, 14); px(claro, 16 + i * 8, 3, 1, 14); }
+          px(corpo, 4, 22, 50, 3); px(claro, 4, 24, 50, 1);
+          for (let i = -13; i <= 13; i++) {
+            const hh = Math.round(15 * Math.sqrt(Math.max(0, 1 - (i / 13) * (i / 13))));
+            if (hh < 1) continue;
+            px(((i + 14) & 2) ? claro : corpo, 29 + i, 25, 1, hh);
+          }
+          px(claro, 28, 40, 3, 5);
+        }
+      }
+    }
+  }
+  // ---- the hillside, which matters more than any monument ----
+  // A neighbourhood stacked up a slope: painted walls, tiled roofs, a water tank on top of
+  // half of them, windows that come on as the world heals. It sits between the skyline and
+  // the tree line, so the frame reads city → hillside → forest → the street he is running
+  // on. Warm, ordinary, and the thing the whole game is asking you to save.
+  {
+    const speed = 0.21, spacing = 340, base = GROUND - 27;
+    const cinza = [154, 148, 132], cinzaT = [140, 133, 118];
+    const paredes = [[226, 162, 56], [58, 176, 202], [226, 108, 76], [236, 214, 172], [136, 196, 70], [206, 96, 146]]
+      .map(function (c) { return longe(mixA(cinza, c, h), 0.14, h); });
+    const luzP = [[252, 200, 108], [110, 216, 236], [252, 156, 122], [255, 244, 214], [186, 232, 118], [240, 152, 190]]
+      .map(function (c) { return longe(mixA(cinza, c, h), 0.12, h); });
+    const telha = [[184, 74, 48], [162, 88, 58], [154, 68, 50]]
+      .map(function (c) { return longe(mixA(cinzaT, c, h), 0.17, h); });
+    const telhaL = [[222, 110, 74], [204, 126, 88], [198, 102, 78]]
+      .map(function (c) { return longe(mixA(cinzaT, c, h), 0.14, h); });
+    const traco = longe(mixA([118, 112, 100], [82, 62, 52], h), 0.18, h);
+    const caixa = longe(mixA([150, 145, 132], [72, 148, 184], h), 0.12, h);
+    const morro = longe(mixA([132, 126, 112], [58, 118, 72], h), 0.20, h);
+    const q0 = Math.floor(worldX * speed / spacing) - 1;
+    for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
+      const sx = Math.round(k * spacing - worldX * speed);
+      if (sx > W + 20 || sx < -140) continue;
+      if (hash01(k * 37 + 11) > 0.62) continue;         // not every stretch has one
+      const altos = [];
+      for (let c = 0; c < 10; c++) {                    // the slope they are built on
+        const t = c / 9;
+        altos.push(3 + Math.round(28 * Math.pow(Math.sin(t * Math.PI), 0.7) * (0.72 + hash01(k * 7 + c) * 0.45)));
+        cx.fillStyle = morro;
+        cx.fillRect(sx + c * 12, base - altos[c] - 4, 13, altos[c] + 6);
+      }
+      for (let c = 0; c < 10; c++) {
+        const alto = altos[c], degrau = Math.round(hash01(k * 5 + c * 3) * 7);
+        for (let j = 0; j * 11 < alto; j++) {
+          const s2 = hash01(k * 53 + c * 9 + j * 3);
+          const x = sx + c * 12 + (s2 > 0.6 ? 1 : 0), y = base - j * 11 - degrau;
+          const ci = Math.floor(s2 * 6) % 6, ti = Math.floor(s2 * 17) % 3;
+          cx.fillStyle = paredes[ci]; cx.fillRect(x, y - 9, 12, 9);
+          cx.fillStyle = luzP[ci]; cx.fillRect(x + 10, y - 9, 2, 9);
+          cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 12, 14, 3);
+          cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 12, 14, 1);
+          cx.fillStyle = traco; cx.fillRect(x + 2, y - 5, 3, 5);            // a door onto the steps
+          cx.fillStyle = h > 0.5 ? "rgba(255,224,138,.8)" : traco;
+          cx.fillRect(x + 7, y - 7, 3, 3);                                  // one window
+          if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 8, y - 15, 4, 3); }  // water tank
+        }
+      }
     }
   }
   // ---- the middle distance, in three planes separated by VALUE ----
@@ -2082,25 +2406,53 @@ function drawScene() {
     const alive = r < h * 0.95 + 0.02;
     const kind = Math.floor(hash01(k * 7 + 3) * 10);
     if (kind < 5) { // trees: baked canopies with volume, on a trunk that flares into roots
-      const pine = hash01(k * 29 + 1) > 0.55;
+      const ipe = hash01(k * 53 + 4) > 0.62;
+      const pine = !ipe && hash01(k * 29 + 1) > 0.55;
       const sway = ((Math.floor(tick / 18) + k) % 2);
       sombra(sx + 22, GROUND, alive ? 24 : 13);
-      cx.fillStyle = "#33200f"; cx.fillRect(sx + 19, GROUND - 22, 6, 22);      // bark, shaded left
-      cx.fillStyle = "#5f3a24"; cx.fillRect(sx + 20, GROUND - 22, 4, 22);
-      cx.fillStyle = "#7d5030"; cx.fillRect(sx + 23, GROUND - 22, 1, 22);      // lit right side
-      cx.fillStyle = "#33200f"; cx.fillRect(sx + 17, GROUND - 3, 3, 3); cx.fillRect(sx + 25, GROUND - 2, 3, 2);
-      if (alive && pine) {
-        drawMap("pinho" + (k % 2), PINE_MAP, k % 2 ? PINE_PAL2 : PINE_PAL, sx + 12 + sway, GROUND - 42);
-      } else if (alive) {
-        drawMap("copa" + (k % 2), TREE_MAP, k % 2 ? TREE_PAL2 : TREE_PAL, sx + 11 + sway, GROUND - 38);
-      } else {                                    // dead: bare forked branches, not three stubs
-        cx.fillStyle = "#4a3020";
+      const galhos = function (cor, luzC) {       // bare forked branches, not three stubs
+        cx.fillStyle = cor;
         cx.fillRect(sx + 21, GROUND - 35, 3, 14);
         cx.fillRect(sx + 16, GROUND - 30, 6, 2); cx.fillRect(sx + 15, GROUND - 37, 2, 8);
         cx.fillRect(sx + 23, GROUND - 27, 6, 2); cx.fillRect(sx + 27, GROUND - 34, 2, 8);
         cx.fillRect(sx + 18, GROUND - 24, 4, 2); cx.fillRect(sx + 24, GROUND - 22, 4, 2);
-        cx.fillStyle = "#6b4830";                 // the sun still catches their right side
+        cx.fillStyle = luzC;                      // the sun still catches their right side
         cx.fillRect(sx + 23, GROUND - 35, 1, 14); cx.fillRect(sx + 28, GROUND - 34, 1, 8);
+      };
+      if (ipe) {
+        // The ipê keeps the same bare wood in both states; only the flowers arrive. A dry
+        // grey skeleton when the world is sick, and the loudest colour on the screen when
+        // it is not — one object carrying the whole arc, which no amount of grading does.
+        const flor = alive && h > 0.38 ? (h > 0.68 ? 2 : 1) : 0;   // bare · budding · alight
+        cx.fillStyle = flor ? "#3a2718" : "#57534a"; cx.fillRect(sx + 20, GROUND - 24, 4, 24);
+        cx.fillStyle = flor ? "#6a4a2e" : "#7d7869"; cx.fillRect(sx + 22, GROUND - 24, 1, 24);
+        cx.fillStyle = flor ? "#3a2718" : "#57534a"; cx.fillRect(sx + 18, GROUND - 3, 3, 3); cx.fillRect(sx + 24, GROUND - 2, 3, 2);
+        galhos(flor ? "#4a3524" : "#6a675c", flor ? "#6b4830" : "#8a8578");
+        if (flor) {
+          const rosa = hash01(k * 71 + 2) > 0.55;
+          const chave = (rosa ? "iperosa" : "ipeamarelo") + flor;
+          const pal = flor === 2 ? (rosa ? IPE_ROSA : IPE_AMARELO) : (rosa ? IPE_ROSA_PAL : IPE_AMARELO_PAL);
+          drawMap(chave, IPE_MAP, pal, sx + 11 + sway, GROUND - 45);
+          if (flor === 2) {
+            cx.fillStyle = rosa ? "#f6a4c6" : "#ffd247"; // petals letting go, one at a time
+            for (let p = 0; p < 3; p++) {
+              const fase = (tick * 0.55 + p * 47 + k * 29) % 46;
+              cx.fillRect(sx + 13 + p * 7 + (Math.floor(fase / 6) % 2), GROUND - 30 + Math.round(fase * 0.65), 2, 1);
+            }
+          }
+        }
+      } else {
+        cx.fillStyle = "#33200f"; cx.fillRect(sx + 19, GROUND - 22, 6, 22);    // bark, shaded left
+        cx.fillStyle = "#5f3a24"; cx.fillRect(sx + 20, GROUND - 22, 4, 22);
+        cx.fillStyle = "#7d5030"; cx.fillRect(sx + 23, GROUND - 22, 1, 22);    // lit right side
+        cx.fillStyle = "#33200f"; cx.fillRect(sx + 17, GROUND - 3, 3, 3); cx.fillRect(sx + 25, GROUND - 2, 3, 2);
+        if (alive && pine) {
+          drawMap("pinho" + (k % 2), PINE_MAP, k % 2 ? PINE_PAL2 : PINE_PAL, sx + 12 + sway, GROUND - 42);
+        } else if (alive) {
+          drawMap("copa" + (k % 2), TREE_MAP, k % 2 ? TREE_PAL2 : TREE_PAL, sx + 11 + sway, GROUND - 38);
+        } else {
+          galhos("#4a3020", "#6b4830");
+        }
       }
     } else if (kind < 7) { // cottage: lit right wall, shaded left, roof overhang and a chimney
       const paredes = [["#8a5c3e", "#a8764f", "#553826"], ["#7a6e62", "#968a7c", "#4e463e"], ["#836a52", "#9e8266", "#544335"]][k % 3];
@@ -2145,8 +2497,23 @@ function drawScene() {
       if (h > 0.45) { cx.fillStyle = "rgba(255,255,255,.85)"; cx.fillRect(sx + 15 + (tick % 40 > 20 ? 8 : 0), GROUND + 7, 4, 1); }
       cx.fillStyle = lerpC([60, 50, 36], [34, 106, 60], h);    // reeds on the near bank
       cx.fillRect(sx + 4, GROUND + 5, 1, 6); cx.fillRect(sx + 6, GROUND + 8, 1, 4); cx.fillRect(sx + 40, GROUND + 6, 1, 6);
+      if (h > 0.5) {                                           // vitória-régia, rims turned up
+        [[10, 7], [21, 10], [30, 6]].forEach(function (p, i) {
+          const lx = sx + p[0], ly = GROUND + p[1];
+          cx.fillStyle = "#1f6e40"; cx.fillRect(lx, ly, 8, 3);
+          cx.fillStyle = "#2e9b54"; cx.fillRect(lx + 1, ly, 6, 2);
+          cx.fillStyle = "#6fdd94"; cx.fillRect(lx + 2, ly, 4, 1);
+          if (i === 1) {
+            cx.fillStyle = "#ffe4ee"; cx.fillRect(lx + 2, ly - 3, 4, 3);
+            cx.fillStyle = "#ff9ec4"; cx.fillRect(lx + 3, ly - 3, 2, 2);
+          }
+        });
+      }
     } else if (kind === 9) { // mossy rocks, faceted and lit from the upper right
       sombra(sx + 20, GROUND, 20, 0.20);
+      cx.fillStyle = "#12242e";
+      cx.fillRect(sx + 12, GROUND - 9, 16, 9); cx.fillRect(sx + 16, GROUND - 10, 11, 3);
+      cx.fillRect(sx + 24, GROUND - 6, 9, 6);
       cx.fillStyle = "#3b3944"; cx.fillRect(sx + 13, GROUND - 8, 14, 8);
       cx.fillStyle = "#6d6a72"; cx.fillRect(sx + 14, GROUND - 7, 12, 7);
       cx.fillStyle = "#8b8794"; cx.fillRect(sx + 17, GROUND - 9, 9, 5);
@@ -2162,6 +2529,10 @@ function drawScene() {
     // community kitchen: a little stand where everyone eats (appears as the world heals)
     if (h > 0.45 && hash01(k * 61 + 7) > 0.78) {
       const kx = sx + 1;
+      cx.fillStyle = "#12242e";                       // keyline under the whole stand
+      cx.fillRect(kx - 1, GROUND - 12, 3, 12); cx.fillRect(kx + 13, GROUND - 12, 3, 12);
+      cx.fillRect(kx - 2, GROUND - 14, 19, 3); cx.fillRect(kx, GROUND - 7, 15, 7);
+      cx.fillRect(kx + 3, GROUND - 10, 8, 4);
       cx.fillStyle = "#4a3020"; cx.fillRect(kx, GROUND - 11, 1, 11); cx.fillRect(kx + 14, GROUND - 11, 1, 11); // posts
       for (let a = 0; a < 8; a++) { cx.fillStyle = a % 2 ? "#e8edf6" : "#c9455c"; cx.fillRect(kx - 1 + a * 2, GROUND - 13, 2, 2); } // striped awning
       cx.fillStyle = "#7d4f30"; cx.fillRect(kx + 1, GROUND - 6, 13, 6);   // counter
@@ -2173,18 +2544,42 @@ function drawScene() {
       cx.fillStyle = "#38b764"; cx.fillRect(kx + 16, GROUND - 6, 5, 3);
       cx.fillStyle = "#e8edf6"; cx.fillRect(kx + 15, GROUND - 4, 2, 1);
       cx.fillStyle = "#2b2f45"; cx.fillRect(kx + 16, GROUND - 3, 2, 3); cx.fillRect(kx + 19, GROUND - 3, 2, 3);
+      // Bandeirinhas strung from the awning out over the pavement, and a table under them.
+      // This is the register the whole thing is aiming at: not a monument, a street that
+      // somebody bothered to decorate.
+      const bpost = kx + 40;
+      cx.fillStyle = "#4a3020"; cx.fillRect(bpost, GROUND - 16, 1, 16);
+      const bcor = ["#e04a44", "#ffcd75", "#38b764", "#4aa8e0", "#f0e0c0"];
+      for (let b = 0; b < 6; b++) {
+        const t2 = (b + 0.5) / 6;
+        const bxp = kx + 14 + Math.round(t2 * 26);
+        const byp = GROUND - 14 - Math.round(Math.sin(t2 * Math.PI) * -3) - 1;
+        cx.fillStyle = "#8a6549"; cx.fillRect(bxp - 2, byp - 1, 5, 1);     // the cord, sagging
+        cx.fillStyle = bcor[b % 5];
+        cx.fillRect(bxp - 1, byp, 3, 1); cx.fillRect(bxp, byp + 1, 1, 2);  // a little triangle
+      }
+      cx.fillStyle = "#4a3020"; cx.fillRect(kx + 24, GROUND - 5, 1, 5); cx.fillRect(kx + 30, GROUND - 5, 1, 5);
+      cx.fillStyle = "#c9a86a"; cx.fillRect(kx + 22, GROUND - 6, 11, 2);  // the table top
+      cx.fillStyle = "#e0c48c"; cx.fillRect(kx + 22, GROUND - 6, 11, 1);
+      cx.fillStyle = "#2b2f45"; cx.fillRect(kx + 20, GROUND - 3, 3, 3); cx.fillRect(kx + 34, GROUND - 3, 3, 3);
     }
     // people come back outside when the world is healthy
     if (h > 0.7 && hash01(k * 47 + 9) > 0.62) {
       const pxx = sx + 38, pc = ["#c9455c", "#2f8be0", "#38b764", "#ffcd75"][((k % 4) + 4) % 4];
       const pb = Math.floor((tick + k * 5) / 10) % 2;
       cx.fillStyle = "rgba(0,0,0,.2)"; cx.fillRect(pxx - 1, GROUND, 5, 1);
+      cx.fillStyle = "#12242e";                       // a person needs a keyline more than
+      cx.fillRect(pxx - 1, GROUND - 11, 5, 5);        // anything else out there: they are
+      cx.fillRect(pxx - 2, GROUND - 8, 7, 6);         // small and they stand against grass
       cx.fillStyle = "#f6cfa2"; cx.fillRect(pxx, GROUND - 10, 3, 3);
       cx.fillStyle = pc; cx.fillRect(pxx - 1, GROUND - 7, 5, 4);
       cx.fillStyle = "#2b2f45";
       cx.fillRect(pxx - 1, GROUND - 3, 2, 3); cx.fillRect(pxx + 2, GROUND - 3 + (pb ? -1 : 0), 2, 3 + (pb ? 1 : 0));
     }
     if (kind === 8) { // modern street lamp (solar!): lights up when the world heals
+      cx.fillStyle = "#12242e";                       // keyline first, one pixel proud
+      cx.fillRect(sx + 21, GROUND - 23, 4, 23); cx.fillRect(sx + 21, GROUND - 24, 10, 4);
+      cx.fillRect(sx + 26, GROUND - 27, 8, 5); cx.fillRect(sx + 27, GROUND - 22, 6, 5);
       cx.fillStyle = "#3e4760"; cx.fillRect(sx + 22, GROUND - 22, 2, 22);
       cx.fillRect(sx + 22, GROUND - 23, 8, 2);
       cx.fillStyle = "#2b2f45"; cx.fillRect(sx + 27, GROUND - 26, 6, 3); // solar panel on top
@@ -2351,10 +2746,11 @@ function drawScene() {
     cx.globalAlpha = 1;
   }
 
-  // floating numbers
+  // Floating numbers. At 1 world px = 3 screen px a 5x7 glyph at scale 2 covered the hero,
+  // so the world text is drawn at scale 1 now: 15x21 screen px, still crisp, no longer a sign.
   floats.forEach(function (f) {
     cx.globalAlpha = Math.min(1, f.life / 20);
-    texto(f.txt, f.x, f.y - 14, 2, f.txt.charAt(0) === "+" ? "#ffe488" : "#fdf6e6", "#12242e");
+    texto(f.txt, f.x, f.y - 12, 1, f.txt.charAt(0) === "+" ? "#ffe488" : "#fdf6e6", "#12242e");
     cx.globalAlpha = 1;
     f.y -= 0.7; f.life--;
   });
