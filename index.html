@@ -1464,16 +1464,27 @@ function drawScene() {
   // waist of every frame. Depth is not parallax alone: air between you and a thing eats
   // its contrast. Far is light, cool and hazy; near is dark, warm and saturated; each band
   // gets a sunlit crown on the side the sun is on, so the eye reads three distances.
-  function faixaVerde(speed, passo, larg, hMin, hMax, doente, sadio, dist, sem) {
+  // The outline is the other half of the trick, and it is applied by distance: the near
+  // band gets a hard dark edge, the middle one a softer one, and the far ridge none at all.
+  // A silhouette that keeps its outline at every depth flattens the frame; one that loses
+  // it as it recedes is what actually reads as air.
+  function faixaVerde(speed, passo, larg, hMin, hMax, doente, sadio, dist, sem, tinta) {
     const base = mixA(doente, sadio, h);
     const corpo = longe(base, dist, h);
     const topo = longe(mixA(base, [255, 244, 200], 0.26), dist * 0.85, h);
+    const linha = tinta ? longe(mixA(base, [18, 36, 46], 0.72), dist * 0.5, h) : null;
     const q0 = Math.floor(worldX * speed / passo) - 1;
     const n = Math.ceil(W / passo) + 2;
     for (let k = q0; k < q0 + n; k++) {
       const sx = Math.round(k * passo - worldX * speed);
       const th = hMin + Math.floor(hash01(k * sem + 6) * (hMax - hMin));
       const cw = Math.round(larg * 0.7), c0 = sx + ((larg - cw) >> 1);
+      if (linha) {                                           // silhouette, one pixel larger
+        cx.fillStyle = linha;
+        cx.fillRect(sx - 1, GROUND - th - 1, larg + 2, th + 7);
+        cx.fillRect(c0 - 1, GROUND - th - 5, cw + 2, 7);
+        cx.fillRect(c0 + 1, GROUND - th - 8, cw - 2, 5);
+      }
       cx.fillStyle = corpo;
       cx.fillRect(sx, GROUND - th, larg, th + 6);            // the mass, rooted below the line
       cx.fillRect(c0, GROUND - th - 4, cw, 6);               // canopy
@@ -1483,9 +1494,9 @@ function drawScene() {
       cx.fillRect(c0 + cw - 3, GROUND - th - 5, 3, 4);
     }
   }
-  faixaVerde(0.26, 18, 18, 10, 21, [99, 95, 72], [99, 201, 119], 0.42, 41);  // far ridge forest
-  faixaVerde(0.44, 22, 22, 8, 17, [74, 72, 56], [47, 156, 92], 0.20, 11);    // mid tree line
-  faixaVerde(0.66, 30, 30, 6, 14, [58, 56, 44], [28, 107, 66], 0.04, 23);    // near bushes
+  faixaVerde(0.26, 18, 18, 10, 21, [99, 95, 72], [99, 201, 119], 0.42, 41, false); // far ridge forest
+  faixaVerde(0.44, 22, 22, 8, 17, [74, 72, 56], [47, 156, 92], 0.20, 11, true);    // mid tree line
+  faixaVerde(0.66, 30, 30, 6, 14, [58, 56, 44], [28, 107, 66], 0.04, 23, true);    // near bushes
   // the bushes sit down onto the ground instead of floating on it
   cx.fillStyle = lerpC([70, 66, 52], [18, 74, 46], h);
   cx.fillRect(0, GROUND - 2, W, 2);
