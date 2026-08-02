@@ -19,7 +19,7 @@ Clique em *Create repository*.
 No terminal, dentro desta pasta:
 
 ```bash
-git remote add origin https://github.com/PatinhasBrasil/save-the-world-idle.git
+git remote add origin https://github.com/mrcx-code/save-the-world-idle.git
 git push -u origin main
 ```
 
@@ -33,7 +33,7 @@ nesse repositório). Ou instale o [GitHub CLI](https://cli.github.com) e rode
 O projeto que fica é o **save-the-world-idle**. O `transicao-energetica-idle` some.
 
 1. Vercel → projeto `save-the-world-idle` → *Settings → Git → Connect Git Repository*
-   → escolha `PatinhasBrasil/save-the-world-idle`.
+   → escolha `mrcx-code/save-the-world-idle`.
    (Se preferir começar limpo: apague os dois e importe do zero em
    <https://vercel.com/new>, com o nome `save-the-world-idle`.)
    - Framework Preset: **Other**
@@ -51,7 +51,7 @@ A partir daí, todo `git push` publica sozinho. Não precisa mais de deploy manu
 ## Trabalhando de outro PC
 
 ```bash
-git clone https://github.com/PatinhasBrasil/save-the-world-idle.git
+git clone https://github.com/mrcx-code/save-the-world-idle.git
 cd save-the-world-idle
 # abra index.html no navegador — é só isso, não tem build
 ```
