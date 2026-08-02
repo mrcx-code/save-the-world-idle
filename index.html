@@ -2370,6 +2370,18 @@ function drawScene() {
       if (h > 0.45) { cx.fillStyle = "rgba(255,255,255,.85)"; cx.fillRect(sx + 15 + (tick % 40 > 20 ? 8 : 0), GROUND + 7, 4, 1); }
       cx.fillStyle = lerpC([60, 50, 36], [34, 106, 60], h);    // reeds on the near bank
       cx.fillRect(sx + 4, GROUND + 5, 1, 6); cx.fillRect(sx + 6, GROUND + 8, 1, 4); cx.fillRect(sx + 40, GROUND + 6, 1, 6);
+      if (h > 0.5) {                                           // vitória-régia, rims turned up
+        [[10, 7], [21, 10], [30, 6]].forEach(function (p, i) {
+          const lx = sx + p[0], ly = GROUND + p[1];
+          cx.fillStyle = "#1f6e40"; cx.fillRect(lx, ly, 8, 3);
+          cx.fillStyle = "#2e9b54"; cx.fillRect(lx + 1, ly, 6, 2);
+          cx.fillStyle = "#6fdd94"; cx.fillRect(lx + 2, ly, 4, 1);
+          if (i === 1) {
+            cx.fillStyle = "#ffe4ee"; cx.fillRect(lx + 2, ly - 3, 4, 3);
+            cx.fillStyle = "#ff9ec4"; cx.fillRect(lx + 3, ly - 3, 2, 2);
+          }
+        });
+      }
     } else if (kind === 9) { // mossy rocks, faceted and lit from the upper right
       sombra(sx + 20, GROUND, 20, 0.20);
       cx.fillStyle = "#3b3944"; cx.fillRect(sx + 13, GROUND - 8, 14, 8);
@@ -2398,6 +2410,24 @@ function drawScene() {
       cx.fillStyle = "#38b764"; cx.fillRect(kx + 16, GROUND - 6, 5, 3);
       cx.fillStyle = "#e8edf6"; cx.fillRect(kx + 15, GROUND - 4, 2, 1);
       cx.fillStyle = "#2b2f45"; cx.fillRect(kx + 16, GROUND - 3, 2, 3); cx.fillRect(kx + 19, GROUND - 3, 2, 3);
+      // Bandeirinhas strung from the awning out over the pavement, and a table under them.
+      // This is the register the whole thing is aiming at: not a monument, a street that
+      // somebody bothered to decorate.
+      const bpost = kx + 40;
+      cx.fillStyle = "#4a3020"; cx.fillRect(bpost, GROUND - 16, 1, 16);
+      const bcor = ["#e04a44", "#ffcd75", "#38b764", "#4aa8e0", "#f0e0c0"];
+      for (let b = 0; b < 6; b++) {
+        const t2 = (b + 0.5) / 6;
+        const bxp = kx + 14 + Math.round(t2 * 26);
+        const byp = GROUND - 14 - Math.round(Math.sin(t2 * Math.PI) * -3) - 1;
+        cx.fillStyle = "#8a6549"; cx.fillRect(bxp - 2, byp - 1, 5, 1);     // the cord, sagging
+        cx.fillStyle = bcor[b % 5];
+        cx.fillRect(bxp - 1, byp, 3, 1); cx.fillRect(bxp, byp + 1, 1, 2);  // a little triangle
+      }
+      cx.fillStyle = "#4a3020"; cx.fillRect(kx + 24, GROUND - 5, 1, 5); cx.fillRect(kx + 30, GROUND - 5, 1, 5);
+      cx.fillStyle = "#c9a86a"; cx.fillRect(kx + 22, GROUND - 6, 11, 2);  // the table top
+      cx.fillStyle = "#e0c48c"; cx.fillRect(kx + 22, GROUND - 6, 11, 1);
+      cx.fillStyle = "#2b2f45"; cx.fillRect(kx + 20, GROUND - 3, 3, 3); cx.fillRect(kx + 34, GROUND - 3, 3, 3);
     }
     // people come back outside when the world is healthy
     if (h > 0.7 && hash01(k * 47 + 9) > 0.62) {
