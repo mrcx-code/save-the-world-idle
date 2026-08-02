@@ -51,6 +51,18 @@
   #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: var(--good); }
   .minibar { height: 6px; background: #000; border: 1px solid #000; margin-top: 4px; }
   .minibar > div { height: 100%; background: var(--bad); transition: width .3s; }
+  /* where the team is heading, not just where it is */
+  .chip .tend { margin-top: 4px; font-size: 7px; white-space: nowrap; }
+  .tend.cai { color: #ff9d8a; } .tend.sobe { color: #8ef0ad; }
+
+  /* the whole frame washes with the rhythm you just chose */
+  #flash { position: fixed; inset: 0; z-index: 8; pointer-events: none; opacity: 0; }
+  #flash.vai { animation: lavagem .5s ease-out 1; }
+  #flash.fast { background: radial-gradient(ellipse at 50% 70%, rgba(255,107,87,.85) 0%, rgba(177,62,83,.5) 45%, transparent 78%); }
+  #flash.steady { background: radial-gradient(ellipse at 50% 70%, rgba(111,221,148,.8) 0%, rgba(56,183,100,.45) 45%, transparent 78%); }
+  @keyframes lavagem { 0% { opacity: .72 } 35% { opacity: .34 } 100% { opacity: 0 } }
+  .pop { animation: estala .42s ease-out 1; }
+  @keyframes estala { 0% { transform: scale(1.14); filter: brightness(1.9) } 100% { transform: scale(1); filter: none } }
 
   #offline { display: none; position: fixed; z-index: 12; left: 50%; transform: translateX(-50%);
     top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
@@ -70,7 +82,7 @@
   @keyframes pulsa { 0% { opacity: 1 } 50% { opacity: .62 } 100% { opacity: 1 } }
 
   #fato { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
-    bottom: calc(128px + env(safe-area-inset-bottom)); width: min(520px, 94vw);
+    bottom: calc(var(--hControles, 128px) + env(safe-area-inset-bottom)); width: min(520px, 94vw);
     font-size: var(--fs-xs); color: #dfe9f2; line-height: 1.8;
     background: rgba(14,15,26,.75); border-left: 4px solid var(--blue); padding: 6px 8px; }
   #fato b { color: var(--blue); }
@@ -86,8 +98,17 @@
     box-shadow: 0 4px 0 var(--ink); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   button:disabled { opacity: .45; cursor: default; }
   button:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+  /* the mode button is a STATE readout, not an icon that swaps */
+  #modeQuick { gap: 5px; padding: 6px 3px; }
+  #modeQuick .mq { display: flex; flex-direction: column; align-items: flex-start; min-width: 0;
+    line-height: 1.25; overflow: hidden; }
+  #modeQuick .mq b { font-size: 9px; font-weight: normal; }
+  #modeQuick .mq i { font-size: 8px; font-style: normal; opacity: .85; white-space: nowrap; }
   #modeQuick.fast { background: #5d2330; border-color: var(--bad); color: #ffb0b0; }
   #modeQuick.steady { background: #1c4a2e; border-color: var(--good); color: #b7ffce; }
+  /* it is costing you right now: say so without words */
+  #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
+  @keyframes doendo { 0% { box-shadow: 0 4px 0 var(--ink) } 50% { box-shadow: 0 4px 0 var(--ink), 0 0 16px rgba(255,107,87,.85) } 100% { box-shadow: 0 4px 0 var(--ink) } }
   #btnClique { width: 100%; padding: 13px 10px; font-size: var(--fs-lg);
     background: linear-gradient(180deg, var(--gold), var(--gold2)); color: var(--ink);
     display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -99,8 +120,11 @@
   #btnClique.segurando #dicaHold { color: rgba(14,15,26,.85); }
 
   /* ---- floating sheets above the character ---- */
+  /* --hControles is measured from the real control block on load and on resize: NOTES
+     records a panel covering the menu bar once already, and a hardcoded 126px breaks
+     again the moment a button grows a line of text */
   .sheet { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%) translateY(110%);
-    bottom: calc(126px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
+    bottom: calc(var(--hControles, 126px) + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
     background: rgba(31,43,87,.96); border: 3px solid var(--ink); border-radius: 2px;
     box-shadow: inset 0 0 0 2px var(--panel2), 5px 5px 0 rgba(0,0,0,.5);
     padding: 12px; transition: transform .22s ease, opacity .22s ease; max-height: 52vh; overflow-y: auto;
@@ -116,6 +140,22 @@
   #modoCarvao.ativo { background: #5d2330; border-color: var(--bad); color: #ffb0b0; }
   #modoLimpo.ativo { background: #1c4a2e; border-color: var(--good); color: #b7ffce; }
   .descModo { font-size: var(--fs-xs); color: var(--sub); margin-top: 8px; min-height: 22px; line-height: 1.8; }
+
+  /* the trade, side by side: what you are running now against what switching would do */
+  .ritmo { display: flex; gap: 7px; margin-top: 9px; }
+  .rCol { flex: 1 1 0; min-width: 0; background: var(--ink); border: 2px solid #000; padding: 8px 7px; }
+  .rCol.quente { box-shadow: inset 0 0 0 1px var(--bad); }
+  .rCol.fria { box-shadow: inset 0 0 0 1px var(--good); }
+  .rTit { font-size: 8px; color: var(--sub); margin-bottom: 7px; white-space: nowrap;
+    overflow: hidden; text-overflow: clip; }
+  .rCol.quente .rTit { color: #ffb0b0; } .rCol.fria .rTit { color: #b7ffce; }
+  .rL { display: flex; justify-content: space-between; align-items: baseline; gap: 4px;
+    font-size: 8px; color: var(--sub); line-height: 2.1; }
+  .rL b { font-size: 9px; font-weight: normal; color: var(--texto); white-space: nowrap; }
+  .rL b.bom { color: #8ef0ad; } .rL b.ruim { color: #ff9d8a; }
+  .avisoRampa { display: none; font-size: 8px; line-height: 1.9; margin-top: 8px; padding: 6px 7px;
+    color: #ffd7cf; background: #4a1f2b; border: 2px solid var(--bad); }
+  .avisoRampa.mostra { display: block; }
 
   .barra { height: 10px; background: #000; border: 2px solid var(--ink); margin-top: 6px; }
   .barra > div { height: 100%; transition: width .3s;
@@ -167,6 +207,7 @@
 <canvas id="scene" width="320" height="180"></canvas>
 <div id="crt"></div>
 <div id="vig"></div>
+<div id="flash"></div>
 
 <div id="lore" class="escondido">
   <div class="loreBox">
@@ -180,11 +221,12 @@
 </div>
 
 <div id="hudTop">
-  <div class="chip"><canvas class="pi" data-i="bolt" width="12" height="12"></canvas>
+  <div class="chip" id="chipTaxa"><canvas class="pi" data-i="bolt" width="12" height="12"></canvas>
     <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo"><span id="taxa">0</span>/s</div></div></div>
-  <div class="chip"><canvas class="pi" data-i="tired" width="12" height="12"></canvas>
+  <div class="chip" id="chipTime"><canvas class="pi" data-i="tired" width="12" height="12"></canvas>
     <div class="cInfo"><div class="valor" id="eficiencia">100%</div>
-      <div class="minibar"><div id="barPoluicao"></div></div><span id="poluicao" style="display:none">0</span></div></div>
+      <div class="minibar"><div id="barPoluicao"></div></div>
+      <div class="rotulo tend" id="tendencia"></div><span id="poluicao" style="display:none">0</span></div></div>
   <div class="chip"><canvas class="pi" data-i="leaf" width="12" height="12"></canvas>
     <div class="cInfo"><div class="valor" id="worldPct">0%</div><div class="rotulo" id="wisChip"></div></div></div>
 </div>
@@ -198,7 +240,8 @@
     <button id="openProjects"><canvas class="pi" data-i="house" width="12" height="12"></canvas><span id="nGeradores">0</span></button>
     <button id="openUpgrades"><canvas class="pi" data-i="up" width="12" height="12"></canvas></button>
     <button id="openTorch"><canvas class="pi" data-i="torch" width="12" height="12"></canvas></button>
-    <button id="modeQuick"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas></button>
+    <button id="modeQuick"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas><span
+      class="mq"><b id="modeNome">FAST</b><i id="modeSub"></i></span></button>
   </div>
   <button id="btnClique"><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
 </div>
@@ -207,6 +250,21 @@
   <div class="sheetHead"><div class="t">PROJECTS — <span id="nGeradores2">0</span> RUNNING</div>
     <button class="fechar" data-close="sheetProjects">✕</button></div>
   <button class="btnCompra" id="btnGerador"></button>
+  <div class="ritmo">
+    <div class="rCol" id="rColA">
+      <div class="rTit" id="rTitA">NOW</div>
+      <div class="rL"><span>now</span><b id="rTaxaA">0/s</b></div>
+      <div class="rL"><span>settles</span><b id="rFimA">0/s</b></div>
+      <div class="rL"><span>team</span><b id="rSaudeA">100%</b></div>
+    </div>
+    <div class="rCol troca" id="rColB">
+      <div class="rTit" id="rTitB">IF YOU SWITCH</div>
+      <div class="rL"><span>now</span><b id="rTaxaB">0/s</b></div>
+      <div class="rL"><span>settles</span><b id="rFimB">0/s</b></div>
+      <div class="rL"><span>team</span><b id="rSaudeB">100%</b></div>
+    </div>
+  </div>
+  <div class="avisoRampa" id="avisoRampa"></div>
   <div class="modo">
     <button id="modoCarvao">🔥 GO FAST</button>
     <button id="modoLimpo">🌱 GO STEADY</button>
@@ -392,6 +450,63 @@ function inovacaoAoTransicionar() {
 function worldHealth() {
   const run = Math.min(1, S.energiaTotal / CFG.metaPrestigio);
   return Math.max(0, Math.min(1, 0.04 + run * 0.72 + Math.min(S.inovacao, 12) * 0.02));
+}
+
+// ============================================================
+// WHAT THE RHYTHM COSTS — projections, not descriptions
+// The whole prototype exists to measure one decision (burn the team out fast vs organise
+// steadily) and until now the game never told the player what they were trading. These
+// read the future straight out of the same closed form simular() steps with, so nothing
+// here is a hardcoded claim that can drift away from the economy.
+// ============================================================
+function kCansaco() { return -Math.log(1 - CFG.decaimentoPoluicao * (S.u7 ? CFG.descansoU7 : 1)); }
+// where tiredness settles if you stay in this mode forever: emission / k
+function cansacoEq(modo) {
+  const emissao = modo === "carvao" ? S.geradores * CFG.poluicaoPorGerador * (S.u1 ? 1.5 : 1) : 0;
+  return emissao / kCansaco();
+}
+// tiredness t seconds from now, if you stay in this mode — the same equation as simular()
+function cansacoEm(modo, t) {
+  const eq = cansacoEq(modo);
+  return eq + (S.poluicao - eq) * Math.exp(-kCansaco() * t);
+}
+const saudeDe = p => 100 / (100 + p);
+// how long until team health reaches `alvo` (0..1) in this mode; Infinity if it never does
+function segundosAteSaude(modo, alvo) {
+  const p = 100 / alvo - 100, eq = cansacoEq(modo), d = S.poluicao - eq;
+  if (Math.abs(d) < 1e-9) return 0;
+  const r = (p - eq) / d;
+  if (r <= 0) return Infinity;
+  const t = -Math.log(r) / kCansaco();
+  return t > 0 ? t : 0;
+}
+// production under a hypothetical rhythm, run through the real prodPorSegundo() so the
+// preview can never disagree with what actually happens one frame later
+function taxaSe(modo, tempoLimpo, poluicao) {
+  const m = S.modo, tl = S.tempoLimpo, p = S.poluicao;
+  S.modo = modo; S.tempoLimpo = tempoLimpo;
+  if (poluicao !== undefined) S.poluicao = poluicao;
+  const v = prodPorSegundo();
+  S.modo = m; S.tempoLimpo = tl; S.poluicao = p;
+  return v;
+}
+const rampaCheia = () => (S.u3 ? CFG.rampaLimpoSeg / 2 : CFG.rampaLimpoSeg);
+// what a rhythm is worth right now, and what it is worth once the team has settled into it
+function taxaAgora(modo) { return taxaSe(modo, modo === "limpo" ? S.tempoLimpo : 0); }
+function taxaAssentada(modo) {
+  return taxaSe(modo, modo === "limpo" ? rampaCheia() : 0, cansacoEq(modo));
+}
+function curto(seg) {
+  if (!isFinite(seg)) return "never";
+  if (seg < 1) return "now";
+  if (seg < 60) return Math.round(seg) + "s";
+  if (seg >= 600) return Math.round(seg / 60) + "m";     // past ten minutes the seconds are noise
+  return Math.floor(seg / 60) + "m" + String(Math.round(seg % 60)).padStart(2, "0");
+}
+// rates are read at a glance, so keep them short whatever the order of magnitude
+function taxaCurta(n) {
+  if (n >= 1000) return fmt(n) + "/s";
+  return (n >= 100 ? Math.round(n) : n.toFixed(1)) + "/s";
 }
 
 // ---------- simulation ----------
@@ -621,12 +736,70 @@ function comprarGerador() {
     desenhar();
   }
 }
+// Changing rhythm is THE decision this prototype exists to measure, and it used to be one
+// floating word. Now the switch reports what it just cost and what it just bought, with
+// numbers read from the live formulas — including the ramp you threw away, which was the
+// sharpest hidden cost in the game.
+let modoAviso = null;
 function definirModo(m) {
   if (S.modo === m) return;
+  const taxaAntes = prodPorSegundo();
+  const rampaPerdida = S.modo === "limpo" ? rampaAtual() : 0;
+  const fracaoPerdida = S.modo === "limpo" ? fracaoRampa() : 0;
+
   S.modo = m; S.tempoLimpo = 0;
-  floats.push({ x: HX - 8, y: GROUND - 44, txt: m === "carvao" ? "GO FAST!" : "GO STEADY!", life: 45 });
-  burst(HX + 6, GROUND - 20, 8, m === "carvao" ? ["#ff6b57", "#ffcd75"] : ["#38b764", "#6fdd94"]);
+
+  const taxaDepois = prodPorSegundo();
+  const fim = taxaAssentada(m);
+  const saudeFim = saudeDe(cansacoEq(m));
+  const delta = taxaAntes > 0.05 ? (taxaDepois / taxaAntes - 1) * 100 : 0;
+  const rapido = m === "carvao";
+
+  // the world reacts: a stack of floats, a fat burst, a screen flash, chips popping
+  let y = GROUND - 44;
+  floats.push({ x: HX - 10, y: y, txt: rapido ? "GO FAST!" : "GO STEADY!", life: 52 });
+  if (S.geradores > 0) {
+    floats.push({ x: HX - 10, y: y -= 13, life: 46,
+      txt: taxaCurta(taxaAntes) + " > " + taxaCurta(taxaDepois) });
+    floats.push({ x: HX - 10, y: y -= 13, life: 42, txt: "SETTLES " + taxaCurta(fim) });
+    floats.push({ x: HX - 10, y: y -= 13, life: 38,
+      txt: "TEAM " + Math.round(saudeFim * 100) + "%" });
+    if (fracaoPerdida > 0.02) {
+      floats.push({ x: HX - 10, y: y - 13, txt: "RAMP LOST x" + rampaPerdida.toFixed(2), life: 60 });
+    }
+  }
+  burst(HX + 6, GROUND - 20, 26, rapido ? ["#ff6b57", "#ffcd75", "#ffe9b0"] : ["#38b764", "#6fdd94", "#b5e08c"]);
+  for (let i = 0; i < 14; i++) {   // a column of sparks going up: revving, or exhaling
+    parts.push({ x: HX + 4 + (Math.random() - 0.5) * 26, y: GROUND - 4,
+      vx: (Math.random() - 0.5) * (rapido ? 40 : 16), vy: -(rapido ? 70 : 34) - Math.random() * 40,
+      life: 0.7 + Math.random() * 0.4, c: rapido ? "#ff6b57" : "#6fdd94", grav: rapido ? 60 : 22 });
+  }
+  piscar(rapido);
+
+  // one line, in the strip, that stays long enough to be read
+  modoAviso = {
+    t: 4.5, rapido: rapido,
+    txt: rapido
+      ? "GO FAST — " + (delta >= 0 ? "+" : "") + Math.round(delta) + "% NOW, TEAM SINKS TO "
+        + Math.round(saudeFim * 100) + "%"
+      : "GO STEADY — TEAM BACK TO 90% IN " + curto(segundosAteSaude("limpo", 0.9))
+        + ", RAMP IN " + curto(rampaCheia())
+  };
+  if (fracaoPerdida > 0.02) modoAviso.txt += " · RAMP LOST";
   desenhar();
+}
+// screen-level punch that belongs to the HUD, not to the scene: a full-frame wash and a
+// pop on the chips that just changed meaning
+function piscar(rapido) {
+  const f = $("flash");
+  if (!f) return;
+  f.className = "";
+  void f.offsetWidth;                 // restart the animation
+  f.className = rapido ? "vai fast" : "vai steady";
+  ["modeQuick", "chipTaxa", "chipTime"].forEach(function (id) {
+    const el = $(id); if (!el) return;
+    el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+  });
 }
 function comprar(u, custo) {
   if (!S[u] && S.energia >= custo) { S.energia -= custo; S[u] = true; desenhar(); }
@@ -1686,22 +1859,7 @@ function desenhar() {
   $("btnGerador").textContent = "+ START A PROJECT — " + fmt(c);
   $("btnGerador").disabled = S.energia < c;
 
-  const mq = $("modeQuick");
-  if (mq.className !== (S.modo === "carvao" ? "fast" : "steady")) {
-    mq.className = S.modo === "carvao" ? "fast" : "steady";
-    renderIcon($("modeIcon"), S.modo === "carvao" ? "flame" : "leaf");
-  }
-
-  $("modoCarvao").classList.toggle("ativo", S.modo === "carvao");
-  $("modoLimpo").classList.toggle("ativo", S.modo === "limpo");
-  if (S.modo === "carvao") {
-    $("descModo").textContent = (S.u1 ? 6 : 3) + "/s each — tires the team";
-    $("boxRampa").style.display = "none";
-  } else {
-    $("descModo").textContent = "1 → " + tetoLimpoAtual() + "/s (now ×" + rampaAtual().toFixed(2) + ") — no tiredness";
-    $("boxRampa").style.display = "block";
-    $("barRampa").style.width = (fracaoRampa() * 100) + "%";
-  }
+  desenharRitmo();
 
   $("cardU1").classList.toggle("comprado", S.u1);
   $("btnU1").textContent = fmt(CFG.custoU1);
@@ -1734,13 +1892,96 @@ function desenhar() {
   alertaMundo();
 }
 
+// Everything the player needs to make the one decision this prototype measures.
+// Every number is read from the live formulas; none of it is written down twice.
+function desenharRitmo() {
+  const rapido = S.modo === "carvao";
+  const outro = rapido ? "limpo" : "carvao";
+  const taxa = taxaCurta;
+
+  // --- the state chip in the menu row ---
+  const mq = $("modeQuick");
+  const classe = rapido ? "fast" : "steady";
+  if (mq.dataset.modo !== classe) {
+    mq.dataset.modo = classe;
+    renderIcon($("modeIcon"), rapido ? "flame" : "leaf");
+    $("modeNome").textContent = rapido ? "FAST" : "STEADY";
+  }
+  const saudeFimAtual = saudeDe(cansacoEq(S.modo));
+  const cansando = rapido && S.geradores > 0 && S.poluicao < cansacoEq("carvao") - 0.5;
+  const descansando = !rapido && S.poluicao > 0.5;
+  $("modeSub").textContent = rapido
+    ? (S.geradores > 0 ? "→" + Math.round(saudeFimAtual * 100) + "%" : "3/s each")
+    : (descansando ? "→100%" : "×" + rampaAtual().toFixed(1));
+  // pulse only while it is actively costing you something
+  mq.className = classe + (cansando && eficiencia() < 0.9 ? " doi" : "");
+
+  // --- where the team is heading, on the team chip ---
+  const tend = $("tendencia");
+  if (cansando) {
+    tend.className = "rotulo tend cai";
+    tend.textContent = "1m ↓ " + Math.round(saudeDe(cansacoEm("carvao", 60)) * 100) + "%";
+  } else if (descansando) {
+    tend.className = "rotulo tend sobe";
+    tend.textContent = "90% ↑ " + curto(segundosAteSaude("limpo", 0.9));
+  } else {
+    tend.className = "rotulo tend";
+    tend.textContent = rapido ? "settled" : "rested";
+  }
+
+  // --- the trade, side by side, inside the projects sheet ---
+  const nomes = { carvao: "🔥 FAST", limpo: "🌱 STEADY" };
+  $("rTitA").textContent = "NOW · " + nomes[S.modo];
+  $("rTitB").textContent = "SWITCH · " + nomes[outro];
+  $("rColA").className = "rCol " + (rapido ? "quente" : "fria");
+  $("rColB").className = "rCol " + (rapido ? "fria" : "quente");
+
+  const aAgora = taxaAgora(S.modo), aFim = taxaAssentada(S.modo);
+  const bAgora = taxaAgora(outro), bFim = taxaAssentada(outro);
+  $("rTaxaA").textContent = taxa(aAgora);
+  $("rTaxaB").textContent = taxa(bAgora);
+  $("rFimA").textContent = taxa(aFim);
+  $("rFimB").textContent = taxa(bFim);
+  $("rTaxaA").className = ""; $("rFimA").className = aFim >= bFim ? "bom" : "ruim";
+  $("rTaxaB").className = bAgora > aAgora ? "bom" : ""; $("rFimB").className = bFim > aFim ? "bom" : "ruim";
+  const saudeA = saudeDe(cansacoEq(S.modo)), saudeB = saudeDe(cansacoEq(outro));
+  $("rSaudeA").textContent = Math.round(eficiencia() * 100) + "% → " + Math.round(saudeA * 100) + "%";
+  $("rSaudeB").textContent = Math.round(eficiencia() * 100) + "% → " + Math.round(saudeB * 100) + "%";
+  $("rSaudeA").className = saudeA >= saudeB ? "bom" : "ruim";
+  $("rSaudeB").className = saudeB > saudeA ? "bom" : "ruim";
+
+  // --- the cost nobody was told about ---
+  const perde = !rapido && fracaoRampa() > 0.02;
+  $("avisoRampa").className = "avisoRampa" + (perde ? " mostra" : "");
+  if (perde) {
+    $("avisoRampa").textContent = "⚠ SWITCHING RESETS THE RAMP — you lose ×"
+      + rampaAtual().toFixed(2) + " and start again at ×1.00 ("
+      + curto(rampaCheia()) + " to climb back)";
+  }
+
+  $("modoCarvao").classList.toggle("ativo", rapido);
+  $("modoLimpo").classList.toggle("ativo", !rapido);
+  if (rapido) {
+    $("descModo").textContent = (S.u1 ? 6 : 3) + "/s each, and the team never stops tiring";
+    $("boxRampa").style.display = "none";
+  } else {
+    $("descModo").textContent = "1 → " + tetoLimpoAtual() + "/s (now ×" + rampaAtual().toFixed(2)
+      + ") — no tiredness, and it keeps climbing";
+    $("boxRampa").style.display = "block";
+    $("barRampa").style.width = (fracaoRampa() * 100) + "%";
+  }
+}
+
 // The one line that tells you why the rate just moved, and what your thumb can do about
 // it. Only one thing at a time: a call beats a party, a party beats a complaint.
 function alertaMundo() {
   const el = $("alerta");
   let classe = "", txt = "";
   const parados = mobs.filter(function (m) { return m.parado && m.dying <= 0; }).length;
-  if (chamada) {
+  if (modoAviso) {                        // the rhythm you just chose owns the line first
+    classe = modoAviso.rapido ? "perigo" : "festa";
+    txt = modoAviso.txt;
+  } else if (chamada) {
     classe = "chama";
     txt = "THEY NEED HANDS — TAP THE POT · " + Math.ceil(chamada.janela - chamada.t) + "s";
   } else if (mutiraoT > 0) {
@@ -1752,6 +1993,7 @@ function alertaMundo() {
       + Math.round((1 - bloqueioMundo()) * 100) + "%";
   }
   el.className = classe ? "mostra " + classe : "";
+  if (!classe) el.textContent = "";     // hidden *and* empty: no stale line left behind
   if (classe) {
     el.textContent = txt;
     // the night's summary owns the top slot while it is up
@@ -1772,6 +2014,15 @@ function abrir(id) {
   SHEETS.forEach(function (s) { $(s).classList.toggle("aberto", s === id && !$(s).classList.contains("aberto")); });
 }
 function fecharTudo() { SHEETS.forEach(function (s) { $(s).classList.remove("aberto"); }); }
+
+// The sheets float just above the controls. Measure that block instead of guessing it, so
+// a button that grows a line can never push the menu bar under an open panel again.
+function medirControles() {
+  const c = $("controls");
+  if (!c) return;
+  const h = Math.ceil(c.getBoundingClientRect().height) + 16;
+  document.documentElement.style.setProperty("--hControles", h + "px");
+}
 
 // ---------- main loop ----------
 document.addEventListener("DOMContentLoaded", () => {
@@ -1870,6 +2121,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   girarFato();
   desenhar();
+  medirControles();
+  window.addEventListener("resize", medirControles);
 
   if (!S.introSeen) {
     drawLoreArt();
@@ -1885,6 +2138,7 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarMobs(dt);
     atualizarDrops(dt);
     atualizarChamada(dt);
+    if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
     if (S.u4) { // neighbors keep helping on their own
       autoAcc += dt * CFG.autoTapsPorSeg;
       let n = Math.min(4, Math.floor(autoAcc));

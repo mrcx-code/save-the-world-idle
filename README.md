@@ -85,6 +85,16 @@ descansado o time, mais Sabedoria.
 Sete upgrades: campanhas grandes, ajuda mútua, treino do time, vizinhos que ajudam
 sozinhos, ferramentas para todos, divisão justa dos ganhos e dias de descanso.
 
+## A troca de ritmo
+
+A folha de projetos mostra o negócio lado a lado — **NOW** contra **SWITCH** — com o que
+cada ritmo rende *agora*, no que ele *assenta* depois que o cansaço encontra o equilíbrio,
+e para onde a saúde do time vai. Tudo projetado das fórmulas vivas (`cansacoEq`,
+`cansacoEm`, `segundosAteSaude`, `taxaSe`), então a explicação não tem como divergir do
+jogo. Sair do GO STEADY reseta a rampa, e isso agora é dito em vermelho, com o
+multiplicador que se perde. O botão de modo na barra é um estado (`FAST →5%`), não um
+ícone que troca.
+
 ## O mundo responde
 
 A cena inteira é botão: tocar nela golpeia igual ao CTA de baixo (mesmo combo, mesmo

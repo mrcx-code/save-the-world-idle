@@ -202,6 +202,124 @@ function chromiumPath() {
   if (perdida.aberta) errors.push('a missed call never closed');
   if (perdida.perdeu) errors.push('missing a call took something away');
 
+  // ---- the rhythm: the one decision this prototype exists to measure ----
+  // Mid-game, GO STEADY with the ramp fully climbed: the panel has to show that switching
+  // buys a burst now and costs almost everything later.
+  const ritmo = await page.evaluate(() => {
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; modoAviso = null;
+    S.geradores = 43; S.energia = 40000; S.energiaTotal = 30000; S.poluicao = 0;
+    S.u1 = S.u3 = S.u6 = true; S.modo = 'limpo'; S.tempoLimpo = 200;
+    desenhar();
+    const txt = id => document.getElementById(id).textContent;
+    return {
+      titA: txt('rTitA'), titB: txt('rTitB'),
+      agoraA: taxaAgora('limpo'), fimA: taxaAssentada('limpo'),
+      agoraB: taxaAgora('carvao'), fimB: taxaAssentada('carvao'),
+      mostraTaxaA: txt('rTaxaA'), mostraFimA: txt('rFimA'), mostraSaudeA: txt('rSaudeA'),
+      mostraTaxaB: txt('rTaxaB'), mostraFimB: txt('rFimB'), mostraSaudeB: txt('rSaudeB'),
+      aviso: txt('avisoRampa'), avisoVisivel: document.getElementById('avisoRampa').className.includes('mostra'),
+      rampa: rampaAtual(), chip: txt('modeNome') + ' ' + txt('modeSub'), tend: txt('tendencia')
+    };
+  });
+  console.log('rhythm panel · now', ritmo.mostraTaxaA, '/ settles', ritmo.mostraFimA, '/ team', ritmo.mostraSaudeA);
+  console.log('             · switch', ritmo.mostraTaxaB, '/ settles', ritmo.mostraFimB, '/ team', ritmo.mostraSaudeB);
+  console.log('             · chip:', JSON.stringify(ritmo.chip), '| warning:', JSON.stringify(ritmo.aviso));
+  if (!(ritmo.agoraB > ritmo.agoraA)) errors.push('GO FAST is not shown as faster right now');
+  if (!(ritmo.fimB < ritmo.fimA)) errors.push('the panel does not show that GO FAST settles lower');
+  if (ritmo.mostraFimB === ritmo.mostraTaxaB) errors.push('now and settles read the same for GO FAST');
+  if (!/100% . 5%/.test(ritmo.mostraSaudeB)) errors.push('the projected team health for GO FAST is wrong: ' + ritmo.mostraSaudeB);
+  if (!ritmo.avisoVisivel) errors.push('the ramp-reset warning did not show while a ramp was built');
+  if (ritmo.aviso.indexOf(ritmo.rampa.toFixed(2)) < 0) errors.push('the warning does not name the ramp being lost');
+  if (!/STEADY/.test(ritmo.chip)) errors.push('the mode chip does not name the rhythm');
+
+  // the numbers must be the real ones: what the panel promises, stepping the economy delivers
+  const honesto = await page.evaluate(() => {
+    const guarda = JSON.stringify(S);
+    S.modo = 'carvao'; S.tempoLimpo = 0; S.poluicao = 0;
+    const previsto = cansacoEm('carvao', 60), eq = cansacoEq('carvao');
+    for (let i = 0; i < 60; i++) simular(1);
+    const real = S.poluicao;
+    Object.assign(S, JSON.parse(guarda));
+    return { previsto, real, eq };
+  });
+  console.log('projection vs stepping the economy for 60s ->', honesto.previsto.toFixed(2),
+    'vs', honesto.real.toFixed(2), '| equilibrium', Math.round(honesto.eq));
+  if (Math.abs(honesto.previsto - honesto.real) > 0.5) errors.push('the tiredness projection does not match simular()');
+
+  // the switch itself has to land: flash, floats with real numbers, a line that stays up
+  await page.evaluate(() => { fecharTudo(); });
+  await page.waitForTimeout(250);
+  const trocou = await page.evaluate(() => {
+    floats.length = 0;
+    const antes = prodPorSegundo(), rampaAntes = S.tempoLimpo;
+    definirModo('carvao');
+    const f = document.getElementById('flash');
+    return {
+      classe: f.className, opacidade: parseFloat(getComputedStyle(f).opacity),
+      pop: document.getElementById('modeQuick').className,
+      textos: floats.map(x => x.txt), aviso: document.getElementById('alerta').textContent,
+      rampaAntes, rampaDepois: S.tempoLimpo, antes, depois: prodPorSegundo()
+    };
+  });
+  console.log('switch to GO FAST -> flash', JSON.stringify(trocou.classe), 'opacity',
+    trocou.opacidade.toFixed(2), '| floats', JSON.stringify(trocou.textos));
+  console.log('                  ->', JSON.stringify(trocou.aviso));
+  if (!/fast/.test(trocou.classe) || !(trocou.opacidade > 0.1)) errors.push('the switch did not flash the screen');
+  if (!trocou.textos.some(t => /GO FAST/.test(t))) errors.push('the switch did not announce itself');
+  if (!trocou.textos.some(t => /RAMP LOST/.test(t))) errors.push('the switch did not report the ramp it threw away');
+  if (!trocou.textos.some(t => />/.test(t) && /\/s/.test(t))) errors.push('the switch did not show the rate before and after');
+  if (!/TEAM SINKS/.test(trocou.aviso)) errors.push('the strip did not explain the cost of GO FAST');
+  if (trocou.rampaDepois !== 0) errors.push('switching did not reset the ramp');
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-troca.png') });
+
+  // the mode chip is a state readout, and it says when it is hurting
+  const chip = await page.evaluate(async () => {
+    S.poluicao = 700; desenhar();
+    const q = document.getElementById('modeQuick'), t = document.getElementById('tendencia');
+    const cabe = el => el.scrollWidth <= el.clientWidth + 1;
+    const doendo = { cls: q.className, sub: document.getElementById('modeSub').textContent,
+      tend: t.textContent, cabeChip: cabe(q), cabeTend: cabe(t) };
+    definirModo('limpo');
+    await new Promise(r => setTimeout(r, 250));
+    return { doendo, curando: { cls: document.getElementById('modeQuick').className,
+      sub: document.getElementById('modeSub').textContent, tend: t.textContent,
+      cabeTend: cabe(t), aviso: document.getElementById('alerta').textContent } };
+  });
+  console.log('mode chip tiring ->', JSON.stringify(chip.doendo.cls), chip.doendo.sub, '|', chip.doendo.tend);
+  console.log('mode chip healing ->', JSON.stringify(chip.curando.cls), chip.curando.sub, '|', chip.curando.tend);
+  if (!/doi/.test(chip.doendo.cls)) errors.push('the mode chip does not show that GO FAST is hurting');
+  if (/doi/.test(chip.curando.cls)) errors.push('the mode chip still says it hurts in GO STEADY');
+  if (!chip.doendo.cabeChip) errors.push('the mode chip text overflows its button');
+  if (!chip.doendo.cabeTend || !chip.curando.cabeTend) errors.push('the team trend line is cut off');
+  if (!/BACK TO 90%/.test(chip.curando.aviso)) errors.push('the strip did not say when the team recovers');
+
+  // the mode line has to fade on its own and hand the strip back
+  const decaiu = await page.evaluate(async () => {
+    for (let i = 0; i < 60; i++) { if (modoAviso) modoAviso.t -= 0.1; }
+    if (modoAviso && modoAviso.t <= 0) modoAviso = null;
+    desenhar();
+    return document.getElementById('alerta').textContent;
+  });
+  if (/GO STEADY —/.test(decaiu)) errors.push('the mode line never goes away');
+
+  // NOTES records this regression once already: no panel may cover the menu bar
+  const cobre = await page.evaluate(async () => {
+    document.getElementById('openProjects').click();
+    await new Promise(r => setTimeout(r, 350));
+    const s = document.getElementById('sheetProjects').getBoundingClientRect();
+    const m = document.getElementById('menuRow').getBoundingClientRect();
+    return { fundoFolha: s.bottom, topoMenu: m.top, altura: s.height, jan: window.innerHeight };
+  });
+  console.log('projects sheet bottom', Math.round(cobre.fundoFolha), 'vs menu top', Math.round(cobre.topoMenu),
+    '| sheet height', Math.round(cobre.altura), 'of', cobre.jan);
+  if (cobre.fundoFolha > cobre.topoMenu) errors.push('the projects sheet covers the menu bar');
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-ritmo.png') });
+  await page.evaluate(() => {
+    fecharTudo();
+    S.geradores = 0; S.poluicao = 0; S.modo = 'carvao'; S.tempoLimpo = 0;
+    S.u1 = S.u3 = S.u6 = false; modoAviso = null; desenhar();
+  });
+
   // ---- coming back on another day is worth something ----
   const dias = await page.evaluate(() => {
     localStorage.setItem('proto_savetheworld_retencao',

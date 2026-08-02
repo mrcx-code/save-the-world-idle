@@ -34,6 +34,49 @@ as falsy). U4 grew a second job on 2026-08-02: the neighbours' auto-taps also cl
 troubles blocking the road, and they pick up what is left on the ground (at half value,
 after 5s). It is the purchasable answer for someone who does not want to watch.
 
+## The rhythm, explained
+
+The prototype exists to measure one decision and the game never told the player what they
+were trading — `definirModo()` threw one floating word and that was the whole feedback.
+Everything below is *projected from the live formulas*, never written down twice, so a
+tuning change moves the explanation with it:
+
+| readout | where it comes from |
+|---|---|
+| tiredness equilibrium | `cansacoEq(modo) = emission / k`, the `eq` term inside `simular()` |
+| tiredness in 60s | `cansacoEm(modo, t) = eq + (p − eq)·e^(−kt)` — the same closed form |
+| when the team is back to 90% | `segundosAteSaude(modo, 0.9)`, that equation solved for t |
+| rate under a rhythm | `taxaSe()` swaps `S.modo`/`tempoLimpo`/`poluicao`, calls the real `prodPorSegundo()`, restores |
+| what a rhythm *settles* at | `taxaAssentada()` — the rate once tiredness has reached equilibrium |
+
+The projects sheet carries the trade side by side: **NOW · <rhythm>** against **SWITCH ·
+<the other>**, each with `now` / `settles` / `team now → settled`. At 43 projects with Big
+campaigns, from a fully-climbed GO STEADY, that reads:
+
+| | now | settles | team |
+|---|---|---|---|
+| NOW · GO STEADY | 224/s | **224/s** | 100% → 100% |
+| SWITCH · GO FAST | **335/s** | 16.5/s | 100% → **5%** |
+
++50% for a minute against 13× less forever. That sentence was always true and was never
+once shown. From the wrecked side it inverts — GO FAST reads 42/s now settling to 16.5/s,
+GO STEADY reads 7.2/s now (the ramp is back at ×1) settling to 224/s — which is exactly the
+"burst then recover" shape open question 6 describes.
+
+The ramp reset gets its own red warning naming the multiplier being thrown away and how
+long it takes to climb back. The mode button in the menu row became a state readout
+(`FAST →5%` / `STEADY ×4.0`) that pulses while GO FAST is actively costing health, and the
+team chip carries the direction (`1m ↓ 9%` while tiring, `90% ↑ 14m` while resting).
+
+Switching now lands: a full-frame wash (red for fast, green for steady), a pop on the chips
+that changed meaning, a column of sparks, a five-line float stack with the real numbers
+(`224/s > 335/s`, `SETTLES 16.5/s`, `TEAM 5%`, `RAMP LOST x4.00`) and a line in the strip
+that stays up for 4.5s.
+
+None of it touches the economy: `node test/sim.js` is identical to the second, before and
+after. The smoke test checks the projection against reality by stepping `simular()` for 60
+real seconds and comparing — 501.34 vs 501.34.
+
 ## The world answers back
 
 | thing | number | where it lands |
@@ -188,7 +231,18 @@ floating sheets above the character; type scales with `clamp()`.
    answer and it costs 3,000, which is late. Worth checking whether the block should
    fade as the world heals (`worldHealth()` is right there) instead of holding at full
    strength forever.
-6. **GO FAST is dominated by GO STEADY once projects pile up.** At equilibrium a fast
+6. **The GO STEADY ramp reset is harsher than it looks, and it does not live where you
+   think.** `definirModo()` sets `S.tempoLimpo = 0`, but that line is redundant: the real
+   reset is in `simular()`, which zeroes `tempoLimpo` on *every tick* spent in GO FAST.
+   Measured with two patches that keep the clock alive across the fast stretch:
+   `--patch=rampaMeia` (a switch keeps half the climb) moves the winner 6m41s → 6m39s and
+   the hands-off rhythm 14m01s → 13m17s; `--patch=rampaFica` (the ramp survives switching
+   entirely) takes the winner to **5m56s**, an 11% acceleration, and promotes both rhythm
+   runs *above* the pure-steady ones. So: full preservation turns the rhythm into a free
+   toggle and should not ship; half-credit costs the table almost nothing (0.5% on the
+   winner) while removing the "I tried GO FAST once and lost two minutes of climbing"
+   punishment. Neither is shipped — flagged for the owner, with the numbers.
+7. **GO FAST is dominated by GO STEADY once projects pile up.** At equilibrium a fast
    project settles at `100/(100 + 44.9n)` health, so at n=43 it produces 0.3/s against
    steady's 4/s. Fast only wins in short bursts before tiredness accumulates. The
    fast/steady choice is really "burst then recover", not "pick a lane" — worth deciding
@@ -375,6 +429,63 @@ toda sessão começa lendo a última entrada.
   por dia e uma chamada dobrada, e isso foi escolhido no papel, não medido. A lente é
   *Medir*: simular três dias de sessões curtas e ver se o dia 2 tem mais a oferecer que o
   dia 1.**
+
+- **2026-08-02 · a troca de ritmo passou a ser explicada e a doer.** O dono disse que a
+  mudança de fogo para planta precisa ser mais impactante e explicar melhor o impacto — e
+  ele está certo: o jogo inteiro existe para medir **uma** decisão e ela era um float
+  escrito "GO FAST!". Agora, antes da troca, a folha de projetos mostra o negócio lado a
+  lado — **NOW · ritmo atual** contra **SWITCH · o outro**, cada coluna com `now`,
+  `settles` e `team agora → assentado`. Tudo projetado das fórmulas vivas, nada escrito
+  duas vezes: `cansacoEq() = emissão/k` (o mesmo `eq` de dentro do `simular()`),
+  `cansacoEm()` com a mesma forma fechada, `segundosAteSaude()` resolvendo aquela equação
+  para t, e `taxaSe()` trocando `S.modo`/`tempoLimpo`/`poluicao`, chamando o
+  `prodPorSegundo()` de verdade e restaurando — então a previsão não tem como divergir do
+  que acontece no quadro seguinte. **Medido**: com 43 projetos e Big campaigns, saindo de
+  um GO STEADY com a rampa cheia, o painel lê `224/s → 224/s, time 100%` contra
+  `335/s agora → 16,5/s assentado, time 100% → 5%`. **+50% por um minuto contra 13× menos
+  para sempre** — sempre foi verdade e nunca tinha sido mostrado. Do lado destruído
+  inverte: FAST 42/s agora assentando em 16,5/s, STEADY 7,2/s agora (a rampa voltou ao ×1)
+  assentando em 224/s. O reset da rampa ganhou aviso vermelho com o multiplicador que se
+  perde e o tempo para reconquistá-lo. O botão de modo virou estado (`FAST →5%` /
+  `STEADY ×4.0`) e pulsa enquanto o GO FAST está cobrando; o chip do time ganhou direção
+  (`1m ↓ 9%` cansando, `90% ↑ 14m` descansando). A troca em si virou momento: lavagem da
+  tela inteira (vermelha/verde), estalo nos chips que mudaram de significado, coluna de
+  faíscas, pilha de cinco floats com os números reais (`224/s > 335/s`, `SETTLES 16.5/s`,
+  `TEAM 5%`, `RAMP LOST x4.00`) e uma linha na tarja por 4,5s. **A economia não se mexeu:
+  `node test/sim.js` saiu idêntico ao segundo, antes e depois** — 6m41s / 6m57s / 7m28s /
+  7m35s / 10m58s / 12m02s / 14m01s / 43m02s / 49m20s / 54m23s / 54m25s / 57m36s / 1h25m30s.
+  A honestidade da previsão virou teste: o smoke pisa o `simular()` por 60s de verdade e
+  compara com `cansacoEm()` — **501,34 contra 501,34**.
+  **Sobre o reset da rampa, que o dono perguntou se é bom design:** medi em vez de opinar,
+  e no caminho descobri que ele **não está onde parece**. O `definirModo()` zera o
+  `S.tempoLimpo`, mas essa linha é redundante — quem zera de verdade é o `simular()`, a
+  cada quadro passado em GO FAST. Minha primeira tentativa de patch não mudou nada
+  justamente por isso (mexia no lugar errado, e a tabela saiu idêntica — foi o sinal).
+  Com o patch certo: `--patch=rampaMeia` (a troca guarda metade da subida) leva a corrida
+  vencedora de 6m41s para **6m39s** e o ritmo sem mãos de 14m01s para 13m17s;
+  `--patch=rampaFica` (a rampa sobrevive inteira) leva a vencedora para **5m56s**, 11% mais
+  rápida, e **promove as duas corridas de ritmo para cima das de steady puro**. Conclusão:
+  preservar tudo transforma o ritmo num interruptor de graça — é a mesma forma de falha do
+  U2 antigo e não deve subir. Guardar metade custa quase nada à tabela (0,5% na vencedora)
+  e tira o castigo de "experimentei o GO FAST uma vez e perdi dois minutos de subida".
+  Não subi nenhum dos dois: é mudança de economia e a decisão é do dono, agora com número.
+  **Quebrou no caminho, duas coisas, e as duas o teste novo pegou.** (a) O botão de modo
+  ganhou uma segunda linha de texto, a barra de menu ficou 3px mais alta e a folha de
+  projetos passou a **cobrir o menu** — exatamente a regressão que o NOTES já registra da
+  sessão de origem, que na época foi consertada com um `126px` chumbado. Em vez de chumbar
+  outro número, o `--hControles` agora é **medido** do bloco de controles no load e no
+  resize, então um botão que cresça uma linha não pode mais empurrar o menu para debaixo do
+  painel (folha em 709, menu em 715). (b) A tarja escondia a classe mas mantinha o texto
+  velho no DOM; agora esvazia junto. Verde, 61 FPS, load de 96ms.
+  **Dúvida nova:** o painel só é visto por quem abre a folha de projetos, e o atalho de
+  modo na barra troca sem abrir nada. Quem nunca abrir a folha vê a explicação só no
+  momento da troca (floats + tarja) — pode ser suficiente, mas é uma suposição, não uma
+  medição. **Próximo passo: decidir com o dono o `rampaMeia`, e medir se alguém que só usa
+  o atalho chega a entender o negócio — a lente é *Primeiros cinco minutos*.**
+  **Recomendação para a agente de ESTÉTICA (não implementei, é território dela):** o mundo
+  em si ainda não reage ao ritmo. O GO FAST já tem `smog` ligado ao cansaço, mas a troca
+  poderia empurrar o céu e a grade de cor por alguns segundos — azedar no fogo, respirar no
+  verde — que é o único lugar onde a decisão ainda não aparece.
 
 ## Would cut with one more day
 

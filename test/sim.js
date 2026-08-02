@@ -34,7 +34,13 @@ const PATCHES = {
     cura(S, st) { const c = Math.min(2, st.curaBudget); st.curaBudget -= c; return c; },
     cansa: () => 0
   },
-  semMundo: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0, mundo: false }
+  semMundo: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0, mundo: false },
+  // Is the GO STEADY ramp reset (S.tempoLimpo = 0 on every switch) too harsh? It is the
+  // sharpest hidden cost in the game, so measure the alternatives instead of arguing.
+  //   rampaMeia — a switch keeps half the time already climbed
+  //   rampaFica — the ramp survives switching entirely
+  rampaMeia: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0, rampaMantida: 0.5 },
+  rampaFica: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0, rampaMantida: 1 }
 };
 
 // ---- the world, mirrored ----
@@ -155,10 +161,19 @@ function jogar(est, patch = PATCHES.none) {
   let deToque = 0, deProjeto = 0, deMundo = 0, tempoSegurando = 0, piorSaude = 1;
 
   while (S.energiaTotal < META && t < LIMITE) {
+    // The ramp reset is not really in definirModo() — simular() zeroes tempoLimpo on every
+    // tick spent in GO FAST, so the climb evaporates the instant you leave GO STEADY.
+    // A patch that softens it has to keep the clock alive across the whole fast stretch.
+    const guardaRampa = patch.rampaMantida !== undefined;
     const novoModo = est.modo(S);
-    if (novoModo !== S.modo) { S.modo = novoModo; S.tempoLimpo = 0; }
+    if (novoModo !== S.modo) {
+      if (novoModo === 'carvao') S.tempoLimpo *= guardaRampa ? patch.rampaMantida : 0;
+      S.modo = novoModo;
+    }
 
+    const tlAntes = S.tempoLimpo;
     deProjeto += F.simular(S, DT);
+    if (guardaRampa && S.modo !== 'limpo') S.tempoLimpo = tlAntes;
     if (patch.limite) st.curaBudget = Math.min(patch.limite, st.curaBudget + patch.limite * DT);
 
     // holding the main button repeats at HOLD_TPS; duty cycle < 1 means the player
