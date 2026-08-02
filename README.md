@@ -1,23 +1,78 @@
-# SAVE THE WORLD — protótipo idle (teste de 3 dias)
+# SAVE THE WORLD
 
-Jogo idle/ação em **um único arquivo**: `index.html`. Sem build, sem dependências, sem servidor.
-Abra o arquivo no navegador e está rodando.
+> *nobody is saved alone*
 
-O herói corre por um mundo quebrado em 2026. Cada toque é ajuda; cada projeto é gente
-trabalhando junto. O mundo cura na tela conforme o impacto total sobe.
+Um jogo idle de ação para celular. O mundo de 2026 está parado — e você é quem começa
+de novo.
+
+Você corre por uma rua quebrada com uma varinha na mão. Cada toque lança magia. Cada
+projeto que você abre é gente trabalhando junto. E o mundo **cura na sua frente
+enquanto você corre**: o céu volta a ter cor, as janelas acendem, os ipês florescem, a
+água limpa, as cozinhas comunitárias aparecem na calçada.
+
+Não tem tela de vitória. Tem uma rua que melhora porque você apareceu.
+
+---
+
+## A decisão que o jogo inteiro é sobre
+
+Você escolhe o ritmo, e não existe resposta certa:
+
+**🔥 GO FAST** — o triplo da produção agora. E o time cansa.
+**🌱 GO STEADY** — começa devagar e vai subindo. E ninguém se esgota.
+
+O cansaço do time divide **tudo**: produção, toques, o que você leva ao passar a tocha.
+Forçar a barra funciona por um minuto e cobra pelo resto da partida. Ir firme demora a
+engrenar e não cobra nada.
+
+O jogo te mostra a conta na hora de decidir — o que você ganha agora, no que aquilo
+estabiliza, e onde o seu time vai parar. A escolha continua sua.
+
+## O que anda pela rua
+
+Os inimigos não são pessoas nem empresas. São abstrações do que trava o mundo:
+
+| | |
+|---|---|
+| **fumaça** | o ar de quem não pôde escolher |
+| **tambor** | o que enterraram e foram embora |
+| **saco de dinheiro** | valor que parou de circular — estoura em **SHARED!** |
+
+Eles caminham até você e ficam parados no caminho, atrapalhando o trabalho, até alguém
+resolver. Derrubar um deixa algo no chão que precisa ser recolhido — ou os vizinhos
+recolhem por você, se você tiver ajudado eles antes.
+
+## A comunidade
+
+De tempos em tempos a panela chama e há uma janela curta pra aparecer. Quem aparece
+dispara um **mutirão**: todo mundo rende mais, e a rua limpa o caminho.
+
+Voltar amanhã vale mais que jogar demais hoje. Cada dia distinto deixa a rua um pouco
+melhor pra sempre, e quem volta depois de uma noite encontra um chamado guardado.
+
+## Passar a tocha
+
+Chega uma hora em que você já não é mais quem a rua precisa que aprenda — você é quem
+ensina. Passar a tocha zera tudo o que você construiu e guarda pra sempre o que você
+aprendeu.
+
+Você não vai embora. Você senta.
+
+---
 
 ## Rodar
 
-```bash
-# só abrir no navegador
-open index.html          # macOS
-xdg-open index.html      # Linux
-start index.html         # Windows
+O jogo inteiro é **um arquivo**. Sem build, sem framework, sem dependência de rede.
+Abrir no navegador é rodar.
 
-# ou servir (recomendado no celular, pra testar em rede local)
-python3 -m http.server 8000
-npx --yes serve .          # se não houver python na máquina
+```bash
+start index.html          # Windows
+open index.html           # macOS
+xdg-open index.html       # Linux
 ```
+
+Pra testar no celular na rede local, sirva a pasta com qualquer servidor estático
+(`npx --yes serve .` resolve).
 
 ## Testar
 
@@ -26,110 +81,30 @@ npm install -D playwright && npx playwright install chromium
 node test/smoke.js
 ```
 
-O teste roda headless num viewport de celular (390×844) e falha se: houver erro de
-console, o segurar-para-atacar não repetir, algum upgrade não aplicar, o terceiro
-golpe não pular, o baque não gerar onda de choque, o toque longo não abrir o painel de
-retenção, aparecer qualquer diálogo do navegador, ou o ganho offline voltar a usar a
-taxa congelada. Também cobre o mundo tocável: um toque na cena golpear igual ao botão,
-segurar a cena repetir, segurar os dois ao mesmo tempo **não** dobrar a cadência, o
-toque com folha aberta só fechar, o monstro andar e bloquear produção, o item cair e
-ser recolhido no toque, a chamada da comunidade abrir e o mutirão subir a produção, e o
-bônus por dia bater com o `CFG`. Ele mede FPS e salva prints (`shot-*.png`) —
-**sempre olhe os prints**: o teste garante que não quebrou, não que ficou bom.
+O smoke test roda headless num viewport de celular (390×844), mede FPS e salva prints
+(`shot-*.png`). Ele falha se houver erro de console, se o segurar-pra-atacar parar de
+repetir, se um upgrade não aplicar, se o terceiro golpe não pular, se o baque não gerar
+onda de choque, se o toque na cena não golpear, se aparecer qualquer diálogo do
+navegador, ou se o ganho offline voltar a usar taxa congelada. **Sempre olhe os
+prints** — o teste garante que não quebrou, não que ficou bonito.
 
-Além do smoke, dois medidores sem navegador — só as fórmulas em Node, lendo o `CFG`
-direto do `index.html` para não divergirem:
+Dois medidores sem navegador, só as fórmulas em Node, lendo o `CFG` direto do
+`index.html` pra não divergirem:
 
 ```bash
-node test/sim.js --detail        # tempo até 50 mil por estratégia
-node test/sim.js --patch=u2Sempre  # e sob uma mudança de balanço candidata
-node test/sim.js --ciclos=2      # duas tochas seguidas — onde uma skill permanente aparece
-node test/offline.js             # o que a noite paga, taxa congelada × integrada
+node test/sim.js --detail   # tempo até a tocha, por estratégia
+node test/offline.js        # o que a noite paga
 ```
-
-## Publicar
-
-Qualquer host estático serve. Na Vercel: importar este repositório e publicar —
-sem framework, sem build command, output = raiz.
-
-## Estrutura
-
-| arquivo | o que é |
-|---|---|
-| `index.html` | o jogo inteiro: HTML, CSS, canvas e lógica |
-| `CLAUDE.md` | instruções permanentes: regras invioláveis, ciclo de trabalho, fila |
-| `NOTES.md` | fórmulas, balanço medido, dúvidas em aberto e o diário de sessões |
-| `test/smoke.js` | teste de fumaça headless (Playwright) |
-| `test/formulas.js` | a economia em Node, com o `CFG` lido do `index.html` |
-| `test/sim.js` | tempo até 50 mil por estratégia, e sob patches candidatos |
-| `test/offline.js` | quanto a noite paga: taxa congelada × integrada |
 
 ## Regras do projeto
 
-1. **Números reais nunca entram nas fórmulas.** Os dados do banner `REAL DATA` vivem
-   no array `dadosReais`, cada um com `fonte` e `data`. Sem fonte verificável, o número
-   não entra. Os números do jogo (`CFG`) existem só para o jogo ser divertido e não
-   representam nada do mundo real.
-2. **Sem empresas ou políticos reais como vilões.** Os inimigos são abstrações:
-   fumaça, tambor tóxico, saco de dinheiro.
-3. **Mobile primeiro.** Sem zoom, sem seleção de texto, sem cara de site.
+1. **Números reais nunca entram nas fórmulas.** Dados do mundo real vivem só no banner
+   `REAL DATA`, cada um com fonte e data. Sem fonte verificável, o número não entra. Os
+   números do jogo existem para o jogo ser divertido e não representam nada.
+2. **Nenhuma empresa, marca ou político real como vilão.** Os inimigos são abstrações.
+3. **Solidário sem ser panfletário.** Se ficar com cara de palanque, foi longe demais.
+4. **Mobile primeiro.** Sem zoom, sem seleção de texto, sem cara de site.
+5. **Um arquivo só.** Nada de bundler, nada de CDN, nada de asset externo.
 
-## O loop
-
-Toque (ou **segure**) para ajudar → junte impacto → abra projetos (custo 15×1,15ⁿ) →
-escolha o ritmo: **GO FAST** rende 3/s por projeto mas cansa o time, **GO STEADY**
-começa em 1/s e sobe até 2/s em 120s sem cansar. Cansaço corrói *toda* a produção
-(saúde do time = 100/(100+cansaço)). Aos 50 mil de impacto total dá para **passar a
-tocha**: recomeça tudo e ganha Sabedoria permanente (+10% cada), e quanto mais
-descansado o time, mais Sabedoria.
-
-Sete upgrades: campanhas grandes, ajuda mútua, treino do time, vizinhos que ajudam
-sozinhos, ferramentas para todos, divisão justa dos ganhos e dias de descanso.
-
-## Projetos e skills
-
-A folha de projetos diz o que um projeto **é**, não só quanto custa: quanto os que você já
-tem rendem por segundo sozinhos, quanto mais um adicionaria agora (no modo em que você
-está, com seus upgrades e a saúde do time), e que o preço sobe 15% a cada compra. A fileira
-`×1 / ×10 / MAX` compra em lote — mesma curva, mesmo gasto total, menos toques.
-
-**Skills** são uma categoria à parte: upgrades são desta partida, skills são para sempre.
-Folha própria, aberta pela tocha, liberada só depois de você passar a tocha uma vez. A
-primeira é **AUTO-FIRE**: a varinha vigia e atira sozinha. Ela não produz nada por conta
-própria — queima **FOCO**, e foco só vem de aparecer para o mundo (limpar um problema,
-catar um item, atender a chamada). Celular na mesa, varinha muda. E nenhum tiro automático
-encosta no cansaço, nunca.
-
-## A troca de ritmo
-
-A folha de projetos mostra o negócio lado a lado — **NOW** contra **SWITCH** — com o que
-cada ritmo rende *agora*, no que ele *assenta* depois que o cansaço encontra o equilíbrio,
-e para onde a saúde do time vai. Tudo projetado das fórmulas vivas (`cansacoEq`,
-`cansacoEm`, `segundosAteSaude`, `taxaSe`), então a explicação não tem como divergir do
-jogo. Sair do GO STEADY reseta a rampa, e isso agora é dito em vermelho, com o
-multiplicador que se perde. O botão de modo na barra é um estado (`FAST →5%`), não um
-ícone que troca.
-
-## O mundo responde
-
-A cena inteira é botão: tocar nela golpeia igual ao CTA de baixo (mesmo combo, mesmo
-salto) e ainda acerta o que estiver embaixo do dedo. Com uma folha aberta, o toque só
-fecha a folha.
-
-- **Problemas andam.** Fumaça, tambor e saco de dinheiro caminham até você e formam
-  fila. Parado na frente, cada um bloqueia 10% da produção até alguém resolver — é
-  multiplicador, nunca cansaço, então não muda a conta de GO FAST × GO STEADY.
-- **O que cai fica no chão.** Derrubar um deixa um item que precisa ser **recolhido no
-  toque**. Os vizinhos (U4) recolhem sozinhos depois de 5s, pela metade.
-- **A comunidade chama.** De tempos em tempos a panela pede mãos e há uma janela de
-  12s. Aparecer dispara um **mutirão**: ×1,35 em tudo por 20s e a rua limpa o caminho.
-  Perder a chamada não custa nada.
-- **Voltar amanhã vale.** Cada dia distinto jogado dá +2% permanente (teto de 10 dias),
-  e quem volta depois de uma noite — ou num dia novo — encontra uma chamada guardada,
-  que vale dobrado.
-
-## Combo
-
-Toques encadeiam três golpes: corte horizontal, corte ascendente e um **salto com
-baque no chão** que abre uma onda de choque. Segurar o botão (ou a cena) mantém o herói
-golpeando; segurar os dois ao mesmo tempo não acelera nada — a cadência é uma só.
+`CLAUDE.md` tem as instruções permanentes de quem trabalha no repositório, e `NOTES.md`
+tem as fórmulas, o balanço medido e o diário de sessões.
