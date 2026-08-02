@@ -44,8 +44,10 @@ inclusive toques. Aos 50 mil de impacto total dá pra passar a tocha:
 
 Sete upgrades (tabela completa no `NOTES.md`). Combo de três golpes terminando em salto
 com baque e onda de choque. Segurar o botão principal repete a ~7 golpes/s. Mundo
-renderizado a 1 px de mundo = 2 px de tela, com herói e monstros desenhados em 2× por
-cima; tudo interpola de doente para saudável conforme `worldHealth()`.
+renderizado a 1 px de mundo = 2 px de tela, **e tudo vive nessa mesma grade** — herói e
+monstros já foram desenhados em 2× por cima e isso era o que deixava o jogo com cara de
+tosco; hoje são sprites assados em canvas offscreen, sombreados por uma direção de luz só
+(sol em cima e à direita). Tudo interpola de doente para saudável conforme `worldHealth()`.
 
 ## 4. Como trabalhar
 

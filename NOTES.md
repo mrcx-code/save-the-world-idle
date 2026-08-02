@@ -97,10 +97,15 @@ solids drop a contact shadow (`sombra()`), and the frame closes with an `overlay
 cold while the world is sick, warm while it heals — plus a dithered vignette.
 
 Presentation: fullscreen pixel side-scroller. The world renders at 1 world px = 2 screen
-px; hero and monsters are drawn at 2× on top of that, so they read as chunky sprites
-over a fine-grained world. Everything (sky bands, mountains, city windows, foliage,
-ponds, community kitchens) lerps from sick to healthy off `worldHealth()`. Menus are
-floating sheets above the character; type scales with `clamp()`.
+px and **everything sits on that one grid** — the hero and the monsters used to carry an
+extra 2× on top, so their pixels covered four screen pixels each while the scenery behind
+them covered one, and that mismatch was what made the whole frame read as crude. Sprites
+are hand-shaded off a single light direction (the sun is up and to the right: lit rim on
+the right, base, form shadow on the left) and baked into offscreen canvases, so four times
+the pixel count still costs one `drawImage` per character per frame. The middle distance is
+three green planes separated by **value**, not only by parallax. Everything (sky bands,
+mountains, city windows, foliage, ponds, community kitchens) lerps from sick to healthy off
+`worldHealth()`. Menus are floating sheets above the character; type scales with `clamp()`.
 
 ## Open questions
 
@@ -248,6 +253,55 @@ toda sessão começa lendo a última entrada.
   árvores e arbustos — ainda lê como mingau verde; separar aqueles dois planos por valor
   é o próximo ganho grande. **Próximo passo: continuar o visual pelo miolo (separar os
   planos verdes), ou voltar para a fila (f) e o dia 2 — o dono decide o que vale mais.**
+
+- **2026-08-02 · o herói desceu para a grade do mundo, e o miolo ganhou três planos.**
+  O dono disse pela segunda vez que ainda está feio e pediu "64 bit, ou até HD, mas com
+  essa estética". A causa raiz não era falta de cor: o mundo desenha a 1 px de mundo = 2 px
+  de tela, mas o herói e os monstros levavam um `cx.scale(2,2)` **por cima disso**, então
+  cada pixel deles ocupava quatro pixels de tela contra um da paisagem atrás. Um boneco
+  grosso na frente de um fundo fino — é isso que o olho lê como tosco. Tirei o 2× e
+  redesenhei tudo na grade do mundo. **Medido em células de sprite:** herói 10×12 = 120
+  células → 22×26 = 572 (4,8×), paleta de 6 para 20 cores; fumaça 9×6 = 54 → 18×13 = 234;
+  saco de dinheiro 9×8 = 72 → 18×16 = 288; tambor 8×9 = 72 → 16×18 = 288. Todos sombreados
+  por **uma** direção de luz (sol em cima e à direita: rim claro à direita, base, sombra
+  própria à esquerda, base escura embaixo) e assados uma vez em canvas offscreen, então o
+  quádruplo de pixels custa um `drawImage` por personagem por quadro. Ciclo de corrida de
+  4 quadros, capa e combo de 3 golpes preservados, com os deslocamentos dobrados.
+
+  O segundo problema era o mingau verde do meio da tela, e ele agora tem número:
+  a antiga linha de árvores e os antigos arbustos ficavam a **0,5–2,6 pontos de
+  luminância** um do outro (de 0 a 255) — na prática, indistinguíveis, um borrão só.
+  Viraram três faixas separadas por valor (névoa 0,30 / 0,10 / 0,00 e bases de matiz
+  diferente): **31 e 36 pontos** de distância entre planos vizinhos com o mundo curado,
+  25 e 28 no meio, 19 e 21 com o mundo doente. Junto vieram: céu com três paradas em vez
+  de duas (a rampa reta deixava uma laje de azul-marinho em metade do quadro), nuvens com
+  lóbulos, topo iluminado e barriga sombreada em vez de três retângulos chapados, cidade
+  com mais névoa e janelas como textura em vez de buracos pretos, copas de árvore e pinheiros
+  como mapas sombreados à mão, casa com parede iluminada à direita e beiral, lago com
+  reflexo da linha de árvores e brilho que anda, e a trilha de terra com sulcos e pedras.
+
+  **Custo medido** (viewport 390×844 = 195×422 px de mundo): `drawScene` foi de **0,555 ms
+  para 0,761 ms** por quadro — 4,6% do orçamento de 16,7 ms; assar o céu subiu de 5,40 para
+  7,30 ms mas só roda quando a saúde cruza um passo de 1/48; chão 2,20 ms; vinheta 4,40 ms
+  uma vez por resize. **FPS: 61, igual ao de antes.** Smoke test verde em todas as etapas.
+
+  Quebrou no caminho: (1) o `drawMap` ganhou uma chave de cache e o postal da intro
+  (128×42) passou a receber um herói de 22×26 que ocupava dois terços do quadro — resolvido
+  com um `HERO_MINI` próprio de 10×13; (2) a primeira versão da espada em diagonal
+  contornava **cada degrau** separadamente e lia como uma fileira de tijolos brancos soltos,
+  não como uma lâmina — passou a ser desenhada em três passadas (contorno, corpo, fio); (3)
+  o braço da espada era um retângulo preto de 9×10 atravessado por uma manga de 7×4, o que
+  virava uma tarja preta no peito. E uma coisa que só os prints pegaram: havia **duas**
+  vinhetas empilhadas, a pontilhada do canvas e um `radial-gradient` de CSS a 50% de preto
+  a partir de 55% — juntas empurravam o quadro inteiro para o barro. A do CSS caiu para 26%
+  a partir de 66% e as scanlines de .5 para .34; conferido nos prints com o mundo a 100% e
+  a 6% que o mundo doente continua opressivo, só não mais lamacento.
+
+  Dúvida nova: o herói tem 44 px de mundo de altura, e no celular a faixa REAL DATA mais a
+  barra de botões comem o terço de baixo da tela — sobra pouca área para o cenário que
+  acabou de ficar bom. Vale medir se dá para encolher aquela faixa.
+  **Próximo passo: o céu ainda é a maior área do quadro e a menos trabalhada com o mundo
+  meio doente; depois disso, animar as folhas das copas e dar quadros de idle ao herói.**
 
 ## Would cut with one more day
 
