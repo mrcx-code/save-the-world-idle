@@ -49,7 +49,8 @@ const PATCHES = {
 const VP_W = Math.max(160, Math.ceil(390 / 2));
 const VP_HX = Math.round(VP_W * 0.26);
 const VIAGEM = (VP_W + 12 - (VP_HX + 26)) / F.CFG.mobVel;   // seconds of warning before it blocks
-const HP_MEDIO = 3.3;               // barrels have 4, the rest 3, weighted by the spawn mix
+// how many hits an arrival takes, on average, in the rhythm you are in — F.hpMedio()
+// reads CFG.mobHp and CFG.mobMix, so widening the spread moves this table with it
 const DANO_TOQUE = 4 / 3;           // the 3-hit combo deals 1, 1, 2
 const MIRA_POR_SEG = 1;             // aimed presses a world-tapper makes per second
 const DANO_MIRA = 2;                // ...each landing double a blind swing on what it hits
@@ -76,7 +77,7 @@ function passoMundo(S, est, m, DT, toques) {
   m.spawnT += DT;
   if (m.spawnT >= F.CFG.mobIntervalo / (1 + smog)) {
     m.spawnT = 0;
-    if (m.mobs.length < F.CFG.mobMax) m.mobs.push({ viagem: VIAGEM, hp: HP_MEDIO });
+    if (m.mobs.length < F.CFG.mobMax) m.mobs.push({ viagem: VIAGEM, hp: F.hpMedio(S.modo) });
   }
   const dano = toques * DANO_TOQUE;
   let ganho = 0, mira = est.mundo ? DANO_MIRA * MIRA_POR_SEG * DT : 0;

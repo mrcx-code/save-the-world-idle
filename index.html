@@ -454,6 +454,13 @@ const CFG = {
   mobVel: 34,              // world px/s a trouble advances toward you
   mobIntervalo: 7,         // seconds between arrivals (shorter when the team is worn out)
   mobMax: 3, mobFila: 20,  // ...and they queue up, one body-width apart
+  // How many hits each one takes, and how often each shows up. The spread is deliberate
+  // and it is read off the sprites: the smog wisp is the smallest thing on the road and
+  // goes down in one combo, the toxic barrel is the heaviest and takes two. 3-vs-4 was
+  // invisible. The mix lives here too so the simulator can compute the expected hp of an
+  // arrival instead of carrying a hand-copied average.
+  mobHp: { smog: 2, cash: 3, barrel: 5 },
+  mobMix: { carvao: { smog: 0.45, barrel: 0.75 }, limpo: { smog: 0.20, barrel: 0.42 } },
   bloqueioPorMob: 0.10,    // production a trouble blocks while it stands in your way
   dropVida: 9,             // seconds a drop waits on the ground
   dropBase: 3, dropPorProjeto: 0.55,
@@ -726,6 +733,12 @@ function coletarDrop(d, auto) {
   d.morto = true;
 }
 
+// One arrival. `hpMax` is kept beside `hp` so the readout can show how much of a thing is
+// left without anyone having to look the type up in a table.
+function novoMob(tipo, wx) {
+  const hp = CFG.mobHp[tipo] || 3;
+  return { wx: wx, type: tipo, hp: hp, hpMax: hp, flash: 0, dying: 0, parado: false };
+}
 // Movement, spawning and state. Drawing lives in drawMobs() and is not touched here.
 function atualizarMobs(dt) {
   const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
@@ -734,10 +747,9 @@ function atualizarMobs(dt) {
   if (mobT >= espera) {
     mobT = 0;
     if (mobs.filter(function (m) { return !m.dying; }).length < CFG.mobMax) {
-      const r = Math.random(), dirty = S.modo === "carvao";
-      const tipo = r < (dirty ? 0.45 : 0.20) ? "smog" : r < (dirty ? 0.75 : 0.42) ? "barrel" : "cash";
-      mobs.push({ wx: worldX + W + 12, type: tipo, hp: tipo === "barrel" ? 4 : 3,
-        flash: 0, dying: 0, parado: false });
+      const r = Math.random(), mix = CFG.mobMix[S.modo] || CFG.mobMix.limpo;
+      const tipo = r < mix.smog ? "smog" : r < mix.barrel ? "barrel" : "cash";
+      mobs.push(novoMob(tipo, worldX + W + 12));
     }
   }
   // They walk in and queue up in front of the hero instead of standing on each other.
@@ -2398,6 +2410,26 @@ function drawScene() {
 // Drawn after drawScene() on purpose: an affordance has to stay legible, so it sits on
 // top of the colour grade instead of inside it. Sprites are not touched here — these are
 // markers over the world, not monsters.
+// A trouble's remaining hits, drawn over its head. Pure function of `m.hp` / `m.hpMax`,
+// no DOM, one keyline plus n little blocks — cheap enough to run for every mob every frame.
+// ESTÉTICA: this whole readout is one function on purpose. The state it needs is `m.hp`,
+// `m.hpMax`, `m.type`, `m.flash` and `m.dying`; restyle or replace the body freely.
+const VIDA_TOPO = { smog: 30, barrel: 23, cash: 21 };   // world px above ground per sprite
+function desenharVidaMob(m) {
+  if (m.dying > 0 || !m.hpMax) return;
+  const sx = Math.round(m.wx - worldX);
+  if (sx < -20 || sx > W + 20) return;
+  const n = m.hpMax, larg = n * 3 - 1;
+  const x0 = sx + 5 - (larg >> 1), y = GROUND - (VIDA_TOPO[m.type] || 22);
+  cx.fillStyle = "#10121c";                       // keyline: it has to read on any ground
+  cx.fillRect(x0 - 1, y - 1, larg + 2, 5);
+  for (let i = 0; i < n; i++) {
+    const cheio = i < m.hp;
+    cx.fillStyle = cheio ? (m.flash > 0 ? "#ffffff" : "#e8edf6") : "#4a4458";
+    cx.fillRect(x0 + i * 3, y, 2, 3);
+  }
+}
+
 function desenharMundo() {
   const pulso = 0.6 + 0.4 * Math.sin(animT * 6);
   // what a beaten trouble left behind, waiting for a thumb
@@ -2421,6 +2453,11 @@ function desenharMundo() {
     cx.fillRect(sx - 3 - r, y + 3, 3, 1); cx.fillRect(sx + 5 + r - 3, y + 3, 3, 1);
     cx.globalAlpha = 1;
   });
+  // how much of a trouble is left, over its head. Damage was already in the game — hits
+  // came off `hp` — but nothing ever showed it, so it read as if nothing was happening
+  // until the thing suddenly popped. Pips, not a bar: at two to five hits you can count
+  // them at a glance, and the *number* of pips is what says "this one is the big one".
+  mobs.forEach(function (m) { desenharVidaMob(m); });
   // a trouble standing in the way: two ticks at its feet say "this one is tappable"
   mobs.forEach(function (m) {
     if (!m.parado || m.dying > 0) return;

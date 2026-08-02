@@ -109,12 +109,53 @@ function chromiumPath() {
   if (comFolha.aberta) errors.push('a scene tap did not close the open sheet');
   if (comFolha.ganho > 0.01) errors.push('a scene tap swung while a sheet was open');
 
+  // ---- how much of a trouble is left, and how much there was to begin with ----
+  // The damage was always there; nothing ever showed it. Two things are checked: the
+  // spread between the little one and the big one is wide enough to feel, and the readout
+  // actually puts pixels on the screen over the right head.
+  const vida = await page.evaluate(async () => {
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
+    const hp = {}, golpes = {};
+    for (const t of ['smog', 'cash', 'barrel']) {
+      hp[t] = novoMob(t, 0).hp;
+      // hits from the button: the 3-hit combo deals 1, 1, 2
+      let restante = hp[t], n = 0, c = 0;
+      while (restante > 0) { restante -= (c % 3 === 2) ? 2 : 1; c++; n++; }
+      golpes[t] = n;
+    }
+    // and it is drawn: paint one barrel's readout onto the scene and look at the pixels
+    mobs.length = 0;
+    const m = novoMob('barrel', worldX + HX + 40);
+    m.parado = true; mobs.push(m);
+    const y = GROUND - VIDA_TOPO.barrel, x0 = Math.round(m.wx - worldX) + 5 - ((m.hpMax * 3 - 1) >> 1);
+    const leia = () => Array.from(cx.getImageData(x0, y, m.hpMax * 3 - 1, 3).data);
+    drawScene(); desenharMundo();
+    const cheio = leia();
+    m.hp = 1;
+    drawScene(); desenharMundo();
+    const ferido = leia();
+    mobs.length = 0;
+    return { hp, golpes, mudou: cheio.some((v, i) => v !== ferido[i]),
+      pintou: cheio.some((v, i) => i % 4 === 3 && v > 0) };
+  });
+  console.log('trouble health -> smog', vida.hp.smog, 'hits', vida.golpes.smog,
+    '| cash', vida.hp.cash, 'hits', vida.golpes.cash,
+    '| barrel', vida.hp.barrel, 'hits', vida.golpes.barrel);
+  console.log('  health readout drawn:', vida.pintou, '| it changes when damaged:', vida.mudou);
+  if (!(vida.hp.barrel >= vida.hp.smog + 3)) errors.push('big and small troubles do not differ enough');
+  if (!(vida.golpes.barrel > vida.golpes.cash && vida.golpes.cash > vida.golpes.smog)) {
+    errors.push('the three troubles do not take different numbers of hits');
+  }
+  if (vida.hp.barrel > 6) errors.push('the health spread grew into a damage system');
+  if (!vida.pintou) errors.push('the health readout drew nothing');
+  if (!vida.mudou) errors.push('the health readout does not change when a trouble is damaged');
+
   // ---- troubles walk in, block the work, and pay when they are cleared ----
   const encontro = await page.evaluate(async () => {
     mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
     S.geradores = 10; S.poluicao = 0; S.modo = 'limpo';
     const livre = prodPorSegundo();
-    mobs.push({ wx: worldX + W + 12, type: 'smog', hp: 3, flash: 0, dying: 0, parado: false });
+    mobs.push(novoMob('smog', worldX + W + 12));
     const longe = mobs[0].wx - worldX;
     for (let i = 0; i < 400; i++) atualizarMobs(0.05);      // 20s of walking
     const perto = mobs[0].wx - worldX;

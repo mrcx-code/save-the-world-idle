@@ -120,6 +120,14 @@ const comprar = (S, u, custo) => {
   S.energia -= custo; S[u] = true; return true;
 };
 
+// What an arrival is worth in hits, on average, in the rhythm you are running. Read from
+// CFG.mobHp and CFG.mobMix rather than restated, so widening the spread between the little
+// smog wisp and the heavy barrel moves the simulation with it.
+function hpMedio(modo) {
+  const mix = CFG.mobMix[modo] || CFG.mobMix.limpo, hp = CFG.mobHp;
+  return mix.smog * hp.smog + (mix.barrel - mix.smog) * hp.barrel + (1 - mix.barrel) * hp.cash;
+}
+
 const UPGRADES = [
   { id: 'u1', custo: CFG.custoU1, nome: 'Big campaigns' },
   { id: 'u2', custo: CFG.custoU2, nome: 'Friends help friends' },
@@ -133,7 +141,7 @@ const UPGRADES = [
 module.exports = {
   CFG, HOLD_TPS, UPGRADES, novoEstado,
   eficiencia, bonusInovacao, custoGerador, bonusJusto, forcaToque, ganhoClique,
-  bloqueioMundo, bonusMutirao, bonusDias, valorDrop,
+  bloqueioMundo, bonusMutirao, bonusDias, valorDrop, hpMedio,
   tetoLimpoAtual, rampaAtual, prodPorSegundo, poluicaoPorSegundo,
   inovacaoAoTransicionar, simular, simularOffline, clicar, comprarGerador, comprar,
   transicionar
