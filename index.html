@@ -795,13 +795,66 @@ function drawMap(key, map, pal, dx, dy, flash) {
   cx.drawImage(sprite(key, map, pal, flash), Math.round(dx), Math.round(dy));
 }
 
-// ---- little monsters: pollution blobs & greedy money bags ----
-const SMOG_MOB = { pal: { X: "#7a7288", K: "#10121c", D: "#5c5568" }, map: [
-  ".XXXXXX..", "XXXXXXXX.", "XKXXXKXX.", "XXXXXXXX.", "XDXDXDXD.", ".XXXXXX.."] };
-const CASH_MOB = { pal: { T: "#c9a86a", K: "#10121c", G: "#ffcd75", D: "#a8854a" }, map: [
-  "...KK....", "..KTTK...", ".TTTTTT..", "TTKTTKTT.", "TTTTTTTT.", "TTGGGGTT.", "TTGDDGTT.", ".TTTTTT.."] };
-const BARREL_MOB = { pal: { B: "#5a8a3c", H: "#7fb356", K: "#10121c", W: "#b5e08c" }, map: [
-  ".KKKKKK.", "KBBBBBBK", "KBHHHHBK", "KBKBBKBK", "KBBBBBBK", "KWBBBBWK", "KBHHHHBK", "KBBBBBBK", ".KKKKKK."] };
+// ---- little monsters: pollution blobs, toxic drums & greedy money bags ----
+// Same story as the hero: they used to be drawn at 2x on top of the world's 2x. On the
+// world's own grid they get four times the pixels, and those pixels go into volume —
+// each one is a rounded solid lit from the upper right, not a flat silhouette.
+const SMOG_MOB = { pal: {
+  K: "#0d0e16", Z: "#3f394e", D: "#5c5568", X: "#7a7288", H: "#98909f", W: "#b7b0c0",
+  E: "#e8c96a", e: "#1a1620" }, map: [
+  "...KKKKK.KKKKKK...",
+  ".KKXXXHHKKXHHHWWK.",
+  "KKXXXXXXXHHHHHWWWK",
+  "KZXXXXXXXXHHHHHWWK",
+  "KZDXXXXXXXXHHHHWWK",
+  "KZDXEXXXXXXXEHHHWK",
+  "KZDXEEXXXXXEEHHHWK",
+  "KZDDeEEXXEEeHHHHWK",
+  "KZDDXXXXXXXXHHHHWK",
+  ".KZDXKXKXKXHHHHWK.",
+  ".KZZDDXXXXXHHHWK..",
+  "..KKZZDDXXXHHWKK..",
+  "....KKZZDDHWKK...."] };
+const CASH_MOB = { pal: {
+  K: "#0d0e16", Z: "#7d6236", D: "#a8854a", T: "#c9a86a", t: "#e0c48c", u: "#f2dcaa",
+  G: "#ffcd75", g: "#c8912f", E: "#1a1620" }, map: [
+  "......KKKK........",
+  ".....KZDtuK.......",
+  ".....KgGGgK.......",
+  "....KKZTTtuKK.....",
+  "..KKZZTTTttuuKK...",
+  ".KZZTTTTTtttuuuK..",
+  "KZZTTTTTTTtttuuuK.",
+  "KZTTEETTTTTEEttuuK",
+  "KZTTEETTTTTEEttuuK",
+  "KZTTTTTTTTTTTttuuK",
+  "KZTTTKKKKKKTTttuuK",
+  "KZTTTTTTTTTTTttuuK",
+  "KZTGGGgggGGGgttuuK",
+  "KZTGGGgggGGGgttuuK",
+  ".KZZTTTTTTTTtuuuK.",
+  "..KKKKKKKKKKKKKK.."] };
+const BARREL_MOB = { pal: {
+  K: "#0d0e16", Z: "#2f4a1f", D: "#3f6428", B: "#5a8a3c", H: "#7fb356", W: "#a8d97c",
+  Y: "#d8e86a", E: "#1a1620", M: "#333d4b", m: "#5f6d7c" }, map: [
+  "...KKKKKKKKKK...",
+  ".KKZDDBBBHHWWKK.",
+  "KZZDDBBBBBHHHWWK",
+  "KZDmmmmmmmmmmHWK",
+  "KZDMMMMMMMMMMHWK",
+  "KZDBBBBBBBBBBHWK",
+  "KZDBBEEBBEEBBHWK",
+  "KZDBBEEBBEEBBHWK",
+  "KZDBBBBBBBBBBHWK",
+  "KZDBBKKKKKKBBHWK",
+  "KZDBBBBBBBBBBHWK",
+  "KZDmmmmmmmmmmHWK",
+  "KZDMMMMMMMMMMHWK",
+  "KZDBYYBBBBYYBHWK",
+  "KZDBBYYBBYYBBHWK",
+  "KZDBBBYYYYBBBHWK",
+  "KZZDDBBBBBHHHWWK",
+  ".KKDDBBBHHWWKK.."] };
 let mobs = [];
 function drawMobs(smog) {
   if (mobs.length < 3 && Math.random() < 0.010 + smog * 0.02) {
@@ -812,20 +865,24 @@ function drawMobs(smog) {
   mobs = mobs.filter(function (m) { return m.wx - worldX > -24 && !m.dead; });
   mobs.forEach(function (m) {
     if (m.wx - worldX < HX + 36) m.wx = worldX + HX + 36; // they hold their ground in front of the hero
-    const sx = Math.round(m.wx - worldX);
-    const bob = Math.floor(tick / 8) % 2;
-    // mobs rendered at 2x, anchored at the ground; death = squash + fade
-    cx.save();
-    cx.translate(sx + 4, GROUND);
+    const sx = Math.round(m.wx - worldX) - 4;   // sprites are anchored at the ground
+    const bob = (Math.floor(tick / 8) % 2) * 2;
     const squash = m.dying > 0 ? m.dying / 8 : 1;
-    cx.scale(2, 2 * squash);
-    cx.translate(-(sx + 4), -GROUND);
-    if (m.dying > 0) cx.globalAlpha = m.dying / 8;
-    cx.fillStyle = "rgba(0,0,0,.25)";
-    cx.fillRect(sx, GROUND, 9, 2);
-    if (m.type === "smog") drawMap("smog", SMOG_MOB.map, SMOG_MOB.pal, sx, GROUND - 12 + bob, m.flash > 0);
-    else if (m.type === "barrel") drawMap("barrel", BARREL_MOB.map, BARREL_MOB.pal, sx, GROUND - 9 + (bob ? 1 : 0), m.flash > 0);
-    else drawMap("cash", CASH_MOB.map, CASH_MOB.pal, sx, GROUND - 8 + (bob ? 0 : -1), m.flash > 0);
+    cx.save();
+    if (squash !== 1) {                          // death: squashed down onto the ground and faded
+      cx.translate(0, GROUND); cx.scale(1, squash); cx.translate(0, -GROUND);
+      cx.globalAlpha = m.dying / 8;
+    }
+    if (m.type === "smog") {
+      sombra(sx + 9, GROUND, 13, 0.13);          // it floats, so its shadow is soft and wide
+      drawMap("smog", SMOG_MOB.map, SMOG_MOB.pal, sx, GROUND - 25 + bob, m.flash > 0);
+    } else if (m.type === "barrel") {
+      sombra(sx + 8, GROUND, 18, 0.26);
+      drawMap("barrel", BARREL_MOB.map, BARREL_MOB.pal, sx, GROUND - 18 + (bob ? 1 : 0), m.flash > 0);
+    } else {
+      sombra(sx + 9, GROUND, 18, 0.26);
+      drawMap("cash", CASH_MOB.map, CASH_MOB.pal, sx, GROUND - 16 - (bob ? 0 : 1), m.flash > 0);
+    }
     cx.globalAlpha = 1;
     cx.restore();
     if (m.flash > 0) m.flash--;
