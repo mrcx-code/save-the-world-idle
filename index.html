@@ -14,9 +14,16 @@
     --ink: #0e0f1a; --panel: #1f2b57; --panel2: #29366f;
     --texto: #f4f4f4; --sub: #94b0c2;
     --gold: #ffcd75; --gold2: #ef7d57;
-    /* poster chrome: solid cream, hard dark outline, hard offset shadow — no transparency,
-       no gradients on panels. It has to hold its own against a very bright world. */
-    --creme: #fdf6e6; --contorno: #12242e; --tinta: #12242e; --tinta2: #6b7a82;
+    /* The chrome is DARK and has depth. The poster pass made every surface flat cream and
+       against a saturated world it read washed out — and it also left the game speaking two
+       languages, cream chrome over navy sheets. One language now: a deep blue-ink fill with
+       a real vertical gradient, a 1px lit top edge, a hard ink outline and a hard offset
+       shadow. The construction the poster pass won is kept; only the fill and the value
+       changed. Gold is reserved for the one action that matters — contrast is the cheapest
+       way to say which button is the main button. */
+    --chromeA: #2c3a68; --chromeB: #18203d; --chromeT: #eaf0ff; --chromeS: #93a6cf;
+    --ouroA: #ffd873; --ouroB: #f0a22e;
+    --creme: #fdf6e6; --contorno: #0b1020; --tinta: #101a30; --tinta2: #6b7a82;
     --bad: #b13e53; --good: #38b764; --blue: #41a6f6; --purple: #8d5bd6;
     /* responsive type scale — grows with the screen */
     --ui: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", sans-serif;
@@ -45,18 +52,20 @@
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0;
     top: calc(6px + env(safe-area-inset-top));
     display: flex; gap: 5px; justify-content: center; padding: 0 6px; pointer-events: none; }
-  .chip { background: var(--creme); border: 2px solid var(--contorno); padding: 5px 8px; flex: 1 1 0;
-    max-width: 170px; min-width: 0; color: var(--tinta); box-shadow: 0 3px 0 var(--contorno);
+  .chip { background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
+    border: 2px solid var(--contorno); padding: 5px 8px; flex: 1 1 0;
+    max-width: 170px; min-width: 0; color: var(--chromeT);
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.16);
     display: flex; align-items: center; gap: 7px; }
   .cInfo { min-width: 0; flex: 1; }
-  .chip .rotulo { font-size: var(--fs-xs); color: var(--tinta2); white-space: nowrap; overflow: hidden;
+  .chip .rotulo { font-size: var(--fs-xs); color: var(--chromeS); white-space: nowrap; overflow: hidden;
     letter-spacing: .06em; font-weight: 700; }
-  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1.1;
-    font-variant-numeric: tabular-nums; }
+  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1.1; color: var(--chromeT);
+    font-variant-numeric: tabular-nums; text-shadow: 0 1px 0 rgba(0,0,0,.55); }
   .pi { image-rendering: pixelated; width: 22px; height: 22px; flex: 0 0 auto; }
   .pi.big { width: 30px; height: 30px; }
-  #energia { color: #c9741a; } #poluicao { color: var(--bad); } #worldPct { color: #177a45; }
-  .minibar { height: 5px; background: #ddd3bc; border: 1px solid var(--contorno); margin-top: 3px; }
+  #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: #7ce8a4; }
+  .minibar { height: 5px; background: #0d1226; border: 1px solid var(--contorno); margin-top: 3px; }
   .minibar > div { height: 100%; background: var(--bad); transition: width .3s; }
   /* where the team is heading, not just where it is */
   .chip .tend { margin-top: 4px; font-size: 7px; white-space: nowrap; }
@@ -95,44 +104,69 @@
      control block on load and on resize, and it is what stops this covering the menu bar. */
   #fato { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
     bottom: calc(var(--hControles, 122px) + env(safe-area-inset-bottom)); width: min(520px, 94vw);
-    font-size: var(--fs-xs); color: var(--tinta); line-height: 1.45;
-    background: var(--creme); border: 2px solid var(--contorno); border-left-width: 5px;
-    box-shadow: 0 3px 0 var(--contorno); padding: 5px 8px;
+    font-size: var(--fs-xs); color: #c6d4f0; line-height: 1.45;
+    background: linear-gradient(180deg, #202a4c, #141b33);
+    border: 2px solid var(--contorno); border-left: 5px solid var(--gold);
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.12); padding: 5px 8px;
     max-height: 3.9em; overflow: hidden; }
-  #fato b { color: #1668a8; }
+  #fato b { color: var(--gold); }
 
   /* ---- bottom controls ---- */
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
     bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
-  #menuRow { display: flex; gap: 6px; margin-bottom: 7px; }
-  #menuRow button { flex: 1; padding: 7px 4px; font-size: var(--fs-sm);
+  /* THE MENU IS A TRAY, NOT FOUR IDENTICAL SLABS. Four buttons of equal width and equal
+     weight told the eye they were four equal things, and they are not: the rhythm readout
+     is the decision the whole game exists to measure, projects is the purchase you make
+     over and over, and upgrades and the torch are places you visit occasionally. They get
+     width and value in that order, inside one dark tray with hairline dividers, so the row
+     reads as a menu bar rather than a shelf of buttons. Markup untouched — this is width,
+     fill and value only. */
+  #menuRow { display: flex; gap: 0; margin-bottom: 7px; padding: 3px;
+    background: linear-gradient(180deg, #202a4e, #10162c);
+    border: 2px solid var(--contorno); border-radius: 2px;
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.10); }
+  #menuRow button { flex: 1; padding: 7px 4px; font-size: var(--fs-sm); border: 0; border-radius: 0;
+    background: transparent; box-shadow: none; color: #b9c8e8;
     display: flex; align-items: center; justify-content: center; gap: 6px; }
-  /* Poster chrome from the estetica pass; the components below it are the jogabilidade
-     pass's new UI, kept because they are structure, not style. */
+  #menuRow button + button { border-left: 1px solid rgba(255,255,255,.09); }
+  #menuRow button:not(:disabled):active { transform: none; background: rgba(255,255,255,.09); box-shadow: none; }
+  #openProjects { flex: 1.35 !important; color: var(--gold); font-weight: 800; }
+  #openUpgrades, #openTorch { flex: .8 !important; }
   button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno); border-radius: 2px;
-    cursor: pointer; color: var(--tinta); background: var(--creme); text-transform: uppercase;
-    box-shadow: 0 3px 0 var(--contorno); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+    cursor: pointer; color: var(--chromeT); text-transform: uppercase;
+    background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14);
+    touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   button:disabled { opacity: .5; cursor: default; }
-  button:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--contorno); }
-  /* the mode button is a STATE readout, not an icon that swaps */
-  #modeQuick { gap: 5px; padding: 6px 3px; }
+  button:not(:disabled):active { transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14); }
+  /* the mode button is a STATE readout, not an icon that swaps — and it is the widest thing
+     in the row because it is the decision the prototype was built to measure */
+  #modeQuick { flex: 2.1 !important; gap: 5px; padding: 6px 5px; border: 2px solid var(--contorno) !important;
+    border-radius: 2px; margin-left: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.14) !important; }
   #modeQuick .mq { display: flex; flex-direction: column; align-items: flex-start; min-width: 0;
     line-height: 1.25; overflow: hidden; }
   #modeQuick .mq b { font-size: 9px; font-weight: normal; }
   #modeQuick .mq i { font-size: 8px; font-style: normal; opacity: .85; white-space: nowrap; }
-  #modeQuick.fast { background: #f6c9c1; border-color: var(--contorno); color: #8f2233; }
-  #modeQuick.steady { background: #c8ecc6; border-color: var(--contorno); color: #14582f; }
+  #modeQuick.fast { background: linear-gradient(180deg, #8c2c3e, #4b1622) !important; color: #ffd2cd; }
+  #modeQuick.steady { background: linear-gradient(180deg, #1f7043, #0e3a21) !important; color: #c9f5d4; }
   /* it is costing you right now: say so without words */
   #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
-  @keyframes doendo { 0% { box-shadow: 0 3px 0 var(--contorno) } 50% { box-shadow: 0 3px 0 var(--contorno), 0 0 16px rgba(255,107,87,.85) } 100% { box-shadow: 0 3px 0 var(--contorno) } }
-  #btnClique { width: 100%; padding: 11px 10px; font-size: var(--fs-lg); font-weight: 800;
-    background: #ffc23d; color: var(--contorno); border-width: 3px;
+  @keyframes doendo { 0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 16px rgba(255,107,87,.9) } 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } }
+  /* the one action of the game, and it should not be arguable which one it is */
+  #btnClique { width: 100%; padding: 13px 10px; font-size: var(--fs-lg); font-weight: 800;
+    background: linear-gradient(180deg, #ffe28f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
+    color: #2a1a06; border-width: 3px; letter-spacing: .02em;
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    box-shadow: 0 5px 0 var(--contorno); position: relative; }
+    text-shadow: 0 1px 0 rgba(255,255,255,.45);
+    box-shadow: 0 6px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.55),
+      inset 0 -3px 0 rgba(120,60,0,.28); position: relative; }
   #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
-    color: rgba(18,36,46,.5); letter-spacing: 1px; }
-  #btnClique.segurando { transform: translateY(3px); background: #ffd469; box-shadow: 0 2px 0 var(--contorno); }
-  #btnClique.segurando #dicaHold { color: rgba(18,36,46,.85); }
+    color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
+  #btnClique.segurando { transform: translateY(4px);
+    background: linear-gradient(180deg, #fff0b8 0%, #ffdd8c 34%, #f7b845 100%);
+    box-shadow: 0 2px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.6); }
+  #btnClique.segurando #dicaHold { color: rgba(42,26,6,.85); }
   /* the wand's charge, on the button that swings it */
   #foco { position: absolute; left: 0; top: 0; height: 4px; width: 0%; background: var(--purple);
     box-shadow: 0 0 6px rgba(141,91,214,.9); transition: width .2s; }
@@ -147,8 +181,9 @@
      again the moment a button grows a line of text */
   .sheet { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%) translateY(110%);
     bottom: calc(var(--hControles, 120px) + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
-    background: #1b2a4e; border: 3px solid var(--contorno); border-radius: 2px;
-    box-shadow: 0 5px 0 var(--contorno);
+    background: linear-gradient(180deg, #24325c 0%, #161e3a 55%, #121933 100%);
+    border: 3px solid var(--contorno); border-radius: 2px;
+    box-shadow: 0 5px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.13);
     /* the menu bar is protected by `bottom`, not by this: max-height only grows upward,
        so the projects sheet can hold its explanation without reaching the buttons below */
     padding: 12px; transition: transform .22s ease, opacity .22s ease; max-height: 62vh; overflow-y: auto;
@@ -156,12 +191,15 @@
   .sheet.aberto { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
   .sheetHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .sheetHead .t { font-size: var(--fs-sm); color: var(--gold); text-shadow: 1px 1px 0 var(--ink); }
-  .fechar { padding: 8px 12px; font-size: var(--fs-sm); background: #f6c9c1; color: #8f2233; }
+  .fechar { padding: 8px 12px; font-size: var(--fs-sm); color: #ffd2cd;
+    background: linear-gradient(180deg, #8c2c3e, #4b1622); }
 
   /* Buy button and mode buttons wear the poster palette; everything below is the
      jogabilidade pass's new UI and is kept as-is. */
   .btnCompra { width: 100%; padding: 13px 10px; font-size: var(--fs-sm); text-align: left; line-height: 1.5;
-    background: #ffc23d; color: var(--tinta); }
+    color: #2a1a06; text-shadow: 0 1px 0 rgba(255,255,255,.4);
+    background: linear-gradient(180deg, #ffe28f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
+    box-shadow: 0 4px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   /* what a project IS, in two short lines — the owner could not tell from the price alone */
   .explica { font-size: 8px; color: var(--sub); line-height: 1.9; margin-bottom: 8px; }
   .explica.sub { margin: 7px 0 0; }
@@ -170,18 +208,20 @@
   /* how many at once: three fixed targets read faster than a control you have to cycle */
   .selQtd { display: flex; gap: 6px; margin-bottom: 7px; }
   .selQtd button { flex: 1; padding: 10px 4px; font-size: var(--fs-xs); }
-  .selQtd button.ativo { background: #ffc23d; border-color: var(--contorno); color: var(--tinta); }
+  .selQtd button.ativo { color: #2a1a06;
+    background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
+    box-shadow: 0 3px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   .modo { display: flex; gap: 6px; margin-top: 8px; }
   .modo button { flex: 1; padding: 13px 6px; font-size: var(--fs-sm); }
-  #modoCarvao, #modoLimpo { background: #cfd6e4; color: #3d4a63; }
-  #modoCarvao.ativo { background: #f6c9c1; color: #8f2233; }
-  #modoLimpo.ativo { background: #c8ecc6; color: #14582f; }
+  #modoCarvao, #modoLimpo { background: linear-gradient(180deg, #2b3557, #171d33); color: #97a6c6; }
+  #modoCarvao.ativo { background: linear-gradient(180deg, #8c2c3e, #4b1622); color: #ffd2cd; }
+  #modoLimpo.ativo { background: linear-gradient(180deg, #1f7043, #0e3a21); color: #c9f5d4; }
   .descModo { font-size: 8px; color: var(--sub); margin-top: 8px; line-height: 1.8; }
   .descModo:empty { margin: 0; }
 
   /* the trade, side by side: what you are running now against what switching would do */
   .ritmo { display: flex; gap: 7px; margin-top: 9px; }
-  .rCol { flex: 1 1 0; min-width: 0; background: var(--ink); border: 2px solid #000; padding: 8px 7px; }
+  .rCol { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; padding: 8px 7px; }
   .rCol.quente { box-shadow: inset 0 0 0 1px var(--bad); }
   .rCol.fria { box-shadow: inset 0 0 0 1px var(--good); }
   .rTit { font-size: 8px; color: var(--sub); margin-bottom: 6px; white-space: nowrap;
@@ -201,23 +241,25 @@
   #barRampa { background-color: var(--good); width: 0%; }
   #barPrestigio { background-color: var(--purple); width: 0%; }
 
-  .upgrade { display: flex; align-items: center; gap: 8px; background: var(--ink);
+  .upgrade { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, #141b33, #0d1226);
     border: 2px solid #000; padding: 9px; margin-bottom: 7px; min-height: 54px; }
   .upgrade .info { flex: 1; }
   .upgrade .nome { font-size: var(--fs-sm); }
   .upgrade .desc { font-size: var(--fs-xs); color: var(--sub); margin-top: 4px; line-height: 1.7; }
-  .upgrade button { padding: 12px 12px; font-size: var(--fs-sm); background: #e8dfc8; color: var(--tinta); }
+  .upgrade button { padding: 12px 12px; font-size: var(--fs-sm); color: #2a1a06;
+    background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
+    box-shadow: 0 3px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   .upgrade.comprado { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
   .upgrade.comprado button { display: none; }
   .check { color: var(--good); font-size: 10px; display: none; }
   .upgrade.comprado .check { display: block; }
 
   #btnPrestigio, #btnConfirmaSim { width: 100%; padding: 14px 8px; font-size: var(--fs-sm); margin-top: 8px;
-    background: #b98cf0; color: var(--tinta); }
+    color: #f3e8ff; background: linear-gradient(180deg, #7f4fd4, #4b2a86); }
   #btnConfirmaNao { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 7px;
-    background: #cfd6e4; color: var(--tinta); }
+    color: #b9c8e8; background: linear-gradient(180deg, #2b3557, #171d33); }
   .placar { display: flex; gap: 7px; margin-bottom: 8px; }
-  .placar > div { flex: 1; background: var(--ink); border: 2px solid #000; padding: 9px; }
+  .placar > div { flex: 1; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; padding: 9px; }
   .placar .r { font-size: var(--fs-xs); color: var(--sub); line-height: 1.7; }
   .placar .v { font-size: var(--fs-sm); margin-bottom: 4px; }
   .placar .ganha .v { color: var(--good); }
