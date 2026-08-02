@@ -2,10 +2,19 @@
 // Run: node test/smoke.js
 const { chromium } = require('playwright');
 const path = require('path');
+const fs = require('fs');
+
+// Use the sandbox chromium when it is there, otherwise whatever playwright installed.
+function chromiumPath() {
+  for (const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium']) {
+    if (p && fs.existsSync(p)) return p;
+  }
+  return undefined;   // let playwright resolve its own download
+}
 
 (async () => {
   const file = 'file://' + path.resolve(__dirname, '..', 'index.html');
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const browser = await chromium.launch({ executablePath: chromiumPath() });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const errors = [];
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));

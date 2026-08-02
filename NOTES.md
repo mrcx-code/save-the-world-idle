@@ -47,6 +47,23 @@ floating sheets above the character; type scales with `clamp()`.
    whether that flattens the "build projects" decision.
 4. Hold-to-attack at 7/s was picked by feel, not tuned against retention.
 
+## Diário
+
+Uma entrada por sessão, mais recente no fim. Formato: data · o que fiz · o que **medi**
+(número, não impressão) · o que quebrou · próximo passo. Este é o ponto de retomada:
+toda sessão começa lendo a última entrada.
+
+- **2026-08-02 · sessão de origem.** Protótipo construído do zero até produção.
+  Adicionados 7 upgrades, segurar-pra-atacar (~7 golpes/s), combo de 3 golpes terminando
+  em salto com baque e onda de choque, terceiro monstro (tambor tóxico), cozinhas
+  comunitárias e 3 dados reais sobre desigualdade. Medido: 61 FPS em viewport 390×844,
+  smoke test verde, `index.html` publicado idêntico ao testado. Quebrou no caminho: com
+  7 cards o painel de upgrades cobria a barra de menu (corrigido subindo `bottom` para
+  126px e reduzindo `max-height` para 52vh). Infra fechada: repo em
+  `mrcx-code/save-the-world-idle`, Vercel ligada ao Git, push publica sozinho.
+  **Próximo passo: tarefa (a) do CLAUDE.md — medir se o segurar-pra-atacar matou a
+  tensão do jogo.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed), the snow caps, and the `confirm()` on the
