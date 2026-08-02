@@ -30,16 +30,23 @@ nesse repositório). Ou instale o [GitHub CLI](https://cli.github.com) e rode
 
 ## 3. Ligar na Vercel (deploy automático)
 
-Em <https://vercel.com/new>: *Import Git Repository* → escolha `save-the-world-idle`.
+O projeto que fica é o **save-the-world-idle**. O `transicao-energetica-idle` some.
 
-- Framework Preset: **Other**
-- Build Command: deixe vazio
-- Output Directory: deixe vazio (raiz)
+1. Vercel → projeto `save-the-world-idle` → *Settings → Git → Connect Git Repository*
+   → escolha `PatinhasBrasil/save-the-world-idle`.
+   (Se preferir começar limpo: apague os dois e importe do zero em
+   <https://vercel.com/new>, com o nome `save-the-world-idle`.)
+   - Framework Preset: **Other**
+   - Build Command: vazio
+   - Output Directory: vazio (raiz)
+2. Apague o `transicao-energetica-idle`: *Settings → General → rolar até o fim →
+   Delete Project*.
 
 A partir daí, todo `git push` publica sozinho. Não precisa mais de deploy manual.
 
-Depois disso dá pra apagar o projeto antigo na Vercel: *Settings → General → rolar até
-o fim → Delete Project*.
+> ⚠️ O link curto **da.gd/pC1Qb** aponta pro projeto antigo e vai morrer junto com ele.
+> A URL nova vai ser `save-the-world-idle-mrcx.vercel.app` — me avise que eu gero um
+> link curto novo.
 
 ## Trabalhando de outro PC
 
