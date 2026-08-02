@@ -32,10 +32,12 @@
   /* ---- the game world fills the screen ---- */
   #scene { position: fixed; inset: 0; width: 100%; height: 100%;
     image-rendering: pixelated; z-index: 0; }
-  #crt { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .5;
+  #crt { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .34;
     background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px); }
+  /* the canvas already lays down a dithered vignette; this one only takes the corners the
+     last few percent, otherwise the two stack and the whole frame goes muddy */
   #vig { position: fixed; inset: 0; z-index: 2; pointer-events: none;
-    background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(8,9,16,.5) 100%); }
+    background: radial-gradient(ellipse at 50% 45%, transparent 66%, rgba(8,9,16,.26) 100%); }
 
   /* ---- HUD on top of the game ---- */
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0;
@@ -617,8 +619,8 @@ function skyCanvas(h) {
   // Three stops, not two. A straight top-to-horizon ramp gives one flat slab of navy over
   // most of the frame; a pale band above the horizon is what a real sky does and it is
   // what lets the far ridge sit against something instead of on top of a wall.
-  const topC = mixA([54, 48, 72], [40, 104, 190], h);
-  const midC = mixA([92, 80, 90], [104, 172, 228], h);
+  const topC = mixA([64, 56, 84], [46, 112, 198], h);
+  const midC = mixA([100, 88, 98], [110, 178, 232], h);
   const horC = horizonC(h);
   const QUEBRA = 0.60;
   const brilho = mixA([188, 176, 150], [255, 238, 186], h);
@@ -1207,11 +1209,11 @@ function drawScene() {
   const nubB = lerpC([120, 114, 126], [230, 236, 248], h);
   const nubT = lerpC([156, 148, 158], [255, 255, 255], h);
   const nubD = lerpC([88, 84, 100], [176, 192, 218], h);
-  const ck0 = Math.floor(worldX * 0.12 / 78) - 1;
-  for (let k = ck0; k < ck0 + Math.ceil(W / 78) + 2; k++) {
-    const sx = Math.round(k * 78 - worldX * 0.12);
+  const ck0 = Math.floor(worldX * 0.12 / 52) - 1;
+  for (let k = ck0; k < ck0 + Math.ceil(W / 52) + 2; k++) {
+    const sx = Math.round(k * 52 - worldX * 0.12);
     const prof = hash01(k * 3 + 1);                       // 0 = high overhead, 1 = near the horizon
-    const cy = Math.round(H * 0.05 + prof * GROUND * 0.62);
+    const cy = Math.round(H * 0.09 + prof * GROUND * 0.58);
     const cs = (1.15 - prof * 0.55) * (0.8 + hash01(k * 9 + 6) * 0.6);
     const w0 = Math.max(12, Math.round(34 * cs)), h0 = Math.max(3, Math.round(6 * cs));
     const wA = Math.round(w0 * 0.44), wB = Math.round(w0 * 0.34);
@@ -1337,15 +1339,24 @@ function drawScene() {
   cx.fillRect(0, GROUND - 2, W, 2);
   // ground: dithered gradient, lit at the horizon and falling into shadow toward the viewer
   cx.drawImage(chaoCanvas(h), 0, GROUND);
-  cx.fillStyle = rgbS(mixA([126, 102, 74], [122, 200, 130], h));   // lit rim where it meets the sky
-  cx.fillRect(0, GROUND, W, 1);
-  // the dirt path the hero runs on
-  cx.fillStyle = lerpC([104, 82, 58], [122, 100, 68], h);
-  cx.fillRect(0, GROUND + 1, W, 5);
-  cx.fillStyle = "rgba(0,0,0,.14)";
-  cx.fillRect(0, GROUND + 5, W, 1);
-  cx.fillStyle = lerpC([76, 58, 42], [46, 118, 74], h);
-  cx.fillRect(0, GROUND, W, 1);
+  // The dirt path he runs on: it used to be one flat 5px band straight across the widest
+  // part of the frame. Now a sunlit crown, ruts and pebbles that scroll with the world, and
+  // a shadow where the grass leans over the edge.
+  cx.fillStyle = lerpC([112, 90, 64], [130, 106, 74], h);
+  cx.fillRect(0, GROUND, W, 8);
+  cx.fillStyle = lerpC([142, 116, 84], [164, 138, 96], h);
+  cx.fillRect(0, GROUND, W, 2);
+  const rutA = lerpC([84, 65, 45], [96, 76, 50], h), rutB = lerpC([158, 138, 108], [176, 156, 118], h);
+  const rk0 = Math.floor(worldX / 9) - 1;
+  for (let k = rk0; k < rk0 + Math.ceil(W / 9) + 2; k++) {
+    const gx = Math.round(k * 9 - worldX), r2 = hash01(k * 31 + 7);
+    cx.fillStyle = rutA;
+    cx.fillRect(gx, GROUND + 3, 5 + Math.floor(r2 * 4), 1);
+    if (r2 > 0.72) cx.fillRect(gx + 2, GROUND + 6, 3, 1);
+    if (r2 < 0.18) { cx.fillStyle = rutB; cx.fillRect(gx + 4, GROUND + 4, 2, 2); }
+  }
+  cx.fillStyle = "rgba(0,0,0,.22)";
+  cx.fillRect(0, GROUND + 8, W, 1);
   // speckle + tonal grass patches across the ground plane (hi-bit texture)
   const spk0 = Math.floor(worldX * 1.15 / 7) - 1;
   for (let k = spk0; k < spk0 + Math.ceil(W / 7) + 2; k++) {
@@ -1531,15 +1542,23 @@ function drawScene() {
   });
   sprouts = sprouts.filter(function (s) { return s.life > 0 && s.wx - worldX > -20; });
 
-  // smog clouds
+  // smog: layered bands with ragged ends and a lit top, drifting at different speeds.
+  // Four flat grey rectangles used to be the whole of it.
   if (smog > 0.03) {
-    cx.globalAlpha = smog;
-    cx.fillStyle = "#5a5a5a";
-    const off = (tick * 0.5) % (W + 40);
-    [[0.03, 18, 0.28, 11], [0.38, 32, 0.3, 10], [0.7, 12, 0.26, 12], [0.18, 48, 0.32, 9]].forEach(function (c) {
-      cx.fillRect(((c[0] * W + off) % (W + 40)) - 30, c[1], c[2] * W, c[3]);
+    const off = (tick * 0.5) % (W + 60);
+    [[0.03, 18, 0.30, 12, 1.00], [0.38, 34, 0.32, 10, 0.80],
+     [0.70, 12, 0.28, 13, 0.90], [0.18, 52, 0.34, 9, 0.65]].forEach(function (c, i) {
+      const bx2 = ((c[0] * W + off * (0.7 + i * 0.16)) % (W + 60)) - 40;
+      const bw = Math.round(c[2] * W), bh = c[3];
+      cx.globalAlpha = smog * c[4] * 0.9;
+      cx.fillStyle = "#6b6470";
+      cx.fillRect(bx2 + 7, c[1], bw - 14, bh);
+      cx.fillRect(bx2, c[1] + 3, bw, bh - 6);
+      cx.globalAlpha = smog * c[4] * 0.45;
+      cx.fillStyle = "#8f8896";
+      cx.fillRect(bx2 + 12, c[1], bw - 26, 3);
+      cx.globalAlpha = 1;
     });
-    cx.globalAlpha = 1;
   }
   // birds when healing
   if (h > 0.55) {
