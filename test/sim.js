@@ -35,6 +35,10 @@ const PATCHES = {
     cansa: () => 0
   },
   semMundo: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0, mundo: false },
+  //   semSuper  — turns off the super (three combos → the road clears and the street works
+  //               with you for a few seconds), so its own delta stays measurable the way
+  //               semMundo keeps the world layer's delta measurable.
+  semSuper: { cura: S => (S.modo === 'limpo' ? 2 : 0), cansa: () => 0, super: false },
   // Is the GO STEADY ramp reset (S.tempoLimpo = 0 on every switch) too harsh? It is the
   // sharpest hidden cost in the game, so measure the alternatives instead of arguing.
   //   rampaMeia — a switch keeps half the time already climbed
@@ -57,7 +61,28 @@ const DANO_MIRA = 2;                // ...each landing double a blind swing on w
 
 function novoMundo() {
   return { mobs: [], drops: [], spawnT: 0, chamadaT: 0, chamada: 0, atendidas: 0, perdidas: 0,
-    foco: 0, canalizando: 0, canais: 0, tiros: 0 };
+    foco: 0, canalizando: 0, canais: 0, tiros: 0,
+    // the super: charged by the player's own swings, gated by its cooldown
+    sCarga: 0, sSwings: 0, sCd: 0, supers: 0 };
+}
+
+// THE SUPER, mirrored. One player swing's worth of bookkeeping: three completed combos arm
+// it, the next swing spends it, and it then stops charging for superRecarga seconds — which
+// is what makes it a once-per-~23s event whether you hold the button or poke at it.
+// The payoff is deliberately NOT swing damage (taps are 4–7% of total impact): the road is
+// cleared, everything on it drops what it held, and a mutirão-shaped window opens. It never
+// touches tiredness — there is no path from here to S.poluicao, in either direction.
+function swingDoJogador(S, m) {
+  if (m.sCarga >= F.CFG.superCombos) {
+    m.sCarga = 0; m.sSwings = 0; m.sCd = F.CFG.superRecarga; m.supers++;
+    S.superT = F.CFG.superSeg;
+    for (const mob of m.mobs) m.drops.push({ t: 0, valor: F.valorDrop(S) });
+    m.mobs = []; S.mobsParados = 0;
+    return;
+  }
+  if (m.sCd > 0) return;
+  m.sSwings++;
+  if (m.sSwings % F.CFG.superCombos === 0) m.sCarga++;
 }
 // AUTO-FIRE's fuel. Focus only comes from showing up for the world, and the world is
 // rate-capped, so the skill cannot run away no matter how long it is left alone.
@@ -192,6 +217,9 @@ function jogar(est, patch = PATCHES.none, S0) {
   const st = { curaBudget: patch.limite || 0 };
   const m = novoMundo();
   const comMundo = patch.mundo !== false;
+  // the super belongs to the world layer (it pays in the road and in a mutirão-shaped
+  // window), so --patch=semMundo turns it off with everything else
+  const comSuper = comMundo && patch.super !== false;
   let t = 0, tapAcc = 0, autoAcc = 0, miraAcc = 0, wandAcc = 0;
   let deToque = 0, deProjeto = 0, deMundo = 0, deWand = 0, tempoSegurando = 0, piorSaude = 1;
   const alvo = S.energiaTotal + META;   // a cycle is always another 50K from where it starts
@@ -214,23 +242,29 @@ function jogar(est, patch = PATCHES.none, S0) {
 
     // holding the main button repeats at HOLD_TPS; duty cycle < 1 means the player
     // only holds part of the time (nobody holds a phone button for three hours)
+    // the super's cooldown and window run on the clock, like the mutirão does
+    if (m.sCd > 0) m.sCd = Math.max(0, m.sCd - DT);
+    if (S.superT > 0) S.superT = Math.max(0, S.superT - DT);
+
     let toques = 0;
+    // `mao` marks a swing made by the player's own hand: only those charge the super.
+    const mao = () => { if (comSuper) swingDoJogador(S, m); };
     if (est.hold > 0) {
       tapAcc += DT * F.HOLD_TPS * est.hold;
       tempoSegurando += DT * est.hold;
-      while (tapAcc >= 1) { deToque += tocar(S, patch, st); tapAcc--; toques++; }
+      while (tapAcc >= 1) { deToque += tocar(S, patch, st); tapAcc--; toques++; mao(); }
     } else if (est.projetos && S.geradores === 0) {
       tapAcc += DT * TOQUE_HUMANO;       // bootstrap: poke until project #1 is affordable
-      while (tapAcc >= 1) { deToque += tocar(S, patch, st); tapAcc--; toques++; }
+      while (tapAcc >= 1) { deToque += tocar(S, patch, st); tapAcc--; toques++; mao(); }
     }
-    if (S.u4) {                          // neighbours keep tapping on their own
-      autoAcc += DT * F.CFG.autoTapsPorSeg;
+    if (S.u4) {                          // neighbours keep tapping on their own — and, like
+      autoAcc += DT * F.CFG.autoTapsPorSeg;   // the wand, they never charge your super
       while (autoAcc >= 1) { deToque += tocar(S, patch, st); autoAcc--; toques++; }
     }
     // a tap on the world is also a swing on the CTA, so aiming pays its own way
     if (comMundo && est.mundo) {
       miraAcc += DT * MIRA_POR_SEG;
-      while (miraAcc >= 1) { deToque += tocar(S, patch, st); miraAcc--; toques++; }
+      while (miraAcc >= 1) { deToque += tocar(S, patch, st); miraAcc--; toques++; mao(); }
     }
     if (comMundo) deMundo += passoMundo(S, est, m, DT, toques);
     else { S.mobsParados = 0; S.mutirao = 0; }
@@ -265,7 +299,7 @@ function jogar(est, patch = PATCHES.none, S0) {
   return {
     nome: est.nome, t, chegou: S.energiaTotal >= alvo,
     geradores: S.geradores, poluicao: S.poluicao, eficiencia: F.eficiencia(S), piorSaude,
-    deToque, deProjeto, deMundo, deWand, tempoSegurando, mutiroes: m.atendidas,
+    deToque, deProjeto, deMundo, deWand, tempoSegurando, mutiroes: m.atendidas, supers: m.supers,
     canais: m.canais, tiros: m.tiros, skill: S.skillAuto, sabedoria: S.inovacao,
     upgrades: F.UPGRADES.filter(u => S[u.id]).map(u => u.id).join(' ')
   };
@@ -354,7 +388,7 @@ for (const r of linhas) {
       + ` · projects ${Math.round(r.deProjeto).toLocaleString('en-US')}`
       + ` · world ${Math.round(r.deMundo).toLocaleString('en-US')}`
       + ` · wand ${Math.round(r.deWand).toLocaleString('en-US')} (${r.canais} channels)`
-      + ` · mutirões ${r.mutiroes}`
+      + ` · mutirões ${r.mutiroes} · supers ${r.supers}`
       + ` · held ${hms(r.tempoSegurando)} · bought ${r.upgrades || '(none)'}`);
   }
 }
