@@ -2043,6 +2043,90 @@ function drawScene() {
       if (tick % 30 < 15) { cx.fillStyle = "#ff5a5a"; cx.fillRect(sx + 19, base - Math.round(H * 0.21) - 10, 3, 3); }
     }
   }
+  // ---- one landmark per stretch of world ----
+  // Places, never brands and never people: a hilltop statue, a modernist parliament, a
+  // museum hung off two portal frames, a lift up a cliff, an opera house in the forest.
+  // They are drawn in the same silhouette language and the same haze as the skyline so they
+  // read at parallax distance, and they bleach with the world like everything else at this
+  // depth — a monument that only works in the healed frame is half an asset. One profile
+  // per stretch, found while running, beats a crowded postcard.
+  {
+    // They stand ON the separator band, not behind it. Rooted at GROUND-8 like the skyline
+    // they were simply eaten by the tree line — distant things belong higher on the picture
+    // plane, and a silhouette whose feet sit on the light strip is the value architecture.
+    const spacing = 460, speed = 0.15, base = GROUND - 29;
+    const corpo = longe(mixA([102, 97, 88], [70, 112, 156], h), 0.19, h);
+    const claro = longe(mixA([136, 130, 118], [122, 168, 208], h), 0.15, h);
+    const escuro = longe(mixA([74, 70, 64], [44, 78, 116], h), 0.25, h);
+    const q0 = Math.floor(worldX * speed / spacing) - 1;
+    for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
+      const sx = Math.round(k * spacing - worldX * speed);
+      if (sx > W + 20 || sx < -110) continue;
+      // px(colour, x, y, w, h) — y is the height of the rect's BOTTOM above the horizon line
+      const px = function (c, x, y, w2, h2) { cx.fillStyle = c; cx.fillRect(sx + x, base - y - h2, w2, h2); };
+      // a half-round: flat side down (a dome) or flat side up (a saucer resting on its belly)
+      const cupula = function (x0, y0c, rx, ry, invertida) {
+        for (let i = -rx; i <= rx; i++) {
+          const hh = Math.round(ry * Math.sqrt(Math.max(0, 1 - (i / rx) * (i / rx))));
+          if (hh < 1) continue;
+          px(i > rx * 0.34 ? claro : corpo, x0 + i, invertida ? y0c - hh : y0c, 1, hh);
+        }
+      };
+      switch (((k % 5) + 5) % 5) {
+        case 0: {   // the massif: a rounded monolith, a steeper peak, a figure with its arms out
+          for (let i = 0; i < 30; i++) {
+            const t = i / 29;
+            px(i > 20 ? claro : corpo, i, 0, 1, Math.max(1, Math.round(40 * Math.pow(Math.sin(t * Math.PI), 0.42))));
+          }
+          for (let i = 0; i < 44; i++) {
+            const t = i / 43;
+            px(i > 26 ? claro : corpo, 30 + i, 0, 1, Math.max(1, Math.round(62 * Math.pow(1 - Math.abs(t * 2 - 1), 0.62))));
+          }
+          px(escuro, 50, 62, 4, 2);
+          px(claro, 51, 64, 2, 8); px(claro, 47, 69, 10, 2); px(claro, 51, 72, 2, 2);
+          break;
+        }
+        case 1: {   // the parliament: a dome, an upturned saucer, and the twin slabs between
+          px(corpo, 0, 0, 86, 5); px(claro, 0, 3, 86, 2);
+          cupula(19, 5, 14, 13, false);
+          cupula(68, 21, 17, 16, true);
+          px(escuro, 39, 5, 5, 52); px(claro, 43, 5, 1, 52);
+          px(escuro, 46, 5, 5, 52); px(claro, 50, 5, 1, 52);
+          break;
+        }
+        case 2: {   // the museum: a box hung under two portal frames, the span clear beneath
+          const vermelho = longe(mixA([140, 132, 120], [198, 62, 50], h), 0.18, h);
+          px(corpo, 8, 12, 56, 18); px(claro, 8, 28, 56, 2); px(escuro, 8, 12, 56, 1);
+          for (let i = 0; i < 5; i++) px(escuro, 13 + i * 10, 16, 6, 9);
+          px(vermelho, 4, 0, 4, 40); px(vermelho, 64, 0, 4, 40); px(vermelho, 4, 36, 64, 4);
+          break;
+        }
+        case 3: {   // the lift: a shaft in the lower town, bridged to the top of the escarpment
+          for (let i = 0; i < 48; i++) {                 // the escarpment, with a broken lip
+            const t = i / 47;
+            let hh = 44 + Math.round(8 * t) + (i % 7 === 3 ? 2 : 0);
+            if (t > 0.78) hh -= Math.round((t - 0.78) * 130);
+            px(i < 4 ? claro : corpo, 36 + i, 0, 1, Math.max(6, hh));
+          }
+          px(escuro, 6, 0, 12, 42); px(corpo, 7, 0, 10, 42); px(claro, 16, 0, 1, 42);
+          px(escuro, 3, 42, 18, 8); px(corpo, 4, 43, 16, 6); px(claro, 4, 48, 16, 1);
+          px(escuro, 18, 38, 20, 3); px(claro, 18, 40, 20, 1);   // the walkway across
+          break;
+        }
+        default: {  // the opera house: an arcaded block under a ribbed dome
+          px(corpo, 6, 0, 46, 22); px(claro, 48, 0, 4, 22);
+          for (let i = 0; i < 5; i++) { px(escuro, 11 + i * 8, 3, 5, 14); px(claro, 16 + i * 8, 3, 1, 14); }
+          px(corpo, 4, 22, 50, 3); px(claro, 4, 24, 50, 1);
+          for (let i = -13; i <= 13; i++) {
+            const hh = Math.round(15 * Math.sqrt(Math.max(0, 1 - (i / 13) * (i / 13))));
+            if (hh < 1) continue;
+            px(((i + 14) & 2) ? claro : corpo, 29 + i, 25, 1, hh);
+          }
+          px(claro, 28, 40, 3, 5);
+        }
+      }
+    }
+  }
   // ---- the middle distance, in three planes separated by VALUE ----
   // The old tree line and the old bushes sat within a few percent of each other in both
   // hue and brightness, so they merged into one undifferentiated green mass across the
