@@ -765,14 +765,34 @@ function renderIcon(cnv, name) {
     }
   });
 }
-function drawMap(map, pal, dx, dy, flash) {
-  for (let r = 0; r < map.length; r++) {
+// Sprites now carry four times the pixels they used to, so painting them cell by cell
+// every frame is no longer free. Each map is baked once into an offscreen canvas (plus a
+// white-flash copy for hits) and a normal frame is one drawImage per character.
+const spriteCv = {};
+function sprite(key, map, pal, flash) {
+  const id = key + (flash ? "!" : "");
+  if (spriteCv[id]) return spriteCv[id];
+  const w = map[0].length, hh = map.length;
+  const c = document.createElement("canvas");
+  c.width = w; c.height = hh;
+  const g = c.getContext("2d");
+  for (let r = 0; r < hh; r++) {
     const row = map[r];
-    for (let c = 0; c < row.length; c++) {
-      const ch = row[c];
-      if (ch !== ".") { cx.fillStyle = flash ? "#ffffff" : pal[ch]; cx.fillRect(dx + c, dy + r, 1, 1); }
+    let run = -1, cor = null;
+    for (let x = 0; x <= w; x++) {                 // horizontal runs, not single pixels
+      const ch = x < w ? row[x] : ".";
+      const px = ch === "." ? null : (flash ? "#ffffff" : pal[ch]);
+      if (px !== cor) {
+        if (cor) { g.fillStyle = cor; g.fillRect(run, r, x - run, 1); }
+        cor = px; run = x;
+      }
     }
   }
+  spriteCv[id] = c;
+  return c;
+}
+function drawMap(key, map, pal, dx, dy, flash) {
+  cx.drawImage(sprite(key, map, pal, flash), Math.round(dx), Math.round(dy));
 }
 
 // ---- little monsters: pollution blobs & greedy money bags ----
@@ -803,9 +823,9 @@ function drawMobs(smog) {
     if (m.dying > 0) cx.globalAlpha = m.dying / 8;
     cx.fillStyle = "rgba(0,0,0,.25)";
     cx.fillRect(sx, GROUND, 9, 2);
-    if (m.type === "smog") drawMap(SMOG_MOB.map, SMOG_MOB.pal, sx, GROUND - 12 + bob, m.flash > 0);
-    else if (m.type === "barrel") drawMap(BARREL_MOB.map, BARREL_MOB.pal, sx, GROUND - 9 + (bob ? 1 : 0), m.flash > 0);
-    else drawMap(CASH_MOB.map, CASH_MOB.pal, sx, GROUND - 8 + (bob ? 0 : -1), m.flash > 0);
+    if (m.type === "smog") drawMap("smog", SMOG_MOB.map, SMOG_MOB.pal, sx, GROUND - 12 + bob, m.flash > 0);
+    else if (m.type === "barrel") drawMap("barrel", BARREL_MOB.map, BARREL_MOB.pal, sx, GROUND - 9 + (bob ? 1 : 0), m.flash > 0);
+    else drawMap("cash", CASH_MOB.map, CASH_MOB.pal, sx, GROUND - 8 + (bob ? 0 : -1), m.flash > 0);
     cx.globalAlpha = 1;
     cx.restore();
     if (m.flash > 0) m.flash--;
@@ -814,6 +834,25 @@ function drawMobs(smog) {
 }
 
 // ---- intro art: a tiny pixel postcard of the broken world ----
+// The postcard is only 128x42, so it keeps its own compact cuts of the hero and the smog
+// blob: the full-size sprites would fill two thirds of the frame on their own.
+const HERO_MINI = [
+  "...KKKK...",
+  "..KRRrrKK.",
+  ".KdRRrrrRK",
+  ".Kbbbbbbbb",
+  ".KhaSSssK.",
+  ".KhaSeSsK.",
+  ".KhaSSssK.",
+  "..KnnnnK..",
+  "..KjJLLK..",
+  ".KjJGJLlK.",
+  ".KjJGJLlK.",
+  ".KjJJJLlK.",
+  "..KiiiiK.."
+];
+const SMOG_MINI = { pal: { X: "#7a7288", K: "#10121c", D: "#5c5568" }, map: [
+  ".XXXXXX..", "XXXXXXXX.", "XKXXXKXX.", "XXXXXXXX.", "XDXDXDXD.", ".XXXXXX.."] };
 function drawLoreArt() {
   const la = document.getElementById("loreArt"); if (!la) return;
   const lc = la.getContext("2d");
@@ -846,12 +885,13 @@ function drawLoreArt() {
   px("#241f30", 16, 22, 2, 11); px("#241f30", 13, 22, 4, 1); px("#241f30", 12, 19, 1, 4);
   px("#241f30", 18, 24, 4, 1); px("#241f30", 22, 21, 1, 4); px("#241f30", 15, 18, 1, 5);
   // two smog blobs closing in from the left
-  pm(SMOG_MOB.map, SMOG_MOB.pal, 34, 22); pm(SMOG_MOB.map, SMOG_MOB.pal, 46, 24);
+  pm(SMOG_MINI.map, SMOG_MINI.pal, 34, 22); pm(SMOG_MINI.map, SMOG_MINI.pal, 46, 24);
   // the hero — the only bright thing in the frame
-  const hx0 = 74, hy0 = 15;
-  pm(HERO_MAP, HERO_COLORS, hx0, hy0);
-  px("#10121c", hx0 + 2, hy0 + 12, 2, 5); px("#10121c", hx0 + 6, hy0 + 12, 2, 5); // legs
-  px("#e8edf6", hx0 + 1, hy0 + 16, 3, 1); px("#e8edf6", hx0 + 6, hy0 + 16, 3, 1); // shoes
+  const hx0 = 74, hy0 = 16;
+  px("#a8384c", hx0 - 3, hy0 + 7, 4, 5); px("#87293a", hx0 - 6, hy0 + 8, 3, 4);   // cape
+  pm(HERO_MINI, HERO_COLORS, hx0, hy0);
+  px("#242a49", hx0 + 2, hy0 + 13, 3, 4); px("#343d66", hx0 + 6, hy0 + 13, 3, 4); // legs
+  px("#e8edf6", hx0 + 1, hy0 + 16, 4, 1); px("#e8edf6", hx0 + 6, hy0 + 16, 4, 1); // shoes
   // the spark above the hero
   px("#ffcd75", hx0 + 4, hy0 - 6, 2, 2); px("#ffe9b0", hx0 + 4, hy0 - 8, 2, 1);
   px("#ffe9b0", hx0 + 4, hy0 - 4, 2, 1); px("#ffe9b0", hx0 + 2, hy0 - 6, 1, 2); px("#ffe9b0", hx0 + 7, hy0 - 6, 1, 2);
@@ -859,130 +899,189 @@ function drawLoreArt() {
   px("rgba(255,205,117,.25)", hx0 - 2, 33, 14, 1);
 }
 
-// ---- hero sprite: modern volunteer, 2026 (Rogue-Legacy-quality pixel art, original) ----
-const HERO_COLORS = { K: "#10121c", R: "#c9455c", S: "#f6cfa2", J: "#2f8be0", L: "#57b0ff", G: "#ffcd75" };
-const HERO_MAP = [ // red cap + face + blue jacket, facing right
-  "...KKKK...",
-  "..KRRRRKK.",
-  ".KRRRRRRRK",
-  ".KSSSSSSK.",
-  ".KSSSKSSK.",
-  ".KSSSSSSK.",
-  "..KSSSSK..",
-  "..KJJJJK..",
-  ".KJGJJLJK.",
-  ".KJGJJLJK.",
-  ".KJJJJJJK.",
-  "..KJJJJK..",
+// ---- hero sprite: modern volunteer, 2026 ----
+// He used to be drawn with an extra 2x scale on top of the world's own 2x, so every one of
+// his sprite pixels covered four screen pixels while the scenery behind him covered one:
+// a chunky blob in front of a finely drawn background, which is what made the whole frame
+// read as crude. He is now on the same grid as the world — twice the pixels, half the size
+// — and the extra resolution is spent on shading. One light direction: the sun sits up and
+// to the right, so every material gets a lit right/top rim, a base, and a shaded left side.
+const HERO_COLORS = {
+  K: "#0e0f18",                                             // outline
+  r: "#f2798d", R: "#c9455c", d: "#9c3346", b: "#6d2233",   // cap: rim / base / shade / brim
+  s: "#ffeacd", S: "#f6cfa2", a: "#d8a87e", n: "#a97a58",   // skin
+  h: "#40252c", e: "#17141f",                               // hair, eye
+  l: "#9ad8ff", L: "#57b0ff", J: "#2f8be0", j: "#1f63ad", i: "#12406f", // jacket
+  G: "#ffcd75", W: "#e8edf6"
+};
+const HERO_MAP = [ // 22x26: red cap, face, blue jacket — facing right, lit from the right
+  ".........KKKK.........",
+  ".......KKRRrrKK.......",
+  "......KdRRRrrrRK......",
+  ".....KdRRRRrrrrRK.....",
+  ".....KdRRRRRrrrRK.....",
+  "....KbbbbbbbbbbdddK...",
+  ".....KhaSSSSSssK......",
+  ".....KhaSSSSSssK......",
+  ".....KhaSSeSSssK......",
+  ".....KhaSSeSSssK......",
+  ".....KhaSSSSSsssK.....",
+  ".....KaaSSSSSssK......",
+  "......KnaSSSsnK.......",
+  ".......KnnnnnK........",
+  "....KKjJJJJLLLLlKK....",
+  "...KjjJWWWWLLLLlK.....",
+  "...KjJJJWWLLLLLlK.....",
+  "...KjJJJJJLLLLLlK.....",
+  "...KjJJJJJLLLLLlK.....",
+  "...KjJJGGJLLLLLlK.....",
+  "...KjJJGGJLLLLLlK.....",
+  "...KjJJJJJLLLLLlK.....",
+  "....KjJJJJJLLLLlK.....",
+  "....KiiJJJJJLLlK......",
+  "....KiiiJJJJLLlK......",
+  "....KKiiiiiiiiKK......"
 ];
-// 4-frame classic run cycle: [frontLegDx, frontLegDy, backLegDx, backLegDy, armDx, bob]
+// 4-frame classic run cycle, in world pixels: [frontLegDx, frontLegDy, backLegDx, backLegDy, armDx, bob]
 const RUN = [
-  [4, 0, -4, 0, -3, 0],
-  [1, -2, -1, 0, -1, -1],
-  [-4, 0, 4, 0, 3, 0],
-  [-1, 0, 1, -2, 1, -1],
+  [8, 0, -8, 0, -6, 0],
+  [2, -4, -2, 0, -2, -2],
+  [-8, 0, 8, 0, 6, 0],
+  [-2, 0, 2, -4, 2, -2],
 ];
+// A blade: outline, shaded body, sunlit edge. Diagonals are a run of steps drawn in three
+// passes rather than step by step — otherwise each step outlines itself and the sword
+// reads as a row of loose white bricks instead of one piece of steel.
+function laminaSeq(steps, vert) {
+  cx.fillStyle = "#0e0f18";
+  for (let i = 0; i < steps.length; i++) cx.fillRect(steps[i][0] - 1, steps[i][1] - 1, steps[i][2] + 2, steps[i][3] + 2);
+  cx.fillStyle = "#c3cbdb";
+  for (let i = 0; i < steps.length; i++) cx.fillRect(steps[i][0], steps[i][1], steps[i][2], steps[i][3]);
+  cx.fillStyle = "#f4f7ff";
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    if (vert) cx.fillRect(s[0] + s[2] - 2, s[1], 2, s[3]); else cx.fillRect(s[0], s[1], s[2], 2);
+  }
+}
+function lamina(x, y, w, hh, vert) { laminaSeq([[x, y, w, hh]], vert); }
 function drawHero() {
   // the leap: rises fast, hangs, then drops hard onto the ground
   const air = jumpT > 0;
   const pj = air ? 1 - jumpT / JUMPF : 0;            // 0 = take-off, 1 = landing
-  const alto = air ? Math.round(Math.pow(Math.sin(pj * Math.PI), 0.7) * 26) : 0;
+  const alto = air ? Math.round(Math.pow(Math.sin(pj * Math.PI), 0.7) * 52) : 0;
   const fi = air ? 1 : ((Math.floor(animT * 9) % 4) + 4) % 4;   // ~9 fps: classic 8-bit run
-  const P = air ? [2, -3, -2, -3, 0, 0] : RUN[fi];  // knees tucked in mid-air
-  const y0 = GROUND - 22 + P[5] - alto;  // feet land exactly on the ground line
-  const hx = HX;
+  const P = air ? [4, -6, -4, -6, 0, 0] : RUN[fi];  // knees tucked in mid-air
+  const bx = HX - 8;                     // left edge of the 22-wide sprite
+  const y0 = GROUND - 44 + P[5] - alto;  // feet land exactly on the ground line
+  const mid = bx + 10;                   // his centre line
   // his shadow stays on the ground and tightens as he climbs, which is what sells the leap
-  sombra(hx + 7, GROUND, Math.max(6, 20 - Math.round(alto * 0.45)), 0.26 - alto * 0.006);
+  sombra(mid, GROUND, Math.max(9, 28 - Math.round(alto * 0.34)), Math.max(0.07, 0.32 - alto * 0.0045));
   if (air) {
     jumpT--;
-    if (jumpT <= 0) impacto(HX + 7);                 // touchdown
+    if (jumpT <= 0) impacto(mid);                 // touchdown
   }
-  // hero rendered at 2x, anchored at the feet (world pixels are finer)
-  cx.save();
-  cx.translate(hx + 7, GROUND);
-  cx.scale(2, 2);
-  cx.translate(-(hx + 7), -GROUND);
-  // soft shadow under the hero (tightens while he is in the air)
-  const sh = Math.max(0, 1 - alto / 30);
-  cx.globalAlpha = 0.28 + sh * 0.25;
-  cx.fillStyle = "#000000";
-  cx.fillRect(hx - 1 + Math.round((1 - sh) * 4), GROUND, Math.max(5, Math.round(15 * sh)), 2);
-  if (sh > 0.7) cx.fillRect(hx + 2, GROUND + 2, 9, 1);
-  cx.globalAlpha = 1;
-  // flowing cape (trails behind the shoulders, flaps with the step)
-  const capeC = ["#c9455c", "#b13e53", "#8f2f42", "#732536"];
-  for (let i = 0; i < 4; i++) {
-    cx.fillStyle = capeC[i];
-    cx.fillRect(hx + 1 - i * 3, y0 + 7 + ((fi + i) % 2), 4, 6 - i);
+  // cape: a trailing sheet in three value bands with a lit top fold, waving half a beat
+  // behind the step. Drawn far strip first so the near ones overlap them.
+  const flap = air ? -2 : (fi % 2 ? 1 : 0);
+  const capa = ["#c9455c", "#a8384c", "#8b2c3d", "#6e2130", "#521825"];
+  for (let i = 5; i >= 0; i--) {
+    const sxx = bx + 3 - i * 3;
+    const hh = Math.max(4, 15 - i * 2);
+    const sy = y0 + 16 + i + (i > 2 ? flap : 0);
+    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy, 4, hh + 2);
+    cx.fillStyle = capa[Math.min(4, (i >> 1) + 1)]; cx.fillRect(sxx, sy + 1, 3, hh);
+    cx.fillStyle = capa[Math.max(0, i >> 1)]; cx.fillRect(sxx, sy + 1, 3, 2);
   }
-  // torso + head from pixel map
-  for (let r = 0; r < HERO_MAP.length; r++) {
-    const row = HERO_MAP[r];
-    for (let c = 0; c < row.length; c++) {
-      const ch = row[c];
-      if (ch !== ".") { cx.fillStyle = HERO_COLORS[ch]; cx.fillRect(hx + c, y0 + r, 1, 1); }
-    }
+  // back arm swings behind the torso
+  const abx = bx + 4 + Math.round(P[4] * 0.4);
+  cx.fillStyle = "#0e0f18"; cx.fillRect(abx - 1, y0 + 16, 6, 10);
+  cx.fillStyle = "#1f63ad"; cx.fillRect(abx, y0 + 17, 4, 5);
+  cx.fillStyle = "#c39a72"; cx.fillRect(abx, y0 + 22, 4, 3);
+  // head + torso, baked once
+  drawMap("hero", HERO_MAP, HERO_COLORS, bx, y0);
+  // legs (jeans + sneakers) — the back leg reads a value darker so the stride has depth
+  const hipY = y0 + 26;
+  function leg(hipX, dx, dy, back) {
+    const base = back ? "#242a49" : "#343d66", rim = back ? "#333c63" : "#48548a";
+    cx.fillStyle = "#12142a";
+    cx.fillRect(hipX - 1, hipY - 1, 7, 10);
+    cx.fillRect(hipX + dx - 1, hipY + 6, 7, 10 + dy);
+    cx.fillStyle = base;
+    cx.fillRect(hipX, hipY, 5, 8);
+    cx.fillRect(hipX + dx, hipY + 7, 5, 8 + dy);
+    cx.fillStyle = rim;                                   // sunlit right edge of the jeans
+    cx.fillRect(hipX + 4, hipY, 1, 8);
+    cx.fillRect(hipX + dx + 4, hipY + 7, 1, 8 + dy);
+    const sy = hipY + 15 + dy, sxx = hipX + dx - (dx < 0 ? 3 : 1);
+    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy - 1, 9, 4);
+    cx.fillStyle = back ? "#bcc5d6" : "#f2f5fb"; cx.fillRect(sxx, sy, 7, 2);
+    cx.fillStyle = back ? "#8d97ab" : "#aeb8ca"; cx.fillRect(sxx, sy + 1, 7, 1);
   }
-  // legs (jeans + white sneakers)
-  const hipY = y0 + 12;
-  function leg(hipX, dx, dy) {
-    cx.fillStyle = "#2b2f45";
-    cx.fillRect(hipX, hipY, 3, 4);
-    cx.fillRect(hipX + dx, hipY + 3, 3, 5 + dy);
-    cx.fillStyle = "#e8edf6";
-    cx.fillRect(hipX + dx - (dx < 0 ? 1 : 0), hipY + 8 + dy, 4, 2);
-    cx.fillStyle = "#10121c";
-    cx.fillRect(hipX + dx - (dx < 0 ? 1 : 0), hipY + 9 + dy, 4, 1);
+  leg(bx + 6, P[2], P[3], true);   // back leg
+  leg(bx + 11, P[0], P[1], false); // front leg
+  // sword arm out of the front shoulder
+  const asx = bx + 13 + Math.round(P[4] * 0.3);
+  function braco(hx2, hy2) {                        // sleeve from the shoulder, hand on the grip
+    const fw = Math.max(3, hx2 - asx - 3);
+    cx.fillStyle = "#0e0f18";
+    cx.fillRect(asx + 3, y0 + 18, fw + 2, 6);       // forearm
+    cx.fillRect(asx - 1, y0 + 16, 7, 7);            // upper arm
+    cx.fillStyle = "#1f63ad"; cx.fillRect(asx + 4, y0 + 19, fw, 4);
+    cx.fillStyle = "#2f8be0"; cx.fillRect(asx, y0 + 17, 5, 5);
+    cx.fillStyle = "#57b0ff"; cx.fillRect(asx, y0 + 17, 5, 2); cx.fillRect(asx + 4, y0 + 19, fw, 1);
+    cx.fillStyle = "#0e0f18"; cx.fillRect(hx2 - 1, hy2 - 1, 7, 7);
+    cx.fillStyle = "#f6cfa2"; cx.fillRect(hx2, hy2, 5, 5);
+    cx.fillStyle = "#ffeacd"; cx.fillRect(hx2 + 3, hy2, 2, 5);
+    cx.fillStyle = "#d8a87e"; cx.fillRect(hx2, hy2 + 4, 5, 1);
   }
-  leg(hx + 3, P[2], P[3]); // back leg
-  leg(hx + 6, P[0], P[1]); // front leg
-  // simple sword, 3-hit combo: slash / upper slash / SPIN
+  // simple sword, 3-hit combo: slash / upper slash / LEAP SLAM
   if (attackT > 0) {
     attackT--;
     const fade = "rgba(255,240,200," + Math.min(1, attackT / 6) + ")";
     if (attackType === 0) {          // horizontal slash
-      cx.fillStyle = "#e8edf6"; cx.fillRect(hx + 12, y0 + 6, 13, 2);
-      cx.fillStyle = "#b9c2d4"; cx.fillRect(hx + 12, y0 + 7, 13, 1);
-      cx.fillStyle = "#ffcd75"; cx.fillRect(hx + 11, y0 + 5, 2, 4);
+      lamina(bx + 25, y0 + 12, 26, 4, false);
+      cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 21, y0 + 10, 4, 8);
+      cx.fillStyle = "#c8912f"; cx.fillRect(bx + 21, y0 + 16, 4, 2);
       cx.fillStyle = fade;
-      cx.fillRect(hx + 14, y0 + 2, 9, 1); cx.fillRect(hx + 21, y0 + 4, 6, 1);
+      cx.fillRect(bx + 29, y0 + 4, 18, 2); cx.fillRect(bx + 43, y0 + 8, 12, 2);
     } else if (attackType === 1) {   // upper diagonal slash
-      cx.fillStyle = "#e8edf6";
-      for (let i = 0; i < 6; i++) cx.fillRect(hx + 11 + i * 2, y0 + 5 - i * 2, 3, 2);
-      cx.fillStyle = "#ffcd75"; cx.fillRect(hx + 10, y0 + 6, 2, 3);
+      const passos = [];
+      for (let i = 0; i < 6; i++) passos.push([bx + 23 + i * 4, y0 + 10 - i * 4, 6, 4]);
+      laminaSeq(passos, false);
+      cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 19, y0 + 12, 4, 6);
       cx.fillStyle = fade;
-      cx.fillRect(hx + 13, y0 - 6, 6, 1); cx.fillRect(hx + 18, y0 - 3, 6, 1);
-    } else {                          // LEAP SLAM: sword raised on the way up, driven down on the way in
+      cx.fillRect(bx + 27, y0 - 12, 12, 2); cx.fillRect(bx + 37, y0 - 6, 12, 2);
+    } else {                          // LEAP SLAM: raised on the way up, driven down on the way in
       const subindo = pj < 0.5;
       if (subindo) {                  // overhead, both hands, blade pointing up
-        cx.fillStyle = "#e8edf6"; cx.fillRect(hx + 8, y0 - 14, 2, 15);
-        cx.fillStyle = "#b9c2d4"; cx.fillRect(hx + 8, y0 - 14, 1, 15);
-        cx.fillStyle = "#ffcd75"; cx.fillRect(hx + 6, y0 + 1, 6, 2);
+        lamina(bx + 17, y0 - 28, 4, 30, true);
+        cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 13, y0 + 2, 12, 4);
         cx.fillStyle = "rgba(255,240,200,.35)";      // gathering glow
-        cx.fillRect(hx + 5, y0 - 17, 8, 2); cx.fillRect(hx + 7, y0 - 20, 4, 2);
+        cx.fillRect(bx + 11, y0 - 34, 16, 4); cx.fillRect(bx + 15, y0 - 40, 8, 4);
       } else {                        // driven down and forward
         const q = (pj - 0.5) * 2;
-        cx.fillStyle = "#e8edf6";
-        for (let i = 0; i < 7; i++) cx.fillRect(hx + 11 + i * 2, y0 + 1 + i * 2, 3, 2);
-        cx.fillStyle = "#ffcd75"; cx.fillRect(hx + 9, y0 - 1, 4, 2);
+        const passos = [];
+        for (let i = 0; i < 7; i++) passos.push([bx + 23 + i * 4, y0 + 2 + i * 4, 6, 4]);
+        laminaSeq(passos, false);
+        cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 19, y0 - 2, 8, 4);
         cx.fillStyle = fade;         // arc trail sweeping from overhead to the ground
         for (let i = 0; i < 6; i++) {
           const a = (-0.9 + q * 1.7) - i * 0.16;
-          cx.fillRect(hx + 8 + Math.round(Math.cos(a) * 20), y0 + 2 + Math.round(Math.sin(a) * 20), 2, 2);
+          cx.fillRect(bx + 15 + Math.round(Math.cos(a) * 40), y0 + 4 + Math.round(Math.sin(a) * 40), 4, 4);
         }
       }
     }
-    cx.fillStyle = HERO_COLORS.S; cx.fillRect(hx + 9, y0 + 7, 3, 3); // hand
+    braco(asx + 5, y0 + 19);
   } else {
-    cx.fillStyle = "#e8edf6"; cx.fillRect(hx + 10, y0 - 8, 2, 12);   // blade rests on the shoulder
-    cx.fillStyle = "#b9c2d4"; cx.fillRect(hx + 10, y0 - 8, 1, 12);
-    cx.fillStyle = "#ffcd75"; cx.fillRect(hx + 9, y0 + 4, 4, 1);     // guard
-    cx.fillStyle = HERO_COLORS.S; cx.fillRect(hx + 10, y0 + 5, 2, 3);
+    lamina(bx + 21, y0 - 12, 4, 28, true);                          // blade rests on the shoulder
+    cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 19, y0 + 16, 8, 3);  // guard
+    cx.fillStyle = "#c8912f"; cx.fillRect(bx + 19, y0 + 18, 8, 1);
+    cx.fillStyle = "#5a3b22"; cx.fillRect(bx + 21, y0 + 19, 4, 6);  // grip
+    braco(bx + 20, y0 + 19);
   }
   // dust puffs at the feet on each step (fluid running feel)
-  cx.restore();
   if (fi !== lastFi && fi % 2 === 0) {
-    parts.push({ x: hx - 5, y: GROUND - 2, vx: -24, vy: -10, life: 0.4, c: "#9b8468", grav: 70 });
+    parts.push({ x: bx + 2, y: GROUND - 3, vx: -24, vy: -10, life: 0.4, c: "#9b8468", grav: 70 });
   }
   lastFi = fi;
 }
