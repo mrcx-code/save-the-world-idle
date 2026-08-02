@@ -9,7 +9,8 @@ switching modes resets the ramp. Tiredness: `+0.15/s` per project in fast mode
 (`p = eq + (p − eq)·e^(−kt)`, `eq = emission/k`, `k = −ln(1 − decay)`), so the same
 equation covers offline time. Team health `= 100/(100+tiredness)` multiplies **all**
 output, taps included. Torch at 50K total impact: `wisdom = ⌊√(total/2500) × health⌋`,
-+10% forever per point. Offline: rate at save time, 12h cap.
++10% forever per point. Offline integrates in 1s slices (12h cap, ~8ms) instead of
+billing one frozen rate, so the team wearing out — or resting — while you sleep counts.
 
 ## Upgrades (7)
 
@@ -97,7 +98,8 @@ floating sheets above the character; type scales with `clamp()`.
 
 ## Open questions
 
-1. Offline gain uses efficiency at save time — a long dirty offline run overpays.
+1. ~~Offline gain uses efficiency at save time~~ — fixed, and it was wrong in *both*
+   directions. See `node test/offline.js`.
 2. ~~First torch may pass 40 min if played 100% steady~~ — **measured: 8m37s**, not 40.
    A greedy buyer reaches 44 projects and 50K in well under ten minutes of active play.
    That is the whole first loop, and it is the single biggest threat to the three-day
@@ -185,6 +187,25 @@ toda sessão começa lendo a última entrada.
   navegador aparecer**, então o `confirm()` não volta sem que o teste perceba. Verde,
   61 FPS. Quebrou no caminho: nada.
   **Próximo passo: tarefa (d) — corrigir o ganho offline.**
+
+- **2026-08-02 · tarefa (d), ganho offline integrado.** O offline cobrava uma taxa
+  congelada: lia a eficiência na hora do save e multiplicava por até 12 horas. Agora
+  `simularOffline()` integra em fatias de 1s reusando o mesmo `simular()`, então offline
+  e online seguem um só caminho de código — a rampa do GO STEADY inclusive. Medido
+  (`node test/offline.js`, 20 projetos, 12h): dormir logo depois de ir para GO FAST com
+  o time descansado pagava **9,87× a mais** (5.184.000 contra 525.144 reais) — era a
+  suspeita do CLAUDE.md e ela se confirmou. Mas o congelamento errava **nos dois
+  sentidos**, e isso ninguém tinha visto: dormir em GO STEADY com o time acabado pagava
+  **0,03×**, ou seja, roubava 33× do jogador, porque o time se recupera durante a noite
+  e a taxa congelada usava a eficiência do pior momento; e dormir em GO STEADY
+  descansado pagava 0,25×, porque a rampa sobe de 1/s para 4/s enquanto você dorme.
+  Custo: 7,83ms no pior caso para as 12h inteiras, uma vez só, no load. Smoke test agora
+  semeia um save de 12 horas atrás e confere o valor de verdade: 525.144 contra os
+  5.184.000 da taxa congelada, com 898 de cansaço acumulado. Quebrou no caminho: a
+  primeira versão do teste falhou em `waitForFunction` — não era o jogo, é que o
+  `beforeunload` chama `salvar()` e escrevia o estado vivo por cima do save semeado
+  antes do reload; o teste desarma o `salvar` antes de recarregar. Verde, 61 FPS.
+  **Próximo passo: tarefa (e) — apagar o `PUSH.md`.**
 
 ## Would cut with one more day
 

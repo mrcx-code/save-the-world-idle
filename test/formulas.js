@@ -67,6 +67,18 @@ function simular(S, dt) {
   return ganho;
 }
 
+// offline: integrate in slices instead of billing one frozen rate for the whole night
+function simularOffline(S, total) {
+  const PASSO = 1;
+  let ganho = 0, resto = total;
+  while (resto > 0) {
+    const p = Math.min(PASSO, resto);
+    ganho += simular(S, p);
+    resto -= p;
+  }
+  return ganho;
+}
+
 // one swing (the economic half of clicar(); the rest is sprites)
 function clicar(S) {
   const g = ganhoClique(S);
@@ -99,5 +111,5 @@ module.exports = {
   CFG, HOLD_TPS, UPGRADES, novoEstado,
   eficiencia, bonusInovacao, custoGerador, bonusJusto, forcaToque, ganhoClique,
   tetoLimpoAtual, rampaAtual, prodPorSegundo, poluicaoPorSegundo,
-  inovacaoAoTransicionar, simular, clicar, comprarGerador, comprar
+  inovacaoAoTransicionar, simular, simularOffline, clicar, comprarGerador, comprar
 };

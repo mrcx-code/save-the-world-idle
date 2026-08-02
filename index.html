@@ -464,6 +464,23 @@ function transicionar() {
   salvar(); desenhar();
 }
 
+// Offline used to bill one frozen rate for the whole night: efficiency was read at save
+// time and multiplied by twelve hours. Go to bed right after switching to GO FAST with a
+// rested team and you were paid the rested rate while the team wore out in their sleep.
+// Tiredness is exact in closed form, so the fix is to let the gain move with it — the
+// slices are small enough that the rate barely changes inside one, and stepping the same
+// simular() keeps offline and online on a single code path, ramp included.
+function simularOffline(total) {
+  const PASSO = 1;
+  let ganho = 0, resto = total;
+  while (resto > 0) {
+    const p = Math.min(PASSO, resto);
+    ganho += simular(p);
+    resto -= p;
+  }
+  return ganho;
+}
+
 // ---------- save / load / offline ----------
 function salvar() {
   S.salvoEm = Date.now();
@@ -477,7 +494,7 @@ function carregar() {
   const dt = Math.min((Date.now() - S.salvoEm) / 1000, CFG.capOfflineHoras * 3600);
   if (dt > 60 && S.geradores > 0) {
     const antes = S.poluicao;
-    const ganho = simular(dt);
+    const ganho = simularOffline(dt);
     const h = Math.floor(dt / 3600), m = Math.floor((dt % 3600) / 60);
     const el = document.getElementById("offline");
     el.style.display = "block";

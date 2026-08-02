@@ -154,6 +154,29 @@ function chromiumPath() {
   if (passou.projetos !== 0) errors.push('passing the torch did not reset the run');
   if (passou.tochas !== 1) errors.push('passing the torch was not counted');
 
+  // offline pays what the night actually earned, not the rate frozen at bedtime:
+  // 20 projects in GO FAST with a rested team wear out while you sleep
+  await page.evaluate(() => {
+    salvar = function () {};   // the unload handler would write live state over the seed
+    localStorage.setItem('proto_savetheworld', JSON.stringify({
+      energia: 0, energiaTotal: 0, poluicao: 0, geradores: 20, modo: 'carvao', tempoLimpo: 0,
+      u1: true, u2: false, u3: false, u4: false, u5: false, u6: false, u7: false,
+      inovacao: 0, transicoes: 0, introSeen: true, salvoEm: Date.now() - 12 * 3600 * 1000
+    }));
+  });
+  const t0 = Date.now();
+  await page.reload();
+  await page.waitForFunction(() => typeof S !== 'undefined' && S.geradores === 20);
+  const noite = await page.evaluate(() => ({ total: S.energiaTotal, cansaco: S.poluicao }));
+  const congelado = 20 * 3 * 2 * 12 * 3600;    // what the old frozen rate would have paid
+  console.log('offline 12h ->', Math.round(noite.total).toLocaleString('en-US'),
+    'impact (frozen rate would pay', congelado.toLocaleString('en-US') + ')',
+    '| tiredness', Math.round(noite.cansaco), '| load', Date.now() - t0, 'ms');
+  if (noite.total > congelado / 3) errors.push('offline still paying near the frozen rate');
+  if (noite.total < 100000) errors.push('offline paid almost nothing');
+  if (noite.cansaco < 100) errors.push('the team did not get tired overnight');
+  await page.evaluate(() => localStorage.removeItem('proto_savetheworld'));
+
   const fps = await page.evaluate(() => new Promise(res => {
     let n = 0; const t0 = performance.now();
     (function f() { n++; performance.now() - t0 < 2000 ? requestAnimationFrame(f) : res(Math.round(n / 2)); })();
