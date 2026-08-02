@@ -241,11 +241,15 @@ The smoke test covers the long-press, the suppressed tap and the corrupt-record 
 
 ## Feel
 
-Taps chain a 3-hit combo: horizontal slash → rising slash → **leap slam** (hero jumps
-~26px, drives the sword down, lands with a white flash, an expanding shockwave and
-cracked dirt). Holding the main button — or the scene — repeats at ~7 hits/s, from a
-single shared timer. Sprouts are capped at 40 so holding in steady mode doesn't flood
-the scene.
+Taps chain a 3-hit combo, all three cast rather than swung: a flat crescent of light
+thrown ahead → a spiral climbing off the wand tip → the **leap slam** (hero jumps ~52
+world px, gathers light overhead, drives a spear of it into the dirt, lands with a flash,
+an expanding wave and green things pushing up through the cracks). Holding the main button
+— or the scene — repeats at ~7 hits/s, from a **single shared timer**, so holding both
+surfaces at once cannot double the rate. Sprouts are capped at 40 so holding in steady
+mode doesn't flood the scene. The bolt is spawned from the drawing code off the attack
+state that already exists, so it is decoration only — what gets hit, how far and how hard
+is decided elsewhere.
 
 One line under the top chips says what the world wants right now, and only ever one
 thing: a call beats a mutirão beats a complaint. Drops carry a dark keyline and four
@@ -253,17 +257,42 @@ breathing ticks; the pot carries a nodding chevron and a countdown bar that turn
 under a third. All of that is drawn *after* the colour grade, on purpose — an affordance
 has to stay legible even when the frame is being tinted.
 
-The hi-bit pass: sky and ground are dithered gradients (8×8 Bayer, ~12 levels) baked into
-offscreen canvases and rebuilt only when world health crosses a 1/48 step, so a normal
-frame is one `drawImage`. Distance dissolves layers into the horizon colour (`longe()`),
-solids drop a contact shadow (`sombra()`), and the frame closes with an `overlay` grade —
-cold while the world is sick, warm while it heals — plus a dithered vignette.
+## Art direction — C, CLEAR SKY
 
-Presentation: fullscreen pixel side-scroller. The world renders at 1 world px = 2 screen
-px; hero and monsters are drawn at 2× on top of that, so they read as chunky sprites
-over a fine-grained world. Everything (sky bands, mountains, city windows, foliage,
-ponds, community kitchens) lerps from sick to healthy off `worldHealth()`. Menus are
-floating sheets above the character; type scales with `clamp()`.
+High-key poster pixel art: saturated, flat, hard outlines, **no post-processing of any
+kind**. The measurement that set this: reference art in this genre has a *bigger* art pixel
+than ours and a shorter hero, so fidelity never came from resolution. It comes from 3–5
+tones per material, a dark 1px outline, one pixel grid, and a strict value architecture —
+light sky → mid background → a **light separator band on the horizon line** → dark ground,
+with the character straddling that boundary.
+
+**Sick is bleached, not dark.** Smoke scatters light, so a polluted sky is warm, opaque and
+too bright. The whole sick→healed arc runs on **saturation**, which is the fastest channel
+to read: it still works on a phone at 30% brightness, outdoors, at a glance. The hero's
+colours and the wand's magic do **not** desaturate with the world — in a sick frame the
+wand is the only warm saturated thing left, and that is the point.
+
+The magic is folk magic — tending and mending, the same hand that plants a sprout. White-
+gold core, warm amber body, green growth halo; never arcane blue or purple. One helper,
+`luz()`, lays every point of channelled light down as nested octagons built from crossed
+rectangles, so a glow stays a pixel shape instead of a soft photographic blob.
+
+Golden Hour (dusk) and The Lights Come On (night) are approved as **time-of-day variants
+off the same engine, later** — palette swaps, no new geometry.
+
+Presentation: fullscreen pixel side-scroller. The world renders at 1 world px = 2 screen px
+and **everything sits on that one grid** — the hero and the monsters used to carry an extra
+2× on top, so their pixels covered four screen pixels each while the scenery behind them
+covered one. Sprites are hand-shaded off a single light direction (sun up and to the right)
+and baked into offscreen canvases, so four times the pixel count still costs one
+`drawImage` per character per frame. The middle distance is three green planes separated by
+**value**, with the outline graded by distance: hard on the near band, soft on the middle,
+absent on the far ridge. Everything lerps from bleached to saturated off `worldHealth()`.
+
+**No webfont.** The chrome uses the system stack; the canvas has a 5×7 bitmap font authored
+in the file, 47 glyphs each baked once with an 8-direction outline. The HUD is poster
+chrome: solid cream `#fdf6e6`, 2px `#12242e` outline, hard 3px offset shadow, no
+transparency. Menus are floating sheets above the character; type scales with `clamp()`.
 
 ## Open questions
 
@@ -608,6 +637,132 @@ toda sessão começa lendo a última entrada.
   precisa pagar em algo que **não** seja golpe — reduzir o bloqueio dos problemas, esticar o
   mutirão, encurtar a rampa. **Próximo passo: decidir com o dono se a segunda skill mexe
   numa dessas alavancas, e medir o `rampaMeia` que ficou pendente da sessão anterior.**
+- **2026-08-02 · o herói desceu para a grade do mundo, e o miolo ganhou três planos.**
+  O dono disse pela segunda vez que ainda está feio e pediu "64 bit, ou até HD, mas com
+  essa estética". A causa raiz não era falta de cor: o mundo desenha a 1 px de mundo = 2 px
+  de tela, mas o herói e os monstros levavam um `cx.scale(2,2)` **por cima disso**, então
+  cada pixel deles ocupava quatro pixels de tela contra um da paisagem atrás. Um boneco
+  grosso na frente de um fundo fino — é isso que o olho lê como tosco. Tirei o 2× e
+  redesenhei tudo na grade do mundo. **Medido em células de sprite:** herói 10×12 = 120
+  células → 22×26 = 572 (4,8×), paleta de 6 para 20 cores; fumaça 9×6 = 54 → 18×13 = 234;
+  saco de dinheiro 9×8 = 72 → 18×16 = 288; tambor 8×9 = 72 → 16×18 = 288. Todos sombreados
+  por **uma** direção de luz (sol em cima e à direita: rim claro à direita, base, sombra
+  própria à esquerda, base escura embaixo) e assados uma vez em canvas offscreen, então o
+  quádruplo de pixels custa um `drawImage` por personagem por quadro. Ciclo de corrida de
+  4 quadros, capa e combo de 3 golpes preservados, com os deslocamentos dobrados.
+
+  O segundo problema era o mingau verde do meio da tela, e ele agora tem número:
+  a antiga linha de árvores e os antigos arbustos ficavam a **0,5–2,6 pontos de
+  luminância** um do outro (de 0 a 255) — na prática, indistinguíveis, um borrão só.
+  Viraram três faixas separadas por valor (névoa 0,30 / 0,10 / 0,00 e bases de matiz
+  diferente): **31 e 36 pontos** de distância entre planos vizinhos com o mundo curado,
+  25 e 28 no meio, 19 e 21 com o mundo doente. Junto vieram: céu com três paradas em vez
+  de duas (a rampa reta deixava uma laje de azul-marinho em metade do quadro), nuvens com
+  lóbulos, topo iluminado e barriga sombreada em vez de três retângulos chapados, cidade
+  com mais névoa e janelas como textura em vez de buracos pretos, copas de árvore e pinheiros
+  como mapas sombreados à mão, casa com parede iluminada à direita e beiral, lago com
+  reflexo da linha de árvores e brilho que anda, e a trilha de terra com sulcos e pedras.
+
+  **Custo medido** (viewport 390×844 = 195×422 px de mundo): `drawScene` foi de **0,555 ms
+  para 0,761 ms** por quadro — 4,6% do orçamento de 16,7 ms; assar o céu subiu de 5,40 para
+  7,30 ms mas só roda quando a saúde cruza um passo de 1/48; chão 2,20 ms; vinheta 4,40 ms
+  uma vez por resize. **FPS: 61, igual ao de antes.** Smoke test verde em todas as etapas.
+
+  Quebrou no caminho: (1) o `drawMap` ganhou uma chave de cache e o postal da intro
+  (128×42) passou a receber um herói de 22×26 que ocupava dois terços do quadro — resolvido
+  com um `HERO_MINI` próprio de 10×13; (2) a primeira versão da espada em diagonal
+  contornava **cada degrau** separadamente e lia como uma fileira de tijolos brancos soltos,
+  não como uma lâmina — passou a ser desenhada em três passadas (contorno, corpo, fio); (3)
+  o braço da espada era um retângulo preto de 9×10 atravessado por uma manga de 7×4, o que
+  virava uma tarja preta no peito. E uma coisa que só os prints pegaram: havia **duas**
+  vinhetas empilhadas, a pontilhada do canvas e um `radial-gradient` de CSS a 50% de preto
+  a partir de 55% — juntas empurravam o quadro inteiro para o barro. A do CSS caiu para 26%
+  a partir de 66% e as scanlines de .5 para .34; conferido nos prints com o mundo a 100% e
+  a 6% que o mundo doente continua opressivo, só não mais lamacento.
+
+  Dúvida nova: o herói tem 44 px de mundo de altura, e no celular a faixa REAL DATA mais a
+  barra de botões comem o terço de baixo da tela — sobra pouca área para o cenário que
+  acabou de ficar bom. Vale medir se dá para encolher aquela faixa.
+  **Próximo passo: o céu ainda é a maior área do quadro e a menos trabalhada com o mundo
+  meio doente; depois disso, animar as folhas das copas e dar quadros de idle ao herói.**
+
+- **2026-08-02 · o herói desceu para a grade do mundo, e o miolo ganhou três planos.**
+  O dono disse pela segunda vez que ainda estava feio e pediu "64 bit, ou até HD, mas com
+  essa estética". A causa raiz não era falta de cor: o mundo desenha a 1 px de mundo = 2 px
+  de tela, mas o herói e os monstros levavam um `cx.scale(2,2)` **por cima disso**, então
+  cada pixel deles ocupava quatro pixels de tela contra um da paisagem atrás. Tirei o 2× e
+  redesenhei tudo na grade do mundo. **Medido em células de sprite:** herói 10×12 = 120
+  células → 22×26 = 572 (4,8×), paleta de 6 para 20 cores; fumaça 9×6 = 54 → 18×13 = 234;
+  saco de dinheiro 9×8 = 72 → 18×16 = 288; tambor 8×9 = 72 → 16×18 = 288. Todos sombreados
+  por **uma** direção de luz e assados uma vez em canvas offscreen, então o quádruplo de
+  pixels custa um `drawImage` por personagem por quadro.
+
+  O mingau verde agora tem número: a antiga linha de árvores e os antigos arbustos ficavam
+  a **0,5–2,6 pontos de luminância** um do outro (de 0 a 255) — indistinguíveis. Viraram
+  três faixas separadas por valor, com **19 a 36 pontos** entre planos vizinhos conforme a
+  saúde do mundo. Junto: céu com três paradas, nuvens com lóbulos e barriga sombreada,
+  copas e pinheiros como mapas sombreados à mão, casa com parede iluminada e beiral, lago
+  com reflexo, trilha de terra com sulcos e pedras. **Medido:** `drawScene` foi de 0,555 ms
+  para 0,761 ms por quadro (4,6% do orçamento de 16,7 ms), FPS 61 igual ao de antes.
+  Quebrou no caminho: o postal da intro (128×42) recebeu um herói de 22×26 que ocupava dois
+  terços do quadro (resolvido com um `HERO_MINI`); a espada em diagonal contornava cada
+  degrau e lia como tijolos soltos (três passadas resolveram); e **duas vinhetas
+  empilhadas** que só os prints pegaram.
+
+- **2026-08-02 · a espada virou varinha, e todo golpe conjura.** Direção nova do dono:
+  *"ao invés de espada bora fazer uma vibe mística e meio mágica, deve ser uma varinha
+  mágica que atire magia."* Nenhuma lâmina em lugar nenhum. A varinha é um galho gasto de
+  2 px de espessura com cabo amarrado, um nó de cordão verde e a ponta sempre um pouco
+  acesa; ela é percorrida um pixel por vez ao longo da reta e desenhada em três passadas,
+  então continua um graveto limpo em qualquer ângulo. A magia é **magia de cuidado** —
+  núcleo branco-quente, corpo âmbar, halo verde de crescimento; nunca azul arcano. Um
+  helper só, `luz()`, desenha cada ponto de luz canalizada como octógonos aninhados feitos
+  de retângulos cruzados, para o brilho continuar sendo forma de pixel e não borrão. Os
+  três golpes viraram três conjurações; o salto, o `jumpT` e a onda de choque continuam
+  intactos porque o smoke test os exige. **O projétil é cosmético**: nasce do código de
+  desenho a partir do estado de ataque que já existia, então nada sobre alcance, dano ou
+  timing foi tocado — isso é do outro agente. FPS 61, smoke verde.
+
+- **2026-08-02 · direção C (CLEAR SKY): o mundo doente parou de ser escuro.** Um agente de
+  design mediu a referência e o dono escolheu. A medida que virou a mesa contradiz o que eu
+  estava assumindo: **o pixel de arte da referência é maior que o nosso**, e o herói dela é
+  mais baixo — a fidelidade nunca veio de resolução. Vem de 3–5 tons por material, contorno
+  escuro de 1 px, **um** grid, arquitetura de valor com faixa clara no horizonte, e **zero
+  pós-processamento**. Então caíram as quatro camadas de pós que eu mesmo tinha construído
+  nesta sessão: a correção `overlay`, a vinheta pontilhada do canvas, a vinheta de CSS e as
+  scanlines. A tabela de Bayer 8×8 foi junto — a granulação estava fazendo o papel de tons
+  que ninguém tinha autorado. **Medido:** assar o céu caiu de 6,10 ms para 0,70 ms, o chão
+  de 2,00 ms para 0,50 ms, e a vinheta (4,50 ms por resize) sumiu; `drawScene` 0,581 ms por
+  quadro contra o orçamento de 16,7 ms; FPS 61.
+  O doente virou **desbotado**: fumaça espalha luz, então céu poluído é quente, opaco e
+  claro demais — nunca preto. O arco doente→curado passou a rodar em **saturação**, que é o
+  canal mais rápido de ler. O herói e a magia da varinha **não** dessaturam com o mundo:
+  no frame doente a varinha é a única coisa quente e saturada da tela.
+  Também: a **faixa separadora** no horizonte (a peça que sustenta a arquitetura de valor),
+  o sol virou disco de verdade com coroa, e o contorno das faixas verdes é graduado por
+  distância — duro no perto, suave no meio, ausente no fundo.
+
+- **2026-08-02 · fora a fonte de CDN, dentro uma fonte bitmap, e a HUD virou pôster.**
+  O `index.html` buscava a Press Start 2P no Google Fonts a cada abertura: isso quebrava a
+  seção 1 do `CLAUDE.md` na letra ("um arquivo só, sem dependência em runtime") e era um
+  bloqueio de render de rede antes do primeiro pixel. As duas `<link>` sumiram. Duas
+  substituições, porque as duas superfícies querem coisas diferentes: o chrome usa a pilha
+  de fontes do sistema (que é o que os mockups da direção usaram de verdade), e o canvas
+  ganhou uma **fonte bitmap 5×7 autorada no arquivo** — 47 glifos, cada um assado uma vez
+  com contorno de 8 direções. Os números flutuantes usavam sombra deslocada de 1 px, que
+  desaparecia no instante em que o chão atrás deles ficou claro. Ícones de pixel também
+  ganharam o contorno automático: um raio dourado simplesmente sumia no creme.
+  A HUD virou linguagem de pôster: creme `#fdf6e6` sólido, contorno `#12242e` de 2 px,
+  sombra dura de 3 px, sem transparência e sem gradiente em painel. O REAL DATA virou um
+  ticker fino — gastava um quinto da tela para dizer uma frase. **Medido:** FPS 61,
+  `drawScene` 0,581 ms. Conferi print a print: chips, intro, folha de projetos, cards de
+  upgrade, confirmação da tocha e números flutuantes. Quebrou no caminho: com o botão
+  padrão virando creme, o `NOT YET` ficou marinho sobre marinho — só o print pegou.
+  **Próximo passo, na ordem do `DIRECAO.md`: silhuetas de verdade (`mountainLayer()` por
+  coluna, copas por união de discos), depois as duas paletas autoradas substituindo os ~40
+  `lerpC()` espalhados, e só então a densidade 1:3 — que é o passo arriscado e precisa ser
+  medido com cuidado. Dúvida honesta: com a faixa separadora, a serra do fundo quase some;
+  o próprio `DIRECAO.md` já tinha anotado isso como falha do mockup C.**
 
 ## Would cut with one more day
 
