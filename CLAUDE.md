@@ -42,12 +42,20 @@ valer para o progresso offline. Saúde do time = `100/(100+cansaço)` multiplica
 inclusive toques. Aos 50 mil de impacto total dá pra passar a tocha:
 `sabedoria = ⌊√(total/2500) × saúde⌋`, +10% permanente por ponto.
 
-Sete upgrades (tabela completa no `NOTES.md`). Combo de três golpes terminando em salto
-com baque e onda de choque. Segurar o botão principal repete a ~7 golpes/s. Mundo
+Sete upgrades (tabela completa no `NOTES.md`). Combo de três conjurações terminando em
+salto com baque e onda de choque. Segurar o botão principal repete a ~7 golpes/s. Mundo
 renderizado a 1 px de mundo = 2 px de tela, **e tudo vive nessa mesma grade** — herói e
 monstros já foram desenhados em 2× por cima e isso era o que deixava o jogo com cara de
 tosco; hoje são sprites assados em canvas offscreen, sombreados por uma direção de luz só
-(sol em cima e à direita). Tudo interpola de doente para saudável conforme `worldHealth()`.
+(sol em cima e à direita).
+
+**Direção de arte: C — CLEAR SKY** (pôster de meio-dia, saturado, contorno duro, **zero
+pós-processamento**). O herói não é espadachim: carrega uma **varinha** e conjura. A magia é
+de cuidado — núcleo branco-quente, halo verde de crescimento, nunca azul arcano — e **não**
+dessatura com o mundo. **Doente é desbotado, não escuro**: o arco doente→curado roda em
+saturação, não em brilho. Sem fonte de CDN: o chrome usa a pilha do sistema e o canvas tem
+uma fonte bitmap 5×7 autorada no arquivo. Detalhes e o caminho de implementação restante
+estão na seção "Art direction" do `NOTES.md`.
 
 ## 4. Como trabalhar
 
