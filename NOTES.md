@@ -173,7 +173,21 @@ toda sessão começa lendo a última entrada.
   a pergunta dos três dias, mas infla a métrica de quem joga de madrugada.
   **Próximo passo: tarefa (c) — tirar o `confirm()` do prestígio.**
 
+- **2026-08-02 · tarefa (c), o `confirm()` saiu.** PASS THE TORCH? virou uma sheet como
+  as outras, com um placar de duas colunas: o que fica (`+N WISDOM`, verde) ao lado do
+  que é passado adiante (`N projects`, vermelho) — coisa que o diálogo do navegador
+  nunca conseguiu mostrar. Se o time está cansado a nota vira "a rested team passes on
+  more — yours is at 71%", que é a única dica no jogo de que a eficiência entra na
+  fórmula da sabedoria. `NOT YET` volta para a folha da tocha sem gastar nada. Medido em
+  navegador: painel abre com +3 WISDOM / 12 projects, `NOT YET` deixa o total em 62.000
+  e a sabedoria em 0, `YES` banca 3 de sabedoria, zera os 12 projetos e conta 1 tocha.
+  O smoke test agora registra um ouvinte de `dialog` e **falha se qualquer diálogo do
+  navegador aparecer**, então o `confirm()` não volta sem que o teste perceba. Verde,
+  61 FPS. Quebrou no caminho: nada.
+  **Próximo passo: tarefa (d) — corrigir o ganho offline.**
+
 ## Would cut with one more day
 
-The REAL DATA rotation (keep one fixed), the snow caps, and the `confirm()` on the
-torch — a proper in-game panel would be better than a browser dialog.
+The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
+torch~~ — done: PASS THE TORCH? is now a sheet like the others, and unlike a browser
+dialog it can show what you keep beside what you hand on.

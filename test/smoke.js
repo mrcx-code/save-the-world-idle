@@ -112,6 +112,48 @@ function chromiumPath() {
   await page.tap('[data-close="sheetStats"]');
   await page.waitForTimeout(300);
 
+  // passing the torch asks in-game, not through a browser dialog
+  page.on('dialog', async d => { errors.push('BROWSER DIALOG: ' + d.message()); await d.dismiss(); });
+  const pergunta = await page.evaluate(async () => {
+    S.energiaTotal = 62000; S.energia = 5000; S.geradores = 12; S.poluicao = 40;
+    desenhar();
+    document.getElementById('openTorch').click();
+    await new Promise(r => setTimeout(r, 250));
+    document.getElementById('btnPrestigio').click();
+    await new Promise(r => setTimeout(r, 300));
+    return {
+      aberto: document.getElementById('sheetConfirm').classList.contains('aberto'),
+      ganha: document.getElementById('confirmaGanha').textContent,
+      perde: document.getElementById('confirmaPerde').textContent
+    };
+  });
+  console.log('pass the torch ->', pergunta.aberto ? 'panel' : 'NO PANEL',
+    '|', pergunta.ganha, '|', pergunta.perde);
+  if (!pergunta.aberto) errors.push('prestige did not open the confirm panel');
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-torch.png') });
+
+  // NOT YET must back out without spending anything
+  const recuou = await page.evaluate(async () => {
+    document.getElementById('btnConfirmaNao').click();
+    await new Promise(r => setTimeout(r, 300));
+    return { total: S.energiaTotal, sabedoria: S.inovacao };
+  });
+  if (recuou.total < 62000 || recuou.sabedoria !== 0) errors.push('NOT YET passed the torch anyway');
+
+  // YES resets the run, banks wisdom and counts the torch
+  const passou = await page.evaluate(async () => {
+    document.getElementById('btnPrestigio').click();
+    await new Promise(r => setTimeout(r, 300));
+    document.getElementById('btnConfirmaSim').click();
+    await new Promise(r => setTimeout(r, 300));
+    return { total: S.energiaTotal, sabedoria: S.inovacao, projetos: S.geradores, tochas: R.tochas };
+  });
+  console.log('confirmed ->  wisdom:', passou.sabedoria, '| impact reset to:', Math.round(passou.total),
+    '| projects:', passou.projetos, '| torches counted:', passou.tochas);
+  if (passou.sabedoria <= 0) errors.push('passing the torch banked no wisdom');
+  if (passou.projetos !== 0) errors.push('passing the torch did not reset the run');
+  if (passou.tochas !== 1) errors.push('passing the torch was not counted');
+
   const fps = await page.evaluate(() => new Promise(res => {
     let n = 0; const t0 = performance.now();
     (function f() { n++; performance.now() - t0 < 2000 ? requestAnimationFrame(f) : res(Math.round(n / 2)); })();
