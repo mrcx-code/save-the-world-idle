@@ -2127,6 +2127,55 @@ function drawScene() {
       }
     }
   }
+  // ---- the hillside, which matters more than any monument ----
+  // A neighbourhood stacked up a slope: painted walls, tiled roofs, a water tank on top of
+  // half of them, windows that come on as the world heals. It sits between the skyline and
+  // the tree line, so the frame reads city → hillside → forest → the street he is running
+  // on. Warm, ordinary, and the thing the whole game is asking you to save.
+  {
+    const speed = 0.21, spacing = 340, base = GROUND - 27;
+    const cinza = [154, 148, 132], cinzaT = [140, 133, 118];
+    const paredes = [[226, 162, 56], [58, 176, 202], [226, 108, 76], [236, 214, 172], [136, 196, 70], [206, 96, 146]]
+      .map(function (c) { return longe(mixA(cinza, c, h), 0.14, h); });
+    const luzP = [[252, 200, 108], [110, 216, 236], [252, 156, 122], [255, 244, 214], [186, 232, 118], [240, 152, 190]]
+      .map(function (c) { return longe(mixA(cinza, c, h), 0.12, h); });
+    const telha = [[184, 74, 48], [162, 88, 58], [154, 68, 50]]
+      .map(function (c) { return longe(mixA(cinzaT, c, h), 0.17, h); });
+    const telhaL = [[222, 110, 74], [204, 126, 88], [198, 102, 78]]
+      .map(function (c) { return longe(mixA(cinzaT, c, h), 0.14, h); });
+    const traco = longe(mixA([118, 112, 100], [82, 62, 52], h), 0.18, h);
+    const caixa = longe(mixA([150, 145, 132], [72, 148, 184], h), 0.12, h);
+    const morro = longe(mixA([132, 126, 112], [58, 118, 72], h), 0.20, h);
+    const q0 = Math.floor(worldX * speed / spacing) - 1;
+    for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
+      const sx = Math.round(k * spacing - worldX * speed);
+      if (sx > W + 20 || sx < -140) continue;
+      if (hash01(k * 37 + 11) > 0.62) continue;         // not every stretch has one
+      const altos = [];
+      for (let c = 0; c < 10; c++) {                    // the slope they are built on
+        const t = c / 9;
+        altos.push(3 + Math.round(28 * Math.pow(Math.sin(t * Math.PI), 0.7) * (0.72 + hash01(k * 7 + c) * 0.45)));
+        cx.fillStyle = morro;
+        cx.fillRect(sx + c * 12, base - altos[c] - 4, 13, altos[c] + 6);
+      }
+      for (let c = 0; c < 10; c++) {
+        const alto = altos[c], degrau = Math.round(hash01(k * 5 + c * 3) * 7);
+        for (let j = 0; j * 11 < alto; j++) {
+          const s2 = hash01(k * 53 + c * 9 + j * 3);
+          const x = sx + c * 12 + (s2 > 0.6 ? 1 : 0), y = base - j * 11 - degrau;
+          const ci = Math.floor(s2 * 6) % 6, ti = Math.floor(s2 * 17) % 3;
+          cx.fillStyle = paredes[ci]; cx.fillRect(x, y - 9, 12, 9);
+          cx.fillStyle = luzP[ci]; cx.fillRect(x + 10, y - 9, 2, 9);
+          cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 12, 14, 3);
+          cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 12, 14, 1);
+          cx.fillStyle = traco; cx.fillRect(x + 2, y - 5, 3, 5);            // a door onto the steps
+          cx.fillStyle = h > 0.5 ? "rgba(255,224,138,.8)" : traco;
+          cx.fillRect(x + 7, y - 7, 3, 3);                                  // one window
+          if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 8, y - 15, 4, 3); }  // water tank
+        }
+      }
+    }
+  }
   // ---- the middle distance, in three planes separated by VALUE ----
   // The old tree line and the old bushes sat within a few percent of each other in both
   // hue and brightness, so they merged into one undifferentiated green mass across the
