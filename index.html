@@ -1485,6 +1485,34 @@ const PINE_MAP = [
   ".KKDDDDDBBBBBBHHHWWK",
   "KKDDDDDDBBBBBBHHHWWK",
   "....KKKDDDBBHHWKK..."];
+// THE IPÊ. It stands as bare grey wood while the world is sick and detonates into flower
+// as it heals — which is the whole sick→healed arc happening inside one object, and it is
+// true to the tree: an ipê blooms on leafless branches, so the same silhouette carries both
+// states. The crown is airier than the ordinary canopy (holes punched through it) because
+// what you are looking at is flowers hung on wood, not a solid mass of leaf.
+const IPE_MAP = [
+  "........KKKKK........."
+, "......KKDBBBHHWK......"
+, "....KKDDBBB.HHHHWK...."
+, "..KKDDDBBBBBHHH.HWWK.."
+, ".KDDDBB.BBBBHHHHHWWWK."
+, "KDDDBBBBBBBBB.HHHHWWK."
+, "KDDDBB.BBBBBBBHHHHHWWK"
+, "KDDDBBBBB.BBBBHHH.HHWK"
+, ".KDDDBBBBBBBBBHHHHHWK."
+, ".KDDDDBB.BBBBBHHH.HWK."
+, "..KKDDDBBBBBBBHHHHWK.."
+, "...KKDDDDB.BBBHHHWK..."
+, ".....KKDDDDBBBHHWK...."
+, "........KKKDDBHWK....."
+, "..........KKKKK......."];
+// Three authored states rather than a lerp, because "bare → budding → full bloom" is a
+// story and an interpolation is a smear. The pale pair is the bloom half-way through, sun-
+// bleached toward the ochre the whole sick palette runs on.
+const IPE_AMARELO = { K: "#6b4410", D: "#c4870d", B: "#f0ad14", H: "#ffd247", W: "#fff2ab" };
+const IPE_ROSA = { K: "#5e2440", D: "#bf5480", B: "#e77aa6", H: "#f6a4c6", W: "#ffd8e8" };
+const IPE_AMARELO_PAL = { K: "#8e7652", D: "#ba9851", B: "#d0ab54", H: "#d8bd6e", W: "#d8cd9f" };
+const IPE_ROSA_PAL = { K: "#87666a", D: "#b87e8a", B: "#cc919d", H: "#d3a6ad", W: "#d8c0be" };
 const TREE_PAL = { K: "#12331f", D: "#1c5c38", B: "#2e9b54", H: "#4fc272", W: "#8ff0ad" };
 const TREE_PAL2 = { K: "#16301a", D: "#256030", B: "#3aa14c", H: "#61c86c", W: "#9df0a4" };
 const PINE_PAL = { K: "#0d2a1a", D: "#175030", B: "#227a44", H: "#3aa25e", W: "#6fdd94" };
@@ -1714,7 +1742,7 @@ function vara(x0, y0v, x1, y1v, brilho) {
   const nx = -dy / len, ny = dx / len;             // perpendicular, for the bow
   const px = [], py = [], pw = [];
   for (let i = 0; i <= n; i++) {
-    const t = i / n, arc = Math.sin(t * Math.PI) * 1.35;
+    const t = i / n, arc = Math.sin(t * Math.PI) * 0.95;
     px.push(Math.round(x0 + dx * t + nx * arc));
     py.push(Math.round(y0v + dy * t + ny * arc));
     pw.push(t < 0.62 ? 2 : 1);                     // thick at the hand, whittled at the tip
@@ -2118,25 +2146,53 @@ function drawScene() {
     const alive = r < h * 0.95 + 0.02;
     const kind = Math.floor(hash01(k * 7 + 3) * 10);
     if (kind < 5) { // trees: baked canopies with volume, on a trunk that flares into roots
-      const pine = hash01(k * 29 + 1) > 0.55;
+      const ipe = hash01(k * 53 + 4) > 0.62;
+      const pine = !ipe && hash01(k * 29 + 1) > 0.55;
       const sway = ((Math.floor(tick / 18) + k) % 2);
       sombra(sx + 22, GROUND, alive ? 24 : 13);
-      cx.fillStyle = "#33200f"; cx.fillRect(sx + 19, GROUND - 22, 6, 22);      // bark, shaded left
-      cx.fillStyle = "#5f3a24"; cx.fillRect(sx + 20, GROUND - 22, 4, 22);
-      cx.fillStyle = "#7d5030"; cx.fillRect(sx + 23, GROUND - 22, 1, 22);      // lit right side
-      cx.fillStyle = "#33200f"; cx.fillRect(sx + 17, GROUND - 3, 3, 3); cx.fillRect(sx + 25, GROUND - 2, 3, 2);
-      if (alive && pine) {
-        drawMap("pinho" + (k % 2), PINE_MAP, k % 2 ? PINE_PAL2 : PINE_PAL, sx + 12 + sway, GROUND - 42);
-      } else if (alive) {
-        drawMap("copa" + (k % 2), TREE_MAP, k % 2 ? TREE_PAL2 : TREE_PAL, sx + 11 + sway, GROUND - 38);
-      } else {                                    // dead: bare forked branches, not three stubs
-        cx.fillStyle = "#4a3020";
+      const galhos = function (cor, luzC) {       // bare forked branches, not three stubs
+        cx.fillStyle = cor;
         cx.fillRect(sx + 21, GROUND - 35, 3, 14);
         cx.fillRect(sx + 16, GROUND - 30, 6, 2); cx.fillRect(sx + 15, GROUND - 37, 2, 8);
         cx.fillRect(sx + 23, GROUND - 27, 6, 2); cx.fillRect(sx + 27, GROUND - 34, 2, 8);
         cx.fillRect(sx + 18, GROUND - 24, 4, 2); cx.fillRect(sx + 24, GROUND - 22, 4, 2);
-        cx.fillStyle = "#6b4830";                 // the sun still catches their right side
+        cx.fillStyle = luzC;                      // the sun still catches their right side
         cx.fillRect(sx + 23, GROUND - 35, 1, 14); cx.fillRect(sx + 28, GROUND - 34, 1, 8);
+      };
+      if (ipe) {
+        // The ipê keeps the same bare wood in both states; only the flowers arrive. A dry
+        // grey skeleton when the world is sick, and the loudest colour on the screen when
+        // it is not — one object carrying the whole arc, which no amount of grading does.
+        const flor = alive && h > 0.38 ? (h > 0.68 ? 2 : 1) : 0;   // bare · budding · alight
+        cx.fillStyle = flor ? "#3a2718" : "#57534a"; cx.fillRect(sx + 20, GROUND - 24, 4, 24);
+        cx.fillStyle = flor ? "#6a4a2e" : "#7d7869"; cx.fillRect(sx + 22, GROUND - 24, 1, 24);
+        cx.fillStyle = flor ? "#3a2718" : "#57534a"; cx.fillRect(sx + 18, GROUND - 3, 3, 3); cx.fillRect(sx + 24, GROUND - 2, 3, 2);
+        galhos(flor ? "#4a3524" : "#6a675c", flor ? "#6b4830" : "#8a8578");
+        if (flor) {
+          const rosa = hash01(k * 71 + 2) > 0.55;
+          const chave = (rosa ? "iperosa" : "ipeamarelo") + flor;
+          const pal = flor === 2 ? (rosa ? IPE_ROSA : IPE_AMARELO) : (rosa ? IPE_ROSA_PAL : IPE_AMARELO_PAL);
+          drawMap(chave, IPE_MAP, pal, sx + 11 + sway, GROUND - 45);
+          if (flor === 2) {
+            cx.fillStyle = rosa ? "#f6a4c6" : "#ffd247"; // petals letting go, one at a time
+            for (let p = 0; p < 3; p++) {
+              const fase = (tick * 0.55 + p * 47 + k * 29) % 46;
+              cx.fillRect(sx + 13 + p * 7 + (Math.floor(fase / 6) % 2), GROUND - 30 + Math.round(fase * 0.65), 2, 1);
+            }
+          }
+        }
+      } else {
+        cx.fillStyle = "#33200f"; cx.fillRect(sx + 19, GROUND - 22, 6, 22);    // bark, shaded left
+        cx.fillStyle = "#5f3a24"; cx.fillRect(sx + 20, GROUND - 22, 4, 22);
+        cx.fillStyle = "#7d5030"; cx.fillRect(sx + 23, GROUND - 22, 1, 22);    // lit right side
+        cx.fillStyle = "#33200f"; cx.fillRect(sx + 17, GROUND - 3, 3, 3); cx.fillRect(sx + 25, GROUND - 2, 3, 2);
+        if (alive && pine) {
+          drawMap("pinho" + (k % 2), PINE_MAP, k % 2 ? PINE_PAL2 : PINE_PAL, sx + 12 + sway, GROUND - 42);
+        } else if (alive) {
+          drawMap("copa" + (k % 2), TREE_MAP, k % 2 ? TREE_PAL2 : TREE_PAL, sx + 11 + sway, GROUND - 38);
+        } else {
+          galhos("#4a3020", "#6b4830");
+        }
       }
     } else if (kind < 7) { // cottage: lit right wall, shaded left, roof overhang and a chimney
       const paredes = [["#8a5c3e", "#a8764f", "#553826"], ["#7a6e62", "#968a7c", "#4e463e"], ["#836a52", "#9e8266", "#544335"]][k % 3];
