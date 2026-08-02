@@ -207,6 +207,18 @@ toda sessão começa lendo a última entrada.
   antes do reload; o teste desarma o `salvar` antes de recarregar. Verde, 61 FPS.
   **Próximo passo: tarefa (e) — apagar o `PUSH.md`.**
 
+- **2026-08-02 · tarefa (e), `PUSH.md` apagado.** Ensinava a criar o repo e ligar a
+  Vercel, as duas coisas feitas desde a sessão de origem. Conferi antes de apagar que
+  nada aponta para ele e que a única parte ainda útil — instalar o playwright numa
+  máquina nova — já está no `README.md`. Aproveitei para pôr o README em dia: a tabela
+  de estrutura estava listando três arquivos de um repo que agora tem sete, e a seção
+  de teste não mencionava nem o `sim.js` nem o `offline.js`. Também anotei o
+  `npx --yes serve .` ao lado do `python3 -m http.server`, porque nesta máquina não há
+  python e o comando do README simplesmente não roda. Fila do CLAUDE.md de (a) a (e)
+  fechada. **Próximo passo: fila (f) — trabalho novo, critério "faz alguém voltar
+  amanhã?". A lente óbvia agora é *Volta no dia 2*: com a primeira tocha caindo em
+  ~8min, o dia 2 precisa ter o que oferecer, e hoje não tem quase nada.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the

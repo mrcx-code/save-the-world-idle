@@ -16,6 +16,7 @@ start index.html         # Windows
 
 # ou servir (recomendado no celular, pra testar em rede local)
 python3 -m http.server 8000
+npx --yes serve .          # se não houver python na máquina
 ```
 
 ## Testar
@@ -27,8 +28,18 @@ node test/smoke.js
 
 O teste roda headless num viewport de celular (390×844) e falha se: houver erro de
 console, o segurar-para-atacar não repetir, algum upgrade não aplicar, o terceiro
-golpe não pular, ou o baque não gerar onda de choque. Ele também mede FPS e salva
-prints (`shot-*.png`) para inspeção visual.
+golpe não pular, o baque não gerar onda de choque, o toque longo não abrir o painel de
+retenção, aparecer qualquer diálogo do navegador, ou o ganho offline voltar a usar a
+taxa congelada. Ele também mede FPS e salva prints (`shot-*.png`) para inspeção visual.
+
+Além do smoke, dois medidores sem navegador — só as fórmulas em Node, lendo o `CFG`
+direto do `index.html` para não divergirem:
+
+```bash
+node test/sim.js --detail        # tempo até 50 mil por estratégia
+node test/sim.js --patch=u2Sempre  # e sob uma mudança de balanço candidata
+node test/offline.js             # o que a noite paga, taxa congelada × integrada
+```
 
 ## Publicar
 
@@ -40,8 +51,12 @@ sem framework, sem build command, output = raiz.
 | arquivo | o que é |
 |---|---|
 | `index.html` | o jogo inteiro: HTML, CSS, canvas e lógica |
-| `NOTES.md` | fórmulas, dúvidas em aberto e o que eu cortaria com mais um dia |
+| `CLAUDE.md` | instruções permanentes: regras invioláveis, ciclo de trabalho, fila |
+| `NOTES.md` | fórmulas, balanço medido, dúvidas em aberto e o diário de sessões |
 | `test/smoke.js` | teste de fumaça headless (Playwright) |
+| `test/formulas.js` | a economia em Node, com o `CFG` lido do `index.html` |
+| `test/sim.js` | tempo até 50 mil por estratégia, e sob patches candidatos |
+| `test/offline.js` | quanto a noite paga: taxa congelada × integrada |
 
 ## Regras do projeto
 
