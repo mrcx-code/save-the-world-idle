@@ -69,6 +69,19 @@ Holding is still worth doing (1.2× over the best hands-off run) but no longer r
 the decision. `--patch=u2Sempre` restores the old behaviour so the regression stays
 measurable.
 
+## Retention counters
+
+Long-press the torch icon (600ms) to open THREE-DAY TEST: distinct days played, total
+time played, torches passed, and the span from the first session. Stored under
+`proto_savetheworld_retencao`, separate from the game save, because passing the torch
+wipes `S` and the measurement has to outlive that. Time only accrues from the rAF loop
+with `dt` clamped, so a tab left open in the background counts as nothing. Nothing
+leaves the device and nothing personal is recorded — just dates, a duration and a count.
+
+A record that is corrupt, hand-edited or half-written is repaired on load rather than
+thrown: non-string days are filtered out, negative or non-finite numbers reset to zero.
+The smoke test covers the long-press, the suppressed tap and the corrupt-record case.
+
 ## Feel
 
 Taps chain a 3-hit combo: horizontal slash → rising slash → **leap slam** (hero jumps
@@ -141,6 +154,24 @@ toda sessão começa lendo a última entrada.
   **Bloqueio: `git push` não funciona neste ambiente** (sem credential helper e sem
   `gh`), então os commits estão locais e a produção segue no commit anterior.
   **Próximo passo: tarefa (b) do CLAUDE.md — instrumentar retenção.**
+
+- **2026-08-02 · tarefa (b), retenção instrumentada.** Toque longo (600ms) no ícone da
+  tocha abre o painel THREE-DAY TEST: dias distintos, tempo total jogado, tochas
+  passadas e o vão desde a primeira sessão. Chave própria no `localStorage`
+  (`proto_savetheworld_retencao`), separada do save — passar a tocha zera o `S` e a
+  medição precisa sobreviver a isso. O tempo só acumula pelo laço de rAF com `dt`
+  limitado, então aba esquecida em segundo plano não conta. Medido em navegador de
+  verdade (mobile 375×812, servido em `127.0.0.1:8123`): o toque longo abre o painel e
+  **não** dispara a folha da tocha (a supressão do clique funciona), 24s de jogo viraram
+  "0m 24s", e um registro semeado com 3 dias / 7325s / 3 tochas mostrou "3 days ·
+  2h 02m · 3". Robustez: cinco registros corrompidos (JSON quebrado, tipos errados,
+  dias com `null` e `"banana"`, string vazia) — nenhum derruba o jogo; o caso sujo
+  reporta corretamente 2 dias distintos num vão de 3. Smoke test cresceu para cobrir
+  toque longo, clique suprimido e registro corrompido; segue verde a 61 FPS.
+  Quebrou no caminho: nada. Dúvida nova: o painel conta dias em fuso local, então
+  atravessar a meia-noite jogando conta dois dias — é o comportamento que eu quero para
+  a pergunta dos três dias, mas infla a métrica de quem joga de madrugada.
+  **Próximo passo: tarefa (c) — tirar o `confirm()` do prestígio.**
 
 ## Would cut with one more day
 

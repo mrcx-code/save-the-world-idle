@@ -78,6 +78,40 @@ function chromiumPath() {
   await page.waitForTimeout(500);
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-game.png') });
 
+  // retention: long-press the torch opens the counters, a normal tap still passes it
+  const ret = await page.evaluate(async () => {
+    const bt = document.getElementById('openTorch');
+    bt.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 700));
+    bt.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    bt.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 250));
+    return {
+      stats: document.getElementById('sheetStats').classList.contains('aberto'),
+      torch: document.getElementById('sheetTorch').classList.contains('aberto'),
+      dias: R.dias.length, segundos: R.segundos
+    };
+  });
+  console.log('long-press torch -> stats:', ret.stats, '| torch sheet:', ret.torch,
+    '| days:', ret.dias, '| seconds played:', ret.segundos.toFixed(1));
+  if (!ret.stats) errors.push('long-press did not open the retention panel');
+  if (ret.torch) errors.push('long-press also passed the torch');
+  if (ret.dias < 1 || ret.segundos <= 0) errors.push('retention did not record the session');
+
+  // a corrupted record must not take the game down with it
+  const sobreviveu = await page.evaluate(() => {
+    try {
+      localStorage.setItem('proto_savetheworld_retencao', '{broken');
+      R = { dias: [], segundos: 0, tochas: 0 };
+      carregarRetencao(); mostrarRetencao();
+      return R.dias.length === 1 && R.segundos === 0;
+    } catch (e) { return false; }
+  });
+  if (!sobreviveu) errors.push('a corrupted retention record broke the game');
+  await page.evaluate(() => localStorage.removeItem('proto_savetheworld_retencao'));
+  await page.tap('[data-close="sheetStats"]');
+  await page.waitForTimeout(300);
+
   const fps = await page.evaluate(() => new Promise(res => {
     let n = 0; const t0 = performance.now();
     (function f() { n++; performance.now() - t0 < 2000 ? requestAnimationFrame(f) : res(Math.round(n / 2)); })();

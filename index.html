@@ -243,6 +243,13 @@
   <div id="linhaInovacao">★ WISDOM: <b id="inovacao">0</b> — bonus ×<span id="bonus">1.0</span></div>
 </div>
 
+<div class="sheet" id="sheetStats">
+  <div class="sheetHead"><div class="t">THREE-DAY TEST</div>
+    <button class="fechar" data-close="sheetStats">✕</button></div>
+  <div id="statsCorpo"></div>
+  <div class="avisoPrestigio">stays on this device • nothing is sent anywhere</div>
+</div>
+
 <script>
 "use strict";
 
@@ -419,6 +426,7 @@ function transicionar() {
   S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
   S.geradores = 0; S.modo = "carvao"; S.tempoLimpo = 0;
   S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
+  R.tochas++; salvarRetencao();
   salvar(); desenhar();
 }
 
@@ -444,6 +452,54 @@ function carregar() {
       (S.poluicao > antes ? ", +" + fmt(S.poluicao - antes) + " tiredness." : ".");
     setTimeout(function () { el.style.display = "none"; }, 12000);
   }
+}
+
+// ---------- retention (this device only: no service, nothing personal) ----------
+// The prototype exists to answer "does the loop hold someone for three days?", so the
+// answer lives in its own key: passing the torch wipes S, and a corrupted game save
+// should not take the measurement down with it.
+const CHAVE_RET = "proto_savetheworld_retencao";
+let R = { dias: [], segundos: 0, tochas: 0 };
+function diaLocal() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
+    + "-" + String(d.getDate()).padStart(2, "0");
+}
+function salvarRetencao() {
+  try { localStorage.setItem(CHAVE_RET, JSON.stringify(R)); } catch (e) {}
+}
+function marcarDia() {
+  const d = diaLocal();
+  if (R.dias.indexOf(d) < 0) { R.dias.push(d); R.dias.sort(); salvarRetencao(); }
+}
+function carregarRetencao() {
+  let bruto = null;
+  try { bruto = localStorage.getItem(CHAVE_RET); } catch (e) {}
+  if (bruto) { try { Object.assign(R, JSON.parse(bruto)); } catch (e) {} }
+  // a hand-edited or half-written record must not take the game down
+  if (!Array.isArray(R.dias)) R.dias = [];
+  R.dias = R.dias.filter(function (d) { return typeof d === "string" && /^\d{4}-\d\d-\d\d$/.test(d); });
+  if (typeof R.segundos !== "number" || !isFinite(R.segundos) || R.segundos < 0) R.segundos = 0;
+  if (typeof R.tochas !== "number" || !isFinite(R.tochas) || R.tochas < 0) R.tochas = 0;
+  marcarDia();
+}
+function duracao(seg) {
+  const h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60);
+  return h > 0 ? h + "h " + String(m).padStart(2, "0") + "m" : m + "m " + String(Math.floor(seg % 60)).padStart(2, "0") + "s";
+}
+function mostrarRetencao() {
+  const dias = R.dias.length, primeiro = R.dias[0] || diaLocal();
+  // how far apart the first and last session are, in whole days
+  const vao = Math.round((new Date(R.dias[R.dias.length - 1] || primeiro) - new Date(primeiro)) / 86400000) + 1;
+  const linha = function (r, v) {
+    return '<div class="upgrade"><div class="info"><div class="nome">' + v
+      + '</div><div class="desc">' + r + "</div></div></div>";
+  };
+  $("statsCorpo").innerHTML =
+    linha("distinct days played", dias + (dias === 1 ? " day" : " days"))
+    + linha("total time played", duracao(R.segundos))
+    + linha("torches passed", String(R.tochas))
+    + linha("first session &middot; span", primeiro + " &middot; " + vao + (vao === 1 ? " day" : " days"));
 }
 
 // ---------- the world (fullscreen side-scroller) ----------
@@ -1234,7 +1290,7 @@ function girarFato() {
 }
 
 // ---------- sheets ----------
-const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch"];
+const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch", "sheetStats"];
 function abrir(id) {
   SHEETS.forEach(function (s) { $(s).classList.toggle("aberto", s === id && !$(s).classList.contains("aberto")); });
 }
@@ -1269,7 +1325,16 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnPrestigio").onclick = transicionar;
   $("openProjects").onclick = () => abrir("sheetProjects");
   $("openUpgrades").onclick = () => abrir("sheetUpgrades");
-  $("openTorch").onclick = () => abrir("sheetTorch");
+  // tap the torch to pass it; hold it to see whether anyone is still coming back
+  const bt = $("openTorch");
+  let pressT = null, longo = false;
+  function cancelarLongo() { if (pressT) { clearTimeout(pressT); pressT = null; } }
+  bt.addEventListener("pointerdown", function () {
+    longo = false;
+    pressT = setTimeout(function () { longo = true; mostrarRetencao(); abrir("sheetStats"); }, 600);
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) { bt.addEventListener(ev, cancelarLongo); });
+  bt.onclick = function () { if (longo) { longo = false; return; } abrir("sheetTorch"); };
   document.querySelectorAll(".fechar").forEach(function (b) {
     b.onclick = function () { $(b.dataset.close).classList.remove("aberto"); };
   });
@@ -1284,6 +1349,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("dblclick", function (e) { e.preventDefault(); });
 
   carregar();
+  carregarRetencao();
   girarFato();
   desenhar();
 
@@ -1293,7 +1359,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("btnBegin").onclick = () => { S.introSeen = true; $("lore").classList.add("escondido"); salvar(); };
   }
 
-  let ultimo = performance.now(), hudAcc = 0, autoAcc = 0;
+  let ultimo = performance.now(), hudAcc = 0, autoAcc = 0, retAcc = 0;
   function frame(agora) {
     const dt = Math.max(0, Math.min(0.25, (agora - ultimo) / 1000));
     ultimo = agora;
@@ -1305,6 +1371,10 @@ document.addEventListener("DOMContentLoaded", () => {
       while (n-- > 0) clicar();
     }
     worldX += dt * (22 + Math.min(60, prodPorSegundo() * 0.9));
+    // rAF stops in a background tab and dt is clamped, so this counts time actually
+    // spent playing rather than time the tab sat open
+    R.segundos += dt; retAcc += dt;
+    if (retAcc > 30) { retAcc = 0; marcarDia(); salvarRetencao(); }
     tick++; animT += dt;
     drawScene();
     hudAcc += dt;
@@ -1314,8 +1384,10 @@ document.addEventListener("DOMContentLoaded", () => {
   requestAnimationFrame(frame);
   setInterval(salvar, 10000);
   setInterval(girarFato, 25000);
-  window.addEventListener("beforeunload", salvar);
-  document.addEventListener("visibilitychange", () => { if (document.hidden) salvar(); });
+  window.addEventListener("beforeunload", function () { salvar(); salvarRetencao(); });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { salvar(); salvarRetencao(); } else { marcarDia(); }
+  });
 });
 </script>
 </body>
