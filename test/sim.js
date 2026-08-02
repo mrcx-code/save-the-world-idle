@@ -55,7 +55,19 @@ const MIRA_POR_SEG = 1;             // aimed presses a world-tapper makes per se
 const DANO_MIRA = 2;                // ...each landing double a blind swing on what it hits
 
 function novoMundo() {
-  return { mobs: [], drops: [], spawnT: 0, chamadaT: 0, chamada: 0, atendidas: 0, perdidas: 0 };
+  return { mobs: [], drops: [], spawnT: 0, chamadaT: 0, chamada: 0, atendidas: 0, perdidas: 0,
+    foco: 0, canalizando: 0, canais: 0, tiros: 0 };
+}
+// AUTO-FIRE's fuel. Focus only comes from showing up for the world, and the world is
+// rate-capped, so the skill cannot run away no matter how long it is left alone.
+function ganharFoco(S, m, n) {
+  if (!S.skillAuto || m.canalizando > 0) return;
+  const antes = m.foco;
+  m.foco = Math.min(F.CFG.focoMax, m.foco + n);
+  if (m.foco >= F.CFG.focoMax && antes < F.CFG.focoMax) {
+    m.canalizando = F.CFG.focoMax / F.CFG.autoFogoDreno;
+    m.canais++;
+  }
 }
 // one tick of troubles, drops and calls. `toques` is how many swings happened this tick —
 // swings hit everything already standing in front of the hero, exactly like clicar() does.
@@ -72,14 +84,17 @@ function passoMundo(S, est, m, DT, toques) {
     if (mob.viagem > 0) { mob.viagem -= DT; continue; }
     mob.hp -= dano;
     if (mira > 0) { mob.hp -= mira; mira = 0; }        // the aim goes to the front one
-    if (mob.hp <= 0) { mob.morto = true; m.drops.push({ t: 0, valor: F.valorDrop(S) }); }
+    if (mob.hp <= 0) {
+      mob.morto = true; m.drops.push({ t: 0, valor: F.valorDrop(S) });
+      ganharFoco(S, m, F.CFG.focoMob);
+    }
   }
   m.mobs = m.mobs.filter(x => !x.morto);
   S.mobsParados = m.mobs.filter(x => x.viagem <= 0).length;
 
   for (const d of m.drops) {
     d.t += DT;
-    if (est.mundo) { ganho += d.valor; d.morto = true; }                       // picked up by hand
+    if (est.mundo) { ganho += d.valor; d.morto = true; ganharFoco(S, m, F.CFG.focoDrop); }
     else if (S.u4 && d.t >= F.CFG.dropAuto) { ganho += d.valor * F.CFG.dropAutoValor; d.morto = true; }
     else if (d.t >= F.CFG.dropVida) d.morto = true;
   }
@@ -92,6 +107,7 @@ function passoMundo(S, est, m, DT, toques) {
     if (est.mundo) {                                   // someone is watching: they show up
       m.chamada = 0; m.atendidas++;
       S.mutirao = F.CFG.mutiraoSeg;
+      ganharFoco(S, m, F.CFG.focoChamada);
       for (const mob of m.mobs) m.drops.push({ t: 0, valor: F.valorDrop(S) });
       m.mobs = []; S.mobsParados = 0;
     } else if (m.chamada <= 0) m.perdidas++;
@@ -102,10 +118,13 @@ function passoMundo(S, est, m, DT, toques) {
   return ganho;
 }
 
-// one swing, with a candidate patch applied
-function tocar(S, patch, st) {
+// one swing, with a candidate patch applied.
+// `auto` marks a shot the wand fired by itself: it earns like any other swing but never
+// touches tiredness, in either direction.
+function tocar(S, patch, st, auto) {
   const g = F.ganhoClique(S);
   S.energia += g; S.energiaTotal += g;
+  if (auto) return g;
   let d = 0;
   if (S.u2) d -= patch.cura(S, st);
   d += patch.cansa(S);
@@ -148,19 +167,35 @@ const ESTRATEGIAS = [
   { nome: 'projects STEADY + hold + world', hold: 1, mundo: true, projetos: true, modo: () => 'limpo', compras: ['u3', 'u4', 'u5', 'u6'] },
   { nome: 'projects FAST + hold + world', hold: 1, mundo: true, projetos: true, modo: () => 'carvao', compras: ['u1', 'u2', 'u4', 'u5', 'u6', 'u7'] },
   // idle answer to the new pressure: U4 keeps the road clear without you
-  { nome: 'projects, GO STEADY + U4', hold: 0, projetos: true, modo: () => 'limpo', compras: ['u3', 'u4', 'u6'] }
+  { nome: 'projects, GO STEADY + U4', hold: 0, projetos: true, modo: () => 'limpo', compras: ['u3', 'u4', 'u6'] },
+  // ---- the skill (added 2026-08-02) ----
+  // It cannot be bought before the first torch, so in a single-cycle table these rows are
+  // identical to their skill-less twins by construction. Run with --ciclos=2 to see it.
+  {
+    nome: 'rhythm + hold + world + SKILL', hold: 1, mundo: true, skill: true, projetos: true,
+    compras: ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7'],
+    modo: S => (S.modo === 'carvao' ? (F.eficiencia(S) < 0.75 ? 'limpo' : 'carvao')
+      : (F.eficiencia(S) > 0.95 ? 'carvao' : 'limpo'))
+  },
+  { nome: 'projects STEADY + hold + world + SKILL', hold: 1, mundo: true, skill: true, projetos: true, modo: () => 'limpo', compras: ['u3', 'u4', 'u5', 'u6'] },
+  // The pair that actually matters: nobody holds a phone button for seven minutes. These
+  // two are the same player at a realistic duty cycle, with and without the wand — the
+  // skill exists for the hands you do not have.
+  { nome: 'STEADY + hold 25% + world', hold: 0.25, mundo: true, projetos: true, modo: () => 'limpo', compras: ['u3', 'u4', 'u5', 'u6'] },
+  { nome: 'STEADY + hold 25% + world + SKILL', hold: 0.25, mundo: true, skill: true, projetos: true, modo: () => 'limpo', compras: ['u3', 'u4', 'u5', 'u6'] }
 ];
 
-function jogar(est, patch = PATCHES.none) {
-  const S = F.novoEstado();
+function jogar(est, patch = PATCHES.none, S0) {
+  const S = S0 || F.novoEstado();
   const compraveis = F.UPGRADES.filter(u => est.compras.includes(u.id));
   const st = { curaBudget: patch.limite || 0 };
   const m = novoMundo();
   const comMundo = patch.mundo !== false;
-  let t = 0, tapAcc = 0, autoAcc = 0, miraAcc = 0;
-  let deToque = 0, deProjeto = 0, deMundo = 0, tempoSegurando = 0, piorSaude = 1;
+  let t = 0, tapAcc = 0, autoAcc = 0, miraAcc = 0, wandAcc = 0;
+  let deToque = 0, deProjeto = 0, deMundo = 0, deWand = 0, tempoSegurando = 0, piorSaude = 1;
+  const alvo = S.energiaTotal + META;   // a cycle is always another 50K from where it starts
 
-  while (S.energiaTotal < META && t < LIMITE) {
+  while (S.energiaTotal < alvo && t < LIMITE) {
     // The ramp reset is not really in definirModo() — simular() zeroes tempoLimpo on every
     // tick spent in GO FAST, so the climb evaporates the instant you leave GO STEADY.
     // A patch that softens it has to keep the clock alive across the whole fast stretch.
@@ -198,21 +233,53 @@ function jogar(est, patch = PATCHES.none) {
     }
     if (comMundo) deMundo += passoMundo(S, est, m, DT, toques);
     else { S.mobsParados = 0; S.mutirao = 0; }
+
+    // AUTO-FIRE: while the wand is channelling it shoots on its own, through the same
+    // swing the player makes — but those shots never heal (see tocar's `auto`).
+    if (comMundo && m.canalizando > 0) {
+      m.canalizando = Math.max(0, m.canalizando - DT);
+      m.foco = Math.max(0, m.foco - F.CFG.autoFogoDreno * DT);
+      wandAcc += DT * F.CFG.autoFogoTiros;
+      while (wandAcc >= 1) { deWand += tocar(S, patch, st, true); wandAcc--; m.tiros++; }
+      if (m.canalizando <= 0) m.foco = 0;
+    }
     piorSaude = Math.min(piorSaude, F.eficiencia(S));
 
-    // spend: next upgrade first, otherwise another project
+    // Spend: next upgrade first, then the skill if this run wants it, otherwise projects.
+    // Note what the greedy buyer implies about prices in this economy: buying every project
+    // it can afford every tick keeps the balance just under the *next project's* cost, so a
+    // lump-sum item is only ever affordable once `15·1.15^n` has grown past it. That is why
+    // u5/u6/u7 are never bought in a 50K run, and it is what sets a reachable skill price.
     const prox = compraveis.find(u => !S[u.id]);
+    const querSkill = est.skill && !S.skillAuto && S.transicoes > 0;
     if (prox && S.energia >= prox.custo) F.comprar(S, prox.id, prox.custo);
-    else if (est.projetos) while (F.comprarGerador(S)) { /* buy as many as we can afford */ }
+    else if (querSkill && S.energia >= F.CFG.custoSkillAuto) {
+      S.energia -= F.CFG.custoSkillAuto; S.skillAuto = true;
+    } else if (est.projetos) {
+      while (F.comprarGerador(S)) { /* buy as many as we can afford */ }
+    }
 
     t += DT;
   }
   return {
-    nome: est.nome, t, chegou: S.energiaTotal >= META,
+    nome: est.nome, t, chegou: S.energiaTotal >= alvo,
     geradores: S.geradores, poluicao: S.poluicao, eficiencia: F.eficiencia(S), piorSaude,
-    deToque, deProjeto, deMundo, tempoSegurando, mutiroes: m.atendidas,
+    deToque, deProjeto, deMundo, deWand, tempoSegurando, mutiroes: m.atendidas,
+    canais: m.canais, tiros: m.tiros, skill: S.skillAuto, sabedoria: S.inovacao,
     upgrades: F.UPGRADES.filter(u => S[u.id]).map(u => u.id).join(' ')
   };
+}
+
+// A skill survives the torch, so its worth can only be seen across cycles: run to 50K,
+// pass it on, run again from the wisdom (and the wand) you kept.
+function jogarCiclos(est, patch, n) {
+  const S = F.novoEstado();
+  const saidas = [];
+  for (let c = 0; c < n; c++) {
+    saidas.push(jogar(est, patch, S));
+    if (c < n - 1) F.transicionar(S);
+  }
+  return saidas;
 }
 
 const hms = s => {
@@ -239,6 +306,33 @@ const arg = (process.argv.find(a => a.startsWith('--patch=')) || '').split('=')[
 const patch = PATCHES[arg];
 if (!patch) { console.error(`unknown patch "${arg}" — try: ${Object.keys(PATCHES).join(', ')}`); process.exit(2); }
 
+// --ciclos=N: a skill is kept through the torch, so its worth only shows across runs
+const ciclos = Number((process.argv.find(a => a.startsWith('--ciclos=')) || '').split('=')[1] || 0);
+if (ciclos > 1) {
+  console.log(`\n${ciclos} torches back to back — ${META.toLocaleString('en-US')} each`
+    + (arg === 'none' ? ' — as shipped\n' : ` — PATCH: ${arg}\n`));
+  const rows = ESTRATEGIAS.map(e => ({ nome: e.nome, quer: !!e.skill, ciclos: jogarCiclos(e, patch, ciclos) }))
+    .sort((a, b) => a.ciclos.reduce((s, r) => s + r.t, 0) - b.ciclos.reduce((s, r) => s + r.t, 0));
+  const larg = Math.max(...rows.map(r => r.nome.length));
+  console.log('  ' + 'strategy'.padEnd(larg) + '   ' + rows[0].ciclos.map((_, i) => `run ${i + 1}`.padStart(9)).join('  ')
+    + '     total   skill  wisdom');
+  console.log('  ' + '-'.repeat(larg + 20 + ciclos * 11));
+  for (const r of rows) {
+    const total = r.ciclos.reduce((s, x) => s + x.t, 0);
+    const ultimo = r.ciclos[r.ciclos.length - 1];
+    console.log('  ' + r.nome.padEnd(larg) + '   ' + r.ciclos.map(x => hms(x.t).padStart(9)).join('  ')
+      + '  ' + hms(total) + '  ' + (ultimo.skill ? ' yes' : '  no').padStart(6)
+      + '  ' + String(ultimo.sabedoria).padStart(6));
+    if (detalhe) {
+      console.log('    '.padEnd(larg) + `     wand ${r.ciclos.map(x => Math.round(x.deWand).toLocaleString('en-US')).join(' / ')}`
+        + ` · channels ${r.ciclos.map(x => x.canais).join(' / ')}`
+        + ` · shots ${r.ciclos.map(x => x.tiros).join(' / ')}`);
+    }
+  }
+  console.log('');
+  process.exit(0);
+}
+
 console.log(`\nTime to ${META.toLocaleString('en-US')} total impact — hold repeats at ${F.HOLD_TPS.toFixed(2)} taps/s`
   + (arg === 'none' ? ' — as shipped\n' : ` — PATCH: ${arg}\n`));
 const linhas = ESTRATEGIAS.map(e => jogar(e, patch)).sort((a, b) => (a.chegou ? a.t : Infinity) - (b.chegou ? b.t : Infinity));
@@ -246,8 +340,8 @@ const largura = Math.max(...linhas.map(r => r.nome.length));
 console.log('  ' + 'strategy'.padEnd(largura) + '   time      projects  worst team  tap share  world share');
 console.log('  ' + '-'.repeat(largura + 54));
 for (const r of linhas) {
-  const total = r.deToque + r.deProjeto + r.deMundo;
-  const share = total > 0 ? r.deToque / total * 100 : 0;
+  const total = r.deToque + r.deProjeto + r.deMundo + r.deWand;
+  const share = total > 0 ? (r.deToque + r.deWand) / total * 100 : 0;
   const shareM = total > 0 ? r.deMundo / total * 100 : 0;
   console.log('  ' + r.nome.padEnd(largura) + '   ' + (r.chegou ? hms(r.t) : '>24h    ')
     + '  ' + String(r.geradores).padStart(6)
@@ -258,6 +352,7 @@ for (const r of linhas) {
     console.log('    '.padEnd(largura) + `     taps ${Math.round(r.deToque).toLocaleString('en-US')}`
       + ` · projects ${Math.round(r.deProjeto).toLocaleString('en-US')}`
       + ` · world ${Math.round(r.deMundo).toLocaleString('en-US')}`
+      + ` · wand ${Math.round(r.deWand).toLocaleString('en-US')} (${r.canais} channels)`
       + ` · mutirões ${r.mutiroes}`
       + ` · held ${hms(r.tempoSegurando)} · bought ${r.upgrades || '(none)'}`);
   }

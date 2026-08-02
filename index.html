@@ -79,6 +79,7 @@
   #alerta.chama { background: #4a3a12; box-shadow: inset 0 0 0 2px var(--gold); color: #ffe9b0;
     animation: pulsa .9s steps(2, end) infinite; }
   #alerta.festa { background: #1c4a2e; box-shadow: inset 0 0 0 2px var(--good); color: #b7ffce; }
+  #alerta.magia { background: #33235c; box-shadow: inset 0 0 0 2px var(--purple); color: #cfa9ff; }
   @keyframes pulsa { 0% { opacity: 1 } 50% { opacity: .62 } 100% { opacity: 1 } }
 
   #fato { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
@@ -117,6 +118,13 @@
   #dicaHold { position: absolute; right: 10px; bottom: 4px; font-size: var(--fs-xs); font-style: normal;
     color: rgba(14,15,26,.55); letter-spacing: 1px; }
   #btnClique.segurando { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink), 0 0 34px rgba(255,205,117,.75); }
+  /* the wand's charge, on the button that swings it */
+  #foco { position: absolute; left: 0; top: 0; height: 4px; width: 0%; background: var(--purple);
+    box-shadow: 0 0 6px rgba(141,91,214,.9); transition: width .2s; }
+  #btnClique.canal { box-shadow: 0 5px 0 var(--ink), 0 0 30px rgba(141,91,214,.95);
+    animation: canalizar .55s steps(2, end) infinite; }
+  @keyframes canalizar { 0% { filter: none } 50% { filter: brightness(1.25) saturate(1.3) } 100% { filter: none } }
+  #flash.magia { background: radial-gradient(ellipse at 50% 70%, rgba(207,169,255,.8) 0%, rgba(141,91,214,.45) 45%, transparent 78%); }
   #btnClique.segurando #dicaHold { color: rgba(14,15,26,.85); }
 
   /* ---- floating sheets above the character ---- */
@@ -197,6 +205,20 @@
   .placar .ganha .v { color: var(--good); }
   .placar .perde .v { color: #ff9d8a; }
   .avisoPrestigio { font-size: var(--fs-xs); color: var(--sub); margin-top: 8px; line-height: 1.8; }
+  /* SKILLS: its own surface, in the sheet language, reached from the torch — because the
+     torch is where everything you keep lives */
+  .btnSkills { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 8px;
+    background: #3a2a5e; border-color: var(--ink); color: #cfa9ff; }
+  .btnSkills.tem { box-shadow: 0 4px 0 var(--ink), 0 0 16px rgba(141,91,214,.7); }
+  #skillsNota { color: var(--gold); }
+  .skillNota { font-size: var(--fs-xs); color: var(--sub); line-height: 1.8; margin-bottom: 9px; }
+  .skillNota.travada { color: #ffd7cf; background: #4a1f2b; border: 2px solid var(--bad); padding: 7px 8px; }
+  #cardAuto { border-color: var(--purple); }
+  #cardAuto.comprado { border-color: var(--purple); box-shadow: inset 0 0 0 1px var(--purple); }
+  #cardAuto .check { color: #cfa9ff; }
+  .focoBar { height: 8px; margin-top: 7px; }
+  #barFoco { background-color: var(--purple); width: 0%; }
+  #cardAuto.canal { box-shadow: inset 0 0 0 2px var(--purple), 0 0 18px rgba(141,91,214,.6); }
   #linhaInovacao { display: none; color: #cfa9ff; font-size: var(--fs-xs); margin-top: 8px; }
 
   /* ---- intro / lore ---- */
@@ -255,7 +277,7 @@
     <button id="modeQuick"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas><span
       class="mq"><b id="modeNome">FAST</b><i id="modeSub"></i></span></button>
   </div>
-  <button id="btnClique"><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
+  <button id="btnClique"><div id="foco"></div><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
 </div>
 
 <div class="sheet" id="sheetProjects">
@@ -337,6 +359,22 @@
   <button id="btnPrestigio"></button>
   <div class="avisoPrestigio">+10% forever per WISDOM • rested team = more Wisdom</div>
   <div id="linhaInovacao">★ WISDOM: <b id="inovacao">0</b> — bonus ×<span id="bonus">1.0</span></div>
+  <button id="abrirSkills" class="btnSkills">✦ SKILLS <span id="skillsNota"></span></button>
+</div>
+
+<div class="sheet" id="sheetSkills">
+  <div class="sheetHead"><div class="t">SKILLS</div>
+    <button class="fechar" data-close="sheetSkills">✕</button></div>
+  <div class="skillNota" id="skillTrava"></div>
+  <div class="upgrade" id="cardAuto">
+    <div class="info"><div class="nome">✦ Auto-fire</div>
+      <div class="desc" id="descAuto">the wand keeps watch and shoots on its own</div>
+      <div class="barra focoBar"><div id="barFoco"></div></div>
+      <div class="desc" id="focoTexto"></div></div>
+    <span class="check">✓</span><button id="btnSkillAuto"></button>
+  </div>
+  <div class="avisoPrestigio">skills are kept through every torch • focus only comes from
+    showing up: clear a trouble, pick a drop up, answer the call</div>
 </div>
 
 <div class="sheet" id="sheetConfirm">
@@ -408,7 +446,15 @@ const CFG = {
   chamadaJanela: 12,       // how long you have to show up
   chamadaVolta: 3600,      // away this long and a call is waiting when you get back
   mutiraoSeg: 20, mutiraoMult: 1.35,
-  bonusDia: 0.02, diasMax: 10        // the neighbourhood remembers you: +2% per day played
+  bonusDia: 0.02, diasMax: 10,       // the neighbourhood remembers you: +2% per day played
+  // --- SKILLS: a category apart from the seven upgrades. Learned once, kept through every
+  // torch, and unlocked only after the first one — so the second run is a different game.
+  // AUTO-FIRE is deliberately NOT a bigger U4: it produces nothing on its own. It is fed
+  // by FOCUS, and focus only comes from showing up for the world (clearing a trouble,
+  // picking a drop up, answering a call). Leave the phone on a table and it never fires.
+  custoSkillAuto: 2000,
+  focoMax: 40, focoMob: 8, focoDrop: 5, focoChamada: 25,
+  autoFogoTiros: 10, autoFogoDreno: 4
 };
 
 let S = {
@@ -418,6 +464,7 @@ let S = {
   u4: false, u5: false, u6: false, u7: false,
   inovacao: 0, transicoes: 0,
   qtdCompra: 1,              // 1 / 10 / "max" — remembered, because nobody wants to re-pick it
+  skillAuto: false,          // learned once, survives every torch — unlike u1..u7
   introSeen: false,
   salvoEm: 0
 };
@@ -578,7 +625,57 @@ function impacto(x) {             // the slam lands: shockwave, dust fan, sparks
 let drops = [], mutiraoT = 0, chamada = null, chamadaT = 0, mobT = 0;
 let chamadaDobrada = false, diaNovo = false, voltouDepoisDe = 0;
 
+// ============================================================
+// SKILLS — a category apart, and AUTO-FIRE is its first entry
+//
+// Why this is not a second "Neighbors join in": U4 is a flat 2 taps/s that runs whether or
+// not anything is happening, forever, for free. AUTO-FIRE produces nothing by itself. It
+// burns FOCUS, and focus is only earned by showing up for the world — clearing a trouble,
+// picking a drop up off the ground, answering the kitchen. Its fuel is the world layer,
+// which is rate-capped by design (one arrival per 7s, three alive at most), so the skill
+// cannot become an income engine no matter how long it is left alone. Put the phone down
+// and the wand goes quiet, which is the exact opposite of the failure this game already
+// survived once.
+//
+// It also never touches tiredness: its shots pass `auto`, which suppresses U2's heal.
+// ============================================================
+let foco = 0, canalizando = 0, autoFogoAcc = 0;
+const skillLiberada = () => S.transicoes > 0 || S.skillAuto;
+function ganharFoco(n) {
+  if (!S.skillAuto || canalizando > 0) return;
+  const antes = foco;
+  foco = Math.min(CFG.focoMax, foco + n);
+  if (foco >= CFG.focoMax && antes < CFG.focoMax) armarWand();
+}
+function armarWand() {
+  canalizando = CFG.focoMax / CFG.autoFogoDreno;
+  floats.push({ x: HX - 14, y: GROUND - 62, txt: "THE WAND WAKES", life: 55 });
+  burst(HX + 6, GROUND - 26, 20, ["#8d5bd6", "#cfa9ff", "#e8edf6"]);
+  const f = $("flash");
+  if (f) { f.className = ""; void f.offsetWidth; f.className = "vai magia"; }
+}
+// while it is channelling the wand shoots on its own, through the same swing the player
+// makes — so whatever the hero is drawn holding, the shot looks like it
+function atualizarWand(dt) {
+  if (canalizando <= 0) { autoFogoAcc = 0; return; }
+  canalizando = Math.max(0, canalizando - dt);
+  foco = Math.max(0, foco - CFG.autoFogoDreno * dt);
+  autoFogoAcc += dt * CFG.autoFogoTiros;
+  let n = Math.min(4, Math.floor(autoFogoAcc));
+  autoFogoAcc -= Math.floor(autoFogoAcc);
+  while (n-- > 0) clicar(true);
+  if (canalizando <= 0) { foco = 0; desenhar(); }
+}
+function comprarSkill() {
+  if (S.skillAuto || !skillLiberada() || S.energia < CFG.custoSkillAuto) return;
+  S.energia -= CFG.custoSkillAuto; S.skillAuto = true;
+  floats.push({ x: HX - 16, y: GROUND - 66, txt: "AUTO-FIRE!", life: 70 });
+  burst(HX + 6, GROUND - 26, 30, ["#8d5bd6", "#cfa9ff", "#ffcd75"]);
+  salvar(); desenhar();
+}
+
 function soltarDrop(m, sx) {
+  ganharFoco(CFG.focoMob);          // every trouble you see off feeds the wand
   drops.push({
     wx: worldX + sx + 5, type: m.type, t: 0,
     valor: (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
@@ -589,6 +686,7 @@ function soltarDrop(m, sx) {
 function coletarDrop(d, auto) {
   const v = d.valor * (auto ? CFG.dropAutoValor : 1);
   S.energia += v; S.energiaTotal += v;
+  if (!auto) ganharFoco(CFG.focoDrop);   // bending down for it yourself is what charges it
   const sx = Math.round(d.wx - worldX);
   floats.push({ x: sx - 10, y: GROUND - 30, txt: "+" + Math.round(v), life: 38 });
   if (!auto) floats.push({ x: sx - 18, y: GROUND - 46,
@@ -651,6 +749,7 @@ function abrirChamada(dobrada) {
 function atenderChamada() {
   if (!chamada) return false;
   mutiraoT = CFG.mutiraoSeg * (chamada.dobrada ? 2 : 1);
+  ganharFoco(CFG.focoChamada);          // showing up is worth the most focus of all
   const sx = chamada.sx;
   chamada = null; chamadaT = 0;
   floats.push({ x: sx - 34, y: GROUND - 54, txt: "MUTIRAO!", life: 55 });
@@ -709,12 +808,14 @@ function tocarMundo(px, py) {
   return false;
 }
 
-function clicar() {
+function clicar(auto) {
   const g = ganhoClique();
   S.energia += g; S.energiaTotal += g;
   // the team recovers while you organise together, not while you burn them out:
-  // healing only in GO STEADY is what keeps holding the button from erasing tiredness
-  if (S.u2 && S.modo === "limpo") S.poluicao = Math.max(0, S.poluicao - 2);
+  // healing only in GO STEADY is what keeps holding the button from erasing tiredness.
+  // A shot the wand fires by itself is not people helping each other, so it never heals —
+  // that keeps automatic output structurally incapable of paying for GO FAST.
+  if (!auto && S.u2 && S.modo === "limpo") S.poluicao = Math.max(0, S.poluicao - 2);
   // 3-hit combo: slash, upper slash, then a big SPIN
   attackType = combo; combo = (combo + 1) % 3;
   attackT = attackType === 2 ? JUMPF : 9;
@@ -868,7 +969,9 @@ function transicionar() {
   S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
   S.geradores = 0; S.modo = "carvao"; S.tempoLimpo = 0;
   S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
-  drops = []; mobs = []; chamada = null; chamadaT = 0; mutiraoT = 0;   // the road starts clear
+  // the road starts clear — but the skill is kept: that is what makes it a skill
+  drops = []; mobs = []; chamada = null; chamadaT = 0; mutiraoT = 0;
+  foco = 0; canalizando = 0; autoFogoAcc = 0;
   R.tochas++; salvarRetencao();
   salvar(); desenhar();
 }
@@ -1931,6 +2034,7 @@ function desenhar() {
     $("inovacao").textContent = S.inovacao;
     $("bonus").textContent = bonusInovacao().toFixed(1);
   }
+  desenharSkills();
   alertaMundo();
 }
 
@@ -1961,6 +2065,37 @@ function desenharProjetos() {
   document.querySelectorAll(".selQtd button").forEach(function (el) {
     el.classList.toggle("ativo", String(S.qtdCompra) === el.dataset.q);
   });
+}
+
+// The skills surface. One skill ships; the sheet is a list, so a second one is markup and
+// a CFG line — but there are no empty slots pretending to be content.
+function desenharSkills() {
+  const liberada = skillLiberada(), tem = S.skillAuto;
+  const podePagar = S.energia >= CFG.custoSkillAuto;
+  $("abrirSkills").className = "btnSkills" + (liberada && !tem && podePagar ? " tem" : "");
+  $("skillsNota").textContent = tem ? "✓" : liberada ? (podePagar ? "— 1 READY" : "") : "— LOCKED";
+
+  const trava = $("skillTrava");
+  trava.className = "skillNota" + (liberada ? "" : " travada");
+  trava.textContent = liberada
+    ? "learned once and kept through every torch — upgrades reset, skills do not"
+    : "🔒 skills are learned after you pass the torch for the first time";
+
+  $("cardAuto").classList.toggle("comprado", tem);
+  $("cardAuto").classList.toggle("canal", canalizando > 0);
+  const b = $("btnSkillAuto");
+  b.textContent = fmt(CFG.custoSkillAuto);
+  b.disabled = tem || !liberada || !podePagar;
+
+  const pct = (foco / CFG.focoMax) * 100;
+  $("barFoco").style.width = pct + "%";
+  $("focoTexto").textContent = !tem ? "+" + CFG.autoFogoTiros + " shots/s while it channels"
+    : canalizando > 0 ? "CHANNELLING — " + Math.ceil(canalizando) + "s left"
+      : "FOCUS " + Math.floor(foco) + " / " + CFG.focoMax;
+
+  // the charge lives on the button that swings the wand, so it is never out of sight
+  $("foco").style.width = tem ? pct + "%" : "0%";
+  $("btnClique").classList.toggle("canal", canalizando > 0);
 }
 
 // Everything the player needs to make the one decision this prototype measures.
@@ -2054,6 +2189,9 @@ function alertaMundo() {
   if (modoAviso) {                        // the rhythm you just chose owns the line first
     classe = modoAviso.rapido ? "perigo" : "festa";
     txt = modoAviso.txt;
+  } else if (canalizando > 0) {
+    classe = "magia";
+    txt = "THE WAND IS CHANNELLING · " + CFG.autoFogoTiros + "/s · " + Math.ceil(canalizando) + "s";
   } else if (chamada) {
     classe = "chama";
     txt = "THEY NEED HANDS — TAP THE POT · " + Math.ceil(chamada.janela - chamada.t) + "s";
@@ -2082,7 +2220,7 @@ function girarFato() {
 }
 
 // ---------- sheets ----------
-const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch", "sheetStats", "sheetConfirm"];
+const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch", "sheetStats", "sheetConfirm", "sheetSkills"];
 function abrir(id) {
   SHEETS.forEach(function (s) { $(s).classList.toggle("aberto", s === id && !$(s).classList.contains("aberto")); });
 }
@@ -2165,6 +2303,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnPrestigio").onclick = pedirTransicao;
   $("btnConfirmaSim").onclick = function () { fecharTudo(); transicionar(); };
   $("btnConfirmaNao").onclick = () => abrir("sheetTorch");
+  $("abrirSkills").onclick = () => abrir("sheetSkills");
+  $("btnSkillAuto").onclick = comprarSkill;
   $("openProjects").onclick = () => abrir("sheetProjects");
   $("openUpgrades").onclick = () => abrir("sheetUpgrades");
   // tap the torch to pass it; hold it to see whether anyone is still coming back
@@ -2217,6 +2357,7 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarMobs(dt);
     atualizarDrops(dt);
     atualizarChamada(dt);
+    atualizarWand(dt);
     if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
     if (S.u4) { // neighbors keep helping on their own
       autoAcc += dt * CFG.autoTapsPorSeg;

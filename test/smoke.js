@@ -22,6 +22,8 @@ function chromiumPath() {
 
   await page.goto(file);
   await page.waitForTimeout(900);
+  // read the tuning out of the page instead of restating it here
+  const CFG_TIROS = await page.evaluate(() => CFG.autoFogoTiros);
   await page.tap('#btnBegin');
   await page.waitForTimeout(300);
 
@@ -389,6 +391,148 @@ function chromiumPath() {
     fecharTudo();
     S.geradores = 0; S.poluicao = 0; S.modo = 'carvao'; S.tempoLimpo = 0;
     S.u1 = S.u3 = S.u6 = false; modoAviso = null; desenhar();
+  });
+
+  // ---- the special skill: AUTO-FIRE ----
+  // locked until the first torch, and it cannot be bought by wishing
+  const trava = await page.evaluate(() => {
+    fecharTudo();
+    S.geradores = 0; S.energia = 999999; S.energiaTotal = 0; S.poluicao = 0; S.modo = 'carvao';
+    S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
+    S.skillAuto = false; S.transicoes = 0; foco = 0; canalizando = 0;
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; modoAviso = null;
+    desenhar();
+    comprarSkill();                       // should refuse: no torch has been passed
+    return { comprou: S.skillAuto, botao: document.getElementById('btnSkillAuto').disabled,
+      nota: document.getElementById('skillTrava').textContent,
+      rotulo: document.getElementById('skillsNota').textContent };
+  });
+  console.log('skill before the first torch -> bought:', trava.comprou, '| button off:', trava.botao,
+    '|', JSON.stringify(trava.rotulo));
+  if (trava.comprou) errors.push('the skill was bought before any torch was passed');
+  if (!trava.botao) errors.push('the locked skill still offered its buy button');
+  if (!/torch/.test(trava.nota)) errors.push('the skills sheet does not say how it unlocks');
+
+  // after a torch it can be learned, and focus does NOT accrue on its own
+  const compra = await page.evaluate(async () => {
+    S.transicoes = 1; desenhar();
+    const antes = S.energia;
+    comprarSkill();
+    const parado = foco;
+    await new Promise(r => setTimeout(r, 700));   // nothing happening: no focus may appear
+    return { tem: S.skillAuto, gasto: antes - S.energia, focoParado: parado, focoDepois: foco,
+      texto: document.getElementById('focoTexto').textContent };
+  });
+  console.log('skill learned ->', compra.tem, '| cost', compra.gasto,
+    '| focus while idle:', compra.focoParado, '->', compra.focoDepois);
+  if (!compra.tem) errors.push('the skill could not be learned after a torch');
+  if (compra.gasto !== 2000 && compra.gasto <= 0) errors.push('the skill was free');
+  if (compra.focoDepois > 0) errors.push('focus accrued with nothing happening — it is passive after all');
+
+  // focus comes from showing up: clearing a trouble, picking a drop up, answering a call
+  const fontes = await page.evaluate(() => {
+    foco = 0; canalizando = 0; drops.length = 0;
+    soltarDrop({ type: 'smog' }, 40);
+    const porMob = foco;
+    coletarDrop(drops[0], false);
+    const porDrop = foco - porMob;
+    foco = 0; drops.length = 0;
+    soltarDrop({ type: 'cash' }, 40);
+    const antesAuto = foco;
+    coletarDrop(drops[0], true);           // the neighbours picking it up gives no focus
+    const porAuto = foco - antesAuto;
+    return { porMob, porDrop, porAuto };
+  });
+  console.log('focus per trouble', fontes.porMob, '| per drop picked up', fontes.porDrop,
+    '| per drop the neighbours take', fontes.porAuto);
+  if (fontes.porMob <= 0) errors.push('clearing a trouble gave no focus');
+  if (fontes.porDrop <= 0) errors.push('picking a drop up gave no focus');
+  if (fontes.porAuto !== 0) errors.push('focus can be farmed without touching anything');
+
+  // full focus arms it, and it fires on its own with no input at all
+  const fogo = await page.evaluate(async () => {
+    foco = 0; canalizando = 0; drops.length = 0; mobs.length = 0;
+    S.geradores = 0; S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
+    ganharFoco(CFG.focoMax);
+    const armou = canalizando, aviso = (desenhar(), document.getElementById('alerta').textContent);
+    const t0 = performance.now(), e0 = S.energiaTotal;
+    await new Promise(r => setTimeout(r, 1000));
+    const disparos = (S.energiaTotal - e0) / ganhoClique();
+    return { armou, aviso, disparos, segundos: (performance.now() - t0) / 1000,
+      botao: document.getElementById('btnClique').className, restante: canalizando };
+  });
+  console.log('armed for', fogo.armou.toFixed(1), 's ->', Math.round(fogo.disparos),
+    'shots with no input in', fogo.segundos.toFixed(2), 's |', JSON.stringify(fogo.aviso));
+  if (fogo.armou <= 0) errors.push('full focus did not arm the wand');
+  if (fogo.disparos < 5) errors.push('the wand did not fire on its own');
+  if (fogo.disparos > CFG_TIROS * 1.6) errors.push('the wand fired faster than CFG says');
+  if (!/CHANNELLING/.test(fogo.aviso)) errors.push('the strip did not announce the channelling');
+  if (!/canal/.test(fogo.botao)) errors.push('the attack button does not show it is channelling');
+
+  // holding at the same time must not double the wand's own rate
+  const junto = await page.evaluate(async () => {
+    foco = 0; canalizando = 0; ganharFoco(CFG.focoMax);
+    const e0 = S.energiaTotal;
+    const bc = document.getElementById('btnClique');
+    bc.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 1000));
+    bc.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    const total = (S.energiaTotal - e0) / ganhoClique();
+    return { total };
+  });
+  console.log('wand + holding ->', Math.round(junto.total), 'shots/s (wand alone was',
+    Math.round(fogo.disparos) + ', hold alone ~7)');
+  if (junto.total > CFG_TIROS + 8 + 4) errors.push('holding and channelling doubled each other up');
+
+  // it stops on its own when the focus runs out
+  const parou = await page.evaluate(async () => {
+    for (let i = 0; i < 400; i++) atualizarWand(0.05);   // 20s: past any channel
+    const e0 = S.energiaTotal;
+    await new Promise(r => setTimeout(r, 500));
+    return { canalizando, foco, ganhouDepois: S.energiaTotal - e0 };
+  });
+  console.log('after the channel ->', parou.canalizando, 'left | focus', parou.foco,
+    '| still earning:', parou.ganhouDepois.toFixed(2));
+  if (parou.canalizando > 0 || parou.foco > 0) errors.push('the channel never ended');
+  if (parou.ganhouDepois > 0.5) errors.push('the wand kept firing after its focus ran out');
+
+  // THE hard constraint: a shot the wand fired may never touch tiredness
+  const cansaco = await page.evaluate(() => {
+    S.u2 = true; S.modo = 'limpo'; S.poluicao = 100;
+    foco = 0; canalizando = 0; ganharFoco(CFG.focoMax);
+    const antes = S.poluicao;
+    for (let i = 0; i < 200; i++) atualizarWand(0.05);   // a whole channel of auto shots
+    const depoisAuto = S.poluicao;
+    S.poluicao = 100;
+    for (let i = 0; i < 20; i++) clicar();               // the same count, by hand
+    const depoisMao = S.poluicao;
+    S.u2 = false; S.modo = 'carvao'; S.poluicao = 0;
+    return { antes, depoisAuto, depoisMao };
+  });
+  console.log('tiredness after a full auto channel:', cansaco.antes, '->', cansaco.depoisAuto,
+    '| after 20 taps by hand:', cansaco.depoisMao);
+  if (cansaco.depoisAuto !== cansaco.antes) errors.push('AUTO-FIRE moved tiredness — the known failure shape');
+  if (cansaco.depoisMao >= cansaco.antes) errors.push('U2 stopped healing on a real tap');
+
+  // and it survives the torch, which is what makes it a skill and not an upgrade
+  const skillFicou = await page.evaluate(() => {
+    S.u1 = true; S.geradores = 9; S.energiaTotal = CFG.metaPrestigio + 1000; S.poluicao = 0;
+    transicionar();
+    return { skill: S.skillAuto, u1: S.u1, projetos: S.geradores, foco: foco, sabedoria: S.inovacao };
+  });
+  console.log('after passing the torch -> skill kept:', skillFicou.skill, '| upgrades reset:',
+    !skillFicou.u1, '| projects', skillFicou.projetos, '| focus', skillFicou.foco);
+  if (!skillFicou.skill) errors.push('the skill did not survive the torch');
+  if (skillFicou.u1 || skillFicou.projetos !== 0) errors.push('the torch stopped resetting the run');
+  if (skillFicou.foco !== 0) errors.push('focus carried across the torch');
+  await page.evaluate(() => { abrir('sheetSkills'); });
+  await page.waitForTimeout(350);
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-skills.png') });
+  await page.evaluate(() => {
+    fecharTudo();
+    S.skillAuto = false; S.transicoes = 0; S.inovacao = 0; foco = 0; canalizando = 0;
+    S.energia = 0; S.energiaTotal = 0; S.geradores = 0; S.poluicao = 0; S.modo = 'carvao';
+    R.tochas = 0; desenhar();
   });
 
   // ---- coming back on another day is worth something ----

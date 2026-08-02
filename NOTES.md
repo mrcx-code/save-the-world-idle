@@ -34,6 +34,58 @@ as falsy). U4 grew a second job on 2026-08-02: the neighbours' auto-taps also cl
 troubles blocking the road, and they pick up what is left on the ground (at half value,
 after 5s). It is the purchasable answer for someone who does not want to watch.
 
+## Skills — a category apart
+
+Upgrades are this run. **Skills are forever.** One ships: **AUTO-FIRE**, the wand keeping
+watch and shooting on its own. It lives on its own sheet, reached from the torch, because
+the torch is where everything you keep lives.
+
+| | value | why |
+|---|---|---|
+| cost | 2,000 impact | the greedy-buy dynamic sets this, see below |
+| unlock | after your first torch | run 1 cannot have it — the second run is a different game |
+| survives prestige | **yes** | that is the category's whole identity |
+| focus to arm | 40 | trouble cleared +8 · drop picked up +5 · call answered +25 |
+| while armed | 10 shots/s for 10s | routed through the same `clicar(auto)` the player uses |
+| touches tiredness | **never** | `clicar(true)` skips U2's heal, by construction |
+
+**Why it is not a second U4.** "Neighbors join in" is a flat 2 taps/s that runs forever,
+free, whether or not anything is happening. AUTO-FIRE produces nothing by itself: it burns
+FOCUS, and focus only comes from showing up for the world — clearing a trouble, bending
+down for a drop, answering the kitchen. Measured: **focus while nothing happens stays at 0**,
+and a drop the neighbours pick up for you gives **0** focus. Put the phone on a table and
+the wand never fires. Its fuel is the world layer, which is rate-capped by design (one
+arrival per 7s, three alive at most), so it cannot become an income engine however long it
+is left alone — the exact opposite of the failure this game already survived.
+
+**What the price had to be, and why.** The sim's greedy buyer takes every project it can
+afford every tick, so the balance sits just under the *next project's* cost — which means a
+lump-sum item is only ever affordable once `15 × 1.15^n` has grown past it. That is why
+u5/u6/u7 are never bought in a 50K run, and it is why a 20,000 skill was measured being
+bought **never**. Two other models were tried and rejected: making the run save for it
+after its upgrade list (never fires — these runs never finish their list) and making it
+stop buying projects to save (run 2 went 4m44s → 26m44s and it *still* did not buy, because
+the upgrades ate the balance first). 2,000 is the price the economy actually admits.
+
+Measured over two torches back to back:
+
+| strategy | run 1 | run 2 | total | wand |
+|---|---|---|---|---|
+| rhythm + hold + world + **SKILL** | 6m41s | **4m43s** | 11m24s | 629 impact, 5 channels, 499 shots |
+| rhythm + hold + world | 6m41s | 4m44s | 11m25s | — |
+| STEADY + hold 25% + world + **SKILL** | 7m30s | 5m32s | 13m02s | 530 impact, 4 channels, 337 shots |
+| STEADY + hold 25% + world | 7m30s | 5m32s | 13m02s | — |
+
+Run 1 is identical to the second in every row, which is structural: the skill cannot be
+bought before a torch. Run 2 moves by **one second**. So the honest verdict is that
+AUTO-FIRE is worth about **1.3% of a run** and costs 4% of one — it pays for itself around
+the third torch and is upside after that, which is the right shape for something permanent
+and the wrong shape for anything that could threaten the eight-minute first torch.
+
+That ceiling is not a tuning failure, it is arithmetic already in this file: **taps are
+4–7% of total impact**, so no tap-shaped skill can ever be worth much here. A skill that
+wanted to matter more would have to pay in something other than swings.
+
 ## The rhythm, explained
 
 The prototype exists to measure one decision and the game never told the player what they
@@ -486,6 +538,76 @@ toda sessão começa lendo a última entrada.
   em si ainda não reage ao ritmo. O GO FAST já tem `smog` ligado ao cansaço, mas a troca
   poderia empurrar o céu e a grade de cor por alguns segundos — azedar no fogo, respirar no
   verde — que é o único lugar onde a decisão ainda não aparece.
+
+- **2026-08-02 · a folha de projetos passou a dizer o que um projeto É, e a comprar em
+  lote.** O dono olhou para `+ START A PROJECT — 15` e não soube dizer o que aquilo fazia —
+  e ele é o dono. Era o preço e mais nada, na compra mais importante do jogo. Agora duas
+  linhas curtas respondem, as duas lidas das fórmulas vivas: `169/s from 43 projects — they
+  work on their own, forever` e `each adds +3.9/s forever · next one costs 6,111, and every
+  one after is +15%`. Sem nenhum projeto ainda, a primeira linha diz o que faltava dizer:
+  *projects earn every second, by themselves — taps are the only income you have until
+  then*. A taxa por projeto sai de `taxaDeUmProjeto()`, que **pergunta ao
+  `prodPorSegundo()`** quanto mudaria com mais um em vez de repetir a conta, então carrega
+  junto o modo em que você está, a rampa, U1/U3, sabedoria, saúde do time, mutirão e o que
+  estiver bloqueando a estrada. **Medido**: a taxa anunciada bate com a real com erro
+  < 1e-9. Comprar em lote virou uma fileira `×1 / ×10 / MAX` acima do botão, guardada no
+  save — três alvos fixos em vez de um controle que se cicla, porque MAX fica a um toque de
+  qualquer lugar e a fileira lê igual ao par GO FAST / GO STEADY que já está na mesma folha.
+  A aritmética é um laço, não fórmula fechada: a curva é `ceil(15·1,15^n)` e o teto torna a
+  fórmula fechada chata na fronteira. **Medido, não suposto**: com dinheiro para exatamente
+  7 projetos mais um a menos que o oitavo, o MAX compra 7 e deixa 213, e comprar de um em um
+  a partir do mesmo saldo compra 7 e deixa 213; com 1 de impacto compra 0 e o saldo nunca
+  fica negativo. A tabela do `sim.js` saiu idêntica ao segundo, como tinha de sair — o
+  simulador já comprava em laço guloso desde sempre. Quebrou no caminho: as linhas novas
+  empurraram os botões de modo para fora da folha; o `max-height` foi de 52vh para 62vh, que
+  só cresce para cima (quem protege a barra de menu é o `bottom`, e o teste afere os dois
+  retângulos: 709 contra 715), e a descrição do modo, que estava repetindo o quadro
+  comparativo logo acima, passou a carregar só o que ele não tem — onde a rampa está. Cabe
+  sem rolagem num 390×844.
+
+- **2026-08-02 · SKILLS: uma categoria nova, e o AUTO-FIRE nela.** O dono pediu uma
+  habilidade comprável de tiro automático, e explicitamente **um tipo novo de coisa**, não
+  um oitavo upgrade. Upgrades são desta partida; **skills são para sempre**. Folha própria,
+  alcançada pela tocha — porque a tocha é onde mora tudo o que você mantém. O AUTO-FIRE não
+  produz nada sozinho: ele **queima FOCO**, e foco só vem de aparecer para o mundo (limpar
+  um problema +8, catar um item do chão +5, atender a chamada +25). Cheio aos 40, a varinha
+  canaliza **10 tiros/s por 10s**, pelo mesmo caminho de golpe do jogador — então o que a
+  agente de estética desenhar na mão do herói vem junto de graça.
+  **A restrição dura, cumprida por construção e medida**: os tiros automáticos passam
+  `clicar(true)`, que pula a cura do U2. Teste: um canal inteiro de tiro automático deixa o
+  cansaço em **100 → 100**, enquanto 20 toques à mão levam 100 → 60. Automação que paga
+  cansaço é exatamente a falha que este jogo já sobreviveu uma vez, e agora ela é impossível
+  aqui, não só improvável.
+  **Por que não é um U4 maior**: o U4 são 2 toques/s fixos, de graça, para sempre,
+  acontecendo ou não alguma coisa. **Medido**: com nada acontecendo o foco fica em **0**, e
+  um item que os vizinhos catam por você dá **0** de foco. Celular na mesa, varinha muda.
+  O combustível é a camada do mundo, que tem teto (uma chegada a cada 7s, três vivos), então
+  ela não tem como disparar sozinha por muito tempo que se espere.
+  **Sobrevive à tocha? Sim** — é a identidade da categoria, e é seguro justamente porque o
+  teto dela é a camada do mundo e não a contagem de projetos, então não compõe com a
+  Sabedoria como um multiplicador de produção comporia. **Medido em duas tochas seguidas**:
+  `rhythm + hold + world + SKILL` faz 6m41s / **4m43s** (total 11m24s) contra 6m41s / 4m44s
+  (11m25s) do gêmeo sem skill — a corrida 1 é idêntica ao segundo em todas as linhas, o que
+  é estrutural (não dá para comprar antes da primeira tocha), e a corrida 2 anda **um
+  segundo**. A varinha rendeu 629 de impacto em 5 canais e 499 tiros, ou seja **1,3% da
+  partida** por um custo de 4% de uma — se paga por volta da terceira tocha e é lucro depois.
+  Esse teto não é erro de calibragem, é aritmética que já estava neste arquivo: **toque é
+  4–7% do impacto total**, então nenhuma habilidade em forma de golpe pode valer muito aqui.
+  **Preço: 2.000, e quem escolheu foi a economia.** O comprador guloso leva todo projeto que
+  couber a cada tique, então o saldo fica logo abaixo do **custo do próximo projeto** — o
+  que significa que item de valor fechado só é alcançável depois que `15·1,15^n` passa dele.
+  É por isso que u5/u6/u7 nunca são comprados numa corrida de 50K, e foi por isso que a
+  skill a 20.000 foi medida sendo comprada **nunca**. Duas outras modelagens foram testadas
+  e rejeitadas: poupar depois de fechar a lista de upgrades (não dispara — estas corridas
+  nunca fecham a lista) e parar de comprar projetos para poupar (a corrida 2 foi de 4m44s
+  para **26m44s** e mesmo assim não comprou, porque os upgrades comiam o saldo antes).
+  Detectores seguem firmes: `--patch=u2Sempre` ainda derruba a tabela para 4m17s com o time
+  a 35%, e `--patch=semMundo` ainda reproduz a tabela antiga. Verde, 61 FPS.
+  **Dúvida nova:** a skill é neutra para quem segura o botão e quase neutra para quem não
+  segura, porque o teto de 4–7% vale para os dois. Se a categoria for crescer, a próxima
+  precisa pagar em algo que **não** seja golpe — reduzir o bloqueio dos problemas, esticar o
+  mutirão, encurtar a rampa. **Próximo passo: decidir com o dono se a segunda skill mexe
+  numa dessas alavancas, e medir o `rampaMeia` que ficou pendente da sessão anterior.**
 
 ## Would cut with one more day
 

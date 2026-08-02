@@ -30,7 +30,9 @@ const novoEstado = (over = {}) => Object.assign({
   u1: false, u2: false, u3: false, u4: false, u5: false, u6: false, u7: false,
   inovacao: 0, transicoes: 0,
   // the world answering back: troubles standing in the way, a mutirão running, days played
-  mobsParados: 0, mutirao: 0, dias: 1
+  mobsParados: 0, mutirao: 0, dias: 1,
+  // skills: kept through every torch, unlike u1..u7
+  skillAuto: false
 }, over);
 
 const eficiencia = S => 100 / (100 + S.poluicao);
@@ -89,12 +91,23 @@ function simularOffline(S, total) {
   return ganho;
 }
 
-// one swing (the economic half of clicar(); the rest is sprites)
-function clicar(S) {
+// one swing (the economic half of clicar(); the rest is sprites).
+// `auto` is a shot the wand fired by itself: it earns impact like any other, but it never
+// heals — automatic output that can pay down tiredness is the failure this game survived.
+function clicar(S, auto) {
   const g = ganhoClique(S);
   S.energia += g; S.energiaTotal += g;
-  if (S.u2 && S.modo === 'limpo') S.poluicao = Math.max(0, S.poluicao - 2);
+  if (!auto && S.u2 && S.modo === 'limpo') S.poluicao = Math.max(0, S.poluicao - 2);
   return g;
+}
+
+// passing the torch: wisdom is banked, the run resets, and skills survive
+function transicionar(S) {
+  const ganho = inovacaoAoTransicionar(S);
+  const guarda = { inovacao: S.inovacao + ganho, transicoes: S.transicoes + 1,
+    dias: S.dias, skillAuto: S.skillAuto };
+  Object.assign(S, novoEstado(), guarda);
+  return ganho;
 }
 
 const comprarGerador = S => {
@@ -122,5 +135,6 @@ module.exports = {
   eficiencia, bonusInovacao, custoGerador, bonusJusto, forcaToque, ganhoClique,
   bloqueioMundo, bonusMutirao, bonusDias, valorDrop,
   tetoLimpoAtual, rampaAtual, prodPorSegundo, poluicaoPorSegundo,
-  inovacaoAoTransicionar, simular, simularOffline, clicar, comprarGerador, comprar
+  inovacaoAoTransicionar, simular, simularOffline, clicar, comprarGerador, comprar,
+  transicionar
 };

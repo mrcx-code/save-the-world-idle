@@ -43,6 +43,7 @@ direto do `index.html` para não divergirem:
 ```bash
 node test/sim.js --detail        # tempo até 50 mil por estratégia
 node test/sim.js --patch=u2Sempre  # e sob uma mudança de balanço candidata
+node test/sim.js --ciclos=2      # duas tochas seguidas — onde uma skill permanente aparece
 node test/offline.js             # o que a noite paga, taxa congelada × integrada
 ```
 
@@ -84,6 +85,20 @@ descansado o time, mais Sabedoria.
 
 Sete upgrades: campanhas grandes, ajuda mútua, treino do time, vizinhos que ajudam
 sozinhos, ferramentas para todos, divisão justa dos ganhos e dias de descanso.
+
+## Projetos e skills
+
+A folha de projetos diz o que um projeto **é**, não só quanto custa: quanto os que você já
+tem rendem por segundo sozinhos, quanto mais um adicionaria agora (no modo em que você
+está, com seus upgrades e a saúde do time), e que o preço sobe 15% a cada compra. A fileira
+`×1 / ×10 / MAX` compra em lote — mesma curva, mesmo gasto total, menos toques.
+
+**Skills** são uma categoria à parte: upgrades são desta partida, skills são para sempre.
+Folha própria, aberta pela tocha, liberada só depois de você passar a tocha uma vez. A
+primeira é **AUTO-FIRE**: a varinha vigia e atira sozinha. Ela não produz nada por conta
+própria — queima **FOCO**, e foco só vem de aparecer para o mundo (limpar um problema,
+catar um item, atender a chamada). Celular na mesa, varinha muda. E nenhum tiro automático
+encosta no cansaço, nunca.
 
 ## A troca de ritmo
 
