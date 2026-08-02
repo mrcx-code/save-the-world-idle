@@ -127,7 +127,9 @@
     bottom: calc(var(--hControles, 126px) + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
     background: rgba(31,43,87,.96); border: 3px solid var(--ink); border-radius: 2px;
     box-shadow: inset 0 0 0 2px var(--panel2), 5px 5px 0 rgba(0,0,0,.5);
-    padding: 12px; transition: transform .22s ease, opacity .22s ease; max-height: 52vh; overflow-y: auto;
+    /* the menu bar is protected by `bottom`, not by this: max-height only grows upward,
+       so the projects sheet can hold its explanation without reaching the buttons below */
+    padding: 12px; transition: transform .22s ease, opacity .22s ease; max-height: 62vh; overflow-y: auto;
     opacity: 0; pointer-events: none; }
   .sheet.aberto { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
   .sheetHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -135,22 +137,32 @@
   .fechar { padding: 8px 12px; font-size: var(--fs-sm); background: #5d2330; }
 
   .btnCompra { width: 100%; padding: 13px 10px; font-size: var(--fs-sm); text-align: left; line-height: 1.5; }
+  /* what a project IS, in two short lines — the owner could not tell from the price alone */
+  .explica { font-size: 8px; color: var(--sub); line-height: 1.9; margin-bottom: 8px; }
+  .explica.sub { margin: 7px 0 0; }
+  .explica b { color: var(--gold); }
+  .explica i { color: #8ef0ad; font-style: normal; }
+  /* how many at once: three fixed targets read faster than a control you have to cycle */
+  .selQtd { display: flex; gap: 6px; margin-bottom: 7px; }
+  .selQtd button { flex: 1; padding: 10px 4px; font-size: var(--fs-xs); }
+  .selQtd button.ativo { background: var(--panel2); border-color: var(--gold); color: var(--gold); }
   .modo { display: flex; gap: 6px; margin-top: 8px; }
   .modo button { flex: 1; padding: 13px 6px; font-size: var(--fs-sm); }
   #modoCarvao.ativo { background: #5d2330; border-color: var(--bad); color: #ffb0b0; }
   #modoLimpo.ativo { background: #1c4a2e; border-color: var(--good); color: #b7ffce; }
-  .descModo { font-size: var(--fs-xs); color: var(--sub); margin-top: 8px; min-height: 22px; line-height: 1.8; }
+  .descModo { font-size: 8px; color: var(--sub); margin-top: 8px; line-height: 1.8; }
+  .descModo:empty { margin: 0; }
 
   /* the trade, side by side: what you are running now against what switching would do */
   .ritmo { display: flex; gap: 7px; margin-top: 9px; }
   .rCol { flex: 1 1 0; min-width: 0; background: var(--ink); border: 2px solid #000; padding: 8px 7px; }
   .rCol.quente { box-shadow: inset 0 0 0 1px var(--bad); }
   .rCol.fria { box-shadow: inset 0 0 0 1px var(--good); }
-  .rTit { font-size: 8px; color: var(--sub); margin-bottom: 7px; white-space: nowrap;
+  .rTit { font-size: 8px; color: var(--sub); margin-bottom: 6px; white-space: nowrap;
     overflow: hidden; text-overflow: clip; }
   .rCol.quente .rTit { color: #ffb0b0; } .rCol.fria .rTit { color: #b7ffce; }
   .rL { display: flex; justify-content: space-between; align-items: baseline; gap: 4px;
-    font-size: 8px; color: var(--sub); line-height: 2.1; }
+    font-size: 8px; color: var(--sub); line-height: 1.95; }
   .rL b { font-size: 9px; font-weight: normal; color: var(--texto); white-space: nowrap; }
   .rL b.bom { color: #8ef0ad; } .rL b.ruim { color: #ff9d8a; }
   .avisoRampa { display: none; font-size: 8px; line-height: 1.9; margin-top: 8px; padding: 6px 7px;
@@ -249,7 +261,12 @@
 <div class="sheet" id="sheetProjects">
   <div class="sheetHead"><div class="t">PROJECTS — <span id="nGeradores2">0</span> RUNNING</div>
     <button class="fechar" data-close="sheetProjects">✕</button></div>
+  <div class="explica" id="oQueEh"></div>
+  <div class="selQtd">
+    <button data-q="1">×1</button><button data-q="10">×10</button><button data-q="max">MAX</button>
+  </div>
   <button class="btnCompra" id="btnGerador"></button>
+  <div class="explica sub" id="oQueDa"></div>
   <div class="ritmo">
     <div class="rCol" id="rColA">
       <div class="rTit" id="rTitA">NOW</div>
@@ -400,6 +417,7 @@ let S = {
   u1: false, u2: false, u3: false,
   u4: false, u5: false, u6: false, u7: false,
   inovacao: 0, transicoes: 0,
+  qtdCompra: 1,              // 1 / 10 / "max" — remembered, because nobody wants to re-pick it
   introSeen: false,
   salvoEm: 0
 };
@@ -727,14 +745,40 @@ function clicar() {
   if (S.modo === "limpo" && sprouts.length < 40) sprouts.push({ wx: worldX + HX - 6, life: 600 });
   desenhar();
 }
-function comprarGerador() {
-  const c = custoGerador();
-  if (S.energia >= c) {
-    S.energia -= c; S.geradores++;
-    floats.push({ x: Math.max(4, Math.round(W / 2) - 44), y: GROUND - 52, txt: "NEW PROJECT!", life: 50 });
-    burst(Math.round(W / 2), GROUND - 30, 14, ["#38b764", "#6fdd94", "#ffcd75"]);
-    desenhar();
+// What one more project would actually add, right now, in the rhythm you are actually in.
+// Measured by asking prodPorSegundo() rather than by re-deriving it, so it carries the
+// upgrades, wisdom, team health, the mutirão and anything blocking the road along with it.
+function taxaDeUmProjeto() {
+  const g = S.geradores;
+  const antes = prodPorSegundo();
+  S.geradores = g + 1;
+  const depois = prodPorSegundo();
+  S.geradores = g;
+  return depois - antes;
+}
+// How many projects the current balance affords, and what they cost together.
+// A loop, not a closed form: the cost curve is `ceil(15 · 1.15^n)` and the ceiling makes a
+// closed form fiddly to get right at the boundary. The curve grows fast enough that even
+// an absurd balance stops well inside the guard.
+function quantosCabem(limite) {
+  let n = 0, gasto = 0;
+  while (n < limite && n < 1000) {
+    const c = Math.ceil(CFG.custoGeradorBase * Math.pow(CFG.custoGeradorFator, S.geradores + n));
+    if (gasto + c > S.energia) break;
+    gasto += c; n++;
   }
+  return { n: n, gasto: gasto };
+}
+function comprarGerador(qtd) {
+  const alvo = qtd === "max" ? Infinity : (qtd || 1);
+  const compra = quantosCabem(alvo);
+  if (compra.n <= 0) return 0;
+  S.energia -= compra.gasto; S.geradores += compra.n;
+  floats.push({ x: Math.max(4, Math.round(W / 2) - 44), y: GROUND - 52, life: 50,
+    txt: compra.n > 1 ? "+" + compra.n + " PROJECTS!" : "NEW PROJECT!" });
+  burst(Math.round(W / 2), GROUND - 30, Math.min(40, 14 + compra.n * 3), ["#38b764", "#6fdd94", "#ffcd75"]);
+  desenhar();
+  return compra.n;
 }
 // Changing rhythm is THE decision this prototype exists to measure, and it used to be one
 // floating word. Now the switch reports what it just cost and what it just bought, with
@@ -1855,9 +1899,7 @@ function desenhar() {
   $("worldPct").textContent = Math.round(worldHealth() * 100) + "%";
   $("wisChip").textContent = S.inovacao > 0 ? "★ wisdom " + S.inovacao : "";
 
-  const c = custoGerador();
-  $("btnGerador").textContent = "+ START A PROJECT — " + fmt(c);
-  $("btnGerador").disabled = S.energia < c;
+  desenharProjetos();
 
   desenharRitmo();
 
@@ -1890,6 +1932,35 @@ function desenhar() {
     $("bonus").textContent = bonusInovacao().toFixed(1);
   }
   alertaMundo();
+}
+
+// A project is the thing that earns while you are not touching the screen, and the sheet
+// used to show its price and nothing else. Two short lines: what you already have, and
+// what one more buys — both read off the live formulas.
+function desenharProjetos() {
+  const um = taxaDeUmProjeto();
+  $("oQueEh").innerHTML = S.geradores > 0
+    ? "<b>" + taxaCurta(prodPorSegundo()) + "</b> from " + S.geradores
+      + (S.geradores === 1 ? " project" : " projects") + " — they work on their own, forever"
+    : "projects earn <b>every second, by themselves</b> — taps are the only income you have until then";
+
+  const alvo = S.qtdCompra === "max" ? Infinity : (S.qtdCompra || 1);
+  const compra = quantosCabem(alvo);
+  const b = $("btnGerador");
+  const c1 = custoGerador();
+  if (compra.n > 0) {
+    b.textContent = "+ " + compra.n + (compra.n === 1 ? " PROJECT — " : " PROJECTS — ") + fmt(compra.gasto);
+    b.disabled = false;
+  } else {
+    b.textContent = "+ PROJECT — " + fmt(c1) + " (NOT ENOUGH)";
+    b.disabled = true;
+  }
+  $("oQueDa").innerHTML = "each adds <i>+" + taxaCurta(um) + "</i> forever &middot; next one costs "
+    + fmt(c1) + ", and every one after is +"
+    + Math.round((CFG.custoGeradorFator - 1) * 100) + "%";
+  document.querySelectorAll(".selQtd button").forEach(function (el) {
+    el.classList.toggle("ativo", String(S.qtdCompra) === el.dataset.q);
+  });
 }
 
 // Everything the player needs to make the one decision this prototype measures.
@@ -1961,12 +2032,14 @@ function desenharRitmo() {
 
   $("modoCarvao").classList.toggle("ativo", rapido);
   $("modoLimpo").classList.toggle("ativo", !rapido);
+  // the columns above already carry the rates; this line only adds what they cannot —
+  // where the climb currently is
   if (rapido) {
-    $("descModo").textContent = (S.u1 ? 6 : 3) + "/s each, and the team never stops tiring";
+    $("descModo").textContent = "";
     $("boxRampa").style.display = "none";
   } else {
-    $("descModo").textContent = "1 → " + tetoLimpoAtual() + "/s (now ×" + rampaAtual().toFixed(2)
-      + ") — no tiredness, and it keeps climbing";
+    $("descModo").textContent = "ramp ×" + rampaAtual().toFixed(2) + " → ×" + tetoLimpoAtual().toFixed(2)
+      + " (" + curto((1 - fracaoRampa()) * rampaCheia()) + " to go)";
     $("boxRampa").style.display = "block";
     $("barRampa").style.width = (fracaoRampa() * 100) + "%";
   }
@@ -2075,7 +2148,13 @@ document.addEventListener("DOMContentLoaded", () => {
   ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
     cv.addEventListener(ev, function () { soltar("mundo"); });
   });
-  $("btnGerador").onclick = comprarGerador;
+  $("btnGerador").onclick = function () { comprarGerador(S.qtdCompra); };
+  document.querySelectorAll(".selQtd button").forEach(function (el) {
+    el.onclick = function () {
+      S.qtdCompra = el.dataset.q === "max" ? "max" : Number(el.dataset.q);
+      desenhar();
+    };
+  });
   $("modoCarvao").onclick = () => definirModo("carvao");
   $("modoLimpo").onclick = () => definirModo("limpo");
   $("modeQuick").onclick = () => definirModo(S.modo === "carvao" ? "limpo" : "carvao");

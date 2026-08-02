@@ -202,6 +202,77 @@ function chromiumPath() {
   if (perdida.aberta) errors.push('a missed call never closed');
   if (perdida.perdeu) errors.push('missing a call took something away');
 
+  // ---- what a project is, and buying more than one of them ----
+  // the sheet has to say what you GET, not only what you pay
+  const explica = await page.evaluate(() => {
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
+    S.geradores = 12; S.energia = 0; S.poluicao = 0; S.modo = 'limpo'; S.tempoLimpo = 200;
+    S.u1 = S.u3 = false; S.qtdCompra = 1;
+    desenhar();
+    const antes = prodPorSegundo();
+    const previsto = taxaDeUmProjeto();
+    S.geradores++;
+    const real = prodPorSegundo() - antes;
+    S.geradores--;
+    return { previsto, real, linha1: document.getElementById('oQueEh').textContent,
+      linha2: document.getElementById('oQueDa').textContent, total: antes };
+  });
+  console.log('project explained ->', JSON.stringify(explica.linha1));
+  console.log('                  ->', JSON.stringify(explica.linha2));
+  if (Math.abs(explica.previsto - explica.real) > 1e-9) errors.push('the advertised rate per project is not the real one');
+  if (explica.linha1.indexOf('12 projects') < 0) errors.push('the sheet does not connect running projects to the rate');
+  if (!/forever/.test(explica.linha2)) errors.push('the sheet does not say a project is permanent');
+  if (!/15%/.test(explica.linha2)) errors.push('the sheet does not say the price climbs');
+
+  // MAX buys exactly what the money covers, and buying one at a time lands identically
+  const max = await page.evaluate(() => {
+    const guarda = JSON.stringify(S);
+    S.geradores = 12; S.energia = 0;
+    // fund exactly 7 projects, plus a little that cannot buy an eighth
+    let fundo = 0;
+    for (let i = 0; i < 7; i++) fundo += Math.ceil(15 * Math.pow(1.15, 12 + i));
+    const oitavo = Math.ceil(15 * Math.pow(1.15, 19));
+    S.energia = fundo + oitavo - 1;
+    S.qtdCompra = 'max'; desenhar();
+    const rotulo = document.getElementById('btnGerador').textContent;
+    const n = comprarGerador('max');
+    const depoisMax = { n, ger: S.geradores, energia: S.energia };
+
+    // same balance, bought one at a time
+    S.geradores = 12; S.energia = fundo + oitavo - 1;
+    let um = 0;
+    while (comprarGerador(1) > 0) um++;
+    const depoisUm = { n: um, ger: S.geradores, energia: S.energia };
+
+    // nothing affordable: MAX must buy zero and must not go negative
+    S.geradores = 12; S.energia = 1; desenhar();
+    const rotuloPobre = document.getElementById('btnGerador').textContent;
+    const desabilitado = document.getElementById('btnGerador').disabled;
+    const zero = comprarGerador('max');
+    const pobre = { zero, ger: S.geradores, energia: S.energia, rotuloPobre, desabilitado };
+
+    // x10 buys exactly ten when ten are affordable
+    S.geradores = 0; S.energia = 1e6; S.qtdCompra = 10; desenhar();
+    const dez = comprarGerador(10);
+
+    Object.assign(S, JSON.parse(guarda));
+    return { rotulo, depoisMax, depoisUm, pobre, dez, esperado: 7, sobra: oitavo - 1 };
+  });
+  console.log('buy MAX ->', JSON.stringify(max.rotulo), '| bought', max.depoisMax.n,
+    'leaving', Math.round(max.depoisMax.energia), '(expected', max.esperado, '/', max.sobra + ')');
+  console.log('one at a time ->', max.depoisUm.n, 'leaving', Math.round(max.depoisUm.energia),
+    '| x10 bought', max.dez, '| broke:', JSON.stringify(max.pobre.rotuloPobre));
+  if (max.depoisMax.n !== max.esperado) errors.push('MAX did not buy every project the money covered');
+  if (Math.abs(max.depoisMax.energia - max.sobra) > 1e-6) errors.push('MAX left the wrong remainder');
+  if (max.depoisMax.n !== max.depoisUm.n || max.depoisMax.ger !== max.depoisUm.ger) {
+    errors.push('MAX and one-at-a-time bought different amounts');
+  }
+  if (Math.abs(max.depoisMax.energia - max.depoisUm.energia) > 1e-6) errors.push('MAX and one-at-a-time spent different money');
+  if (max.pobre.zero !== 0 || max.pobre.ger !== 12) errors.push('MAX bought something it could not afford');
+  if (max.pobre.energia < 0) errors.push('buying drove the balance negative');
+  if (!max.pobre.desabilitado || !/NOT ENOUGH/.test(max.pobre.rotuloPobre)) errors.push('the buy button lied about being affordable');
+  if (max.dez !== 10) errors.push('x10 did not buy ten');
+
   // ---- the rhythm: the one decision this prototype exists to measure ----
   // Mid-game, GO STEADY with the ramp fully climbed: the panel has to show that switching
   // buys a burst now and costs almost everything later.
