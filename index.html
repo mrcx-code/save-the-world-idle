@@ -375,18 +375,32 @@ function burst(x, y, n, cores) {
     parts.push({ x: x, y: y, vx: (Math.random() - 0.35) * 34, vy: -Math.random() * 44 - 8,
       life: 0.5 + Math.random() * 0.3, c: cores[Math.floor(Math.random() * cores.length)], grav: 110 });
   }
-  if (parts.length > 140) parts = parts.slice(-140);
+  // half as many motes of the wand's own light, rising and lingering after the debris has
+  // fallen. The colours passed in stay: they say what was hit, these say what did it.
+  for (let i = 0; i <= n >> 1; i++) {
+    parts.push({ x: x + (Math.random() - 0.5) * 12, y: y + (Math.random() - 0.5) * 10,
+      vx: (Math.random() - 0.5) * 20, vy: -12 - Math.random() * 20,
+      life: 0.75 + Math.random() * 0.6, c: MOTES[Math.floor(Math.random() * MOTES.length)],
+      aura: LUZ_MEIO, grav: -12 });
+  }
+  if (parts.length > 190) parts = parts.slice(-190);
 }
 let combo = 0, attackT = 0, attackType = 0;
 const JUMPF = 20;                 // frames of the leap
 let jumpT = 0, shocks = [];       // leap timer + ground shockwaves
-function impacto(x) {             // the slam lands: shockwave, dust fan, sparks (x is screen space)
+function impacto(x) {             // the magic goes into the dirt: wave, dust fan, motes (x is screen space)
   shocks.push({ wx: worldX + x, t: 0 });
-  floats.push({ x: x - 22, y: GROUND - 20, txt: "BOOM", life: 18 });
+  floats.push({ x: x - 26, y: GROUND - 20, txt: "BLOOM", life: 18 });
   for (let i = 0; i < 18; i++) {
     const dir = i % 2 ? 1 : -1;
     parts.push({ x: x + dir * 4, y: GROUND - 2, vx: dir * (30 + Math.random() * 70), vy: -18 - Math.random() * 34,
       life: 0.45 + Math.random() * 0.35, c: i % 3 === 0 ? "#ffe9b0" : "#9b8468", grav: 130 });
+  }
+  for (let i = 0; i < 14; i++) {  // and what he put in comes back up out of the ground
+    parts.push({ x: x + (Math.random() - 0.5) * 46, y: GROUND - 1,
+      vx: (Math.random() - 0.5) * 26, vy: -26 - Math.random() * 40,
+      life: 0.9 + Math.random() * 0.7, c: MOTES[Math.floor(Math.random() * MOTES.length)],
+      aura: LUZ_MEIO, grav: -16 });
   }
 }
 function clicar() {
@@ -758,9 +772,10 @@ const ICONS = {
   flame: { pal: { X: "#ef7d57", W: "#ffcd75" }, map: [
     "............", ".....X......", "....XX......", "....XXX.....", "...XXXXX....", "...XWXXX....",
     "..XWWXXX....", "..XWWWXX....", "...XWWX.....", "....XX......", "............", "............"] },
-  sword: { pal: { X: "#e8edf6", G: "#ffcd75", K: "#10121c" }, map: [
-    "..........XX", ".........XXX", "........XXX.", ".......XXX..", "......XXX...", ".....XXX....",
-    ".K..XXX.....", "..GGXX......", "..KGG.......", ".K..G.......", "............", "............"] }
+  // key stays `sword` because the markup names it; what it draws is the wand
+  sword: { pal: { W: "#fffbe8", G: "#ffe08a", M: "#8ff0c4", B: "#8a6242", K: "#3a2416" }, map: [
+    ".....W......", "..M..W..M...", "...WWGWW....", "....WGW.....", "...W.G.W....", "....MBM.....",
+    ".....B......", "....KBK.....", "....KBK.....", "....KBK.....", "....KKK.....", "............"] }
 };
 function renderIcon(cnv, name) {
   const ic = ICONS[name]; if (!ic || !cnv) return;
@@ -1061,21 +1076,86 @@ const RUN = [
   [-8, 0, 8, 0, 6, 0],
   [-2, 0, 2, -4, 2, -2],
 ];
-// A blade: outline, shaded body, sunlit edge. Diagonals are a run of steps drawn in three
-// passes rather than step by step — otherwise each step outlines itself and the sword
-// reads as a row of loose white bricks instead of one piece of steel.
-function laminaSeq(steps, vert) {
-  cx.fillStyle = "#0e0f18";
-  for (let i = 0; i < steps.length; i++) cx.fillRect(steps[i][0] - 1, steps[i][1] - 1, steps[i][2] + 2, steps[i][3] + 2);
-  cx.fillStyle = "#c3cbdb";
-  for (let i = 0; i < steps.length; i++) cx.fillRect(steps[i][0], steps[i][1], steps[i][2], steps[i][3]);
-  cx.fillStyle = "#f4f7ff";
-  for (let i = 0; i < steps.length; i++) {
-    const s = steps[i];
-    if (vert) cx.fillRect(s[0] + s[2] - 2, s[1], 2, s[3]); else cx.fillRect(s[0], s[1], s[2], 2);
+// ---------- the wand, and the light it channels ----------
+// He carries no blade. The magic here is folk magic — tending and mending, the same hand
+// that plants a sprout — so its colours are the world's own: amber at the core, going out
+// through warm gold into the green of new growth. Never cold, never arcane-purple.
+const LUZ_CORE = "#fffbe8", LUZ_QUENTE = "#ffe08a", LUZ_MEIO = "#8ff0c4", LUZ_FORA = "#6fdd94";
+const MOTES = ["#fffbe8", "#ffe08a", "#8ff0c4", "#6fdd94"];
+// A point of channelled light: a hot core inside two octagonal blooms. Built out of two
+// crossed rectangles per ring so it stays a pixel shape and never a soft photographic blob.
+function luz(x, y, f, a) {
+  const r = Math.max(2, Math.round(f * 3.5)), al = a === undefined ? 1 : Math.max(0, Math.min(1, a));
+  if (al <= 0.02) return;
+  const anel = [[r * 3, 0.10, LUZ_FORA], [r * 2, 0.20, LUZ_FORA],
+                [Math.round(r * 1.45), 0.42, LUZ_MEIO], [r, 0.88, LUZ_QUENTE]];
+  for (let i = 0; i < anel.length; i++) {
+    const rr = Math.max(2, anel[i][0]);
+    cx.globalAlpha = anel[i][1] * al; cx.fillStyle = anel[i][2];
+    cx.fillRect(x - rr, y - rr + 1, rr * 2, rr * 2 - 2);          // an octagon out of two
+    cx.fillRect(x - rr + 1, y - rr, rr * 2 - 2, rr * 2);          // crossed rectangles
+  }
+  cx.globalAlpha = al; cx.fillStyle = LUZ_CORE;
+  cx.fillRect(x - 1, y - 1, 3, 3);
+  cx.globalAlpha = 1;
+}
+// The wand itself: a worn wooden shaft with a bound grip. Drawn as a run of steps in three
+// passes so a diagonal reads as one stick instead of a row of loose blocks.
+// A bolt of magic leaving the wand. Purely decorative: what gets hit, how far the swing
+// reaches and how hard it lands are decided elsewhere and are none of this code's business.
+// It is spawned off the attack state that is already there and drawn on top of it.
+let magias = [], ultAtkT = 0, ultAtkTipo = -1;
+function lancarMagia(tipo, bx, y0) {
+  const vida = 0.34;
+  if (tipo === 0) magias.push({ wx: worldX + bx + 32, y: y0 + 14, vx: 190, vy: 0, t: 0, vida: vida, f: 1.5 });
+  else if (tipo === 1) magias.push({ wx: worldX + bx + 28, y: y0 + 6, vx: 150, vy: -95, t: 0, vida: vida, f: 1.35 });
+  else magias.push({ wx: worldX + bx + 30, y: y0 + 26, vx: 90, vy: 150, t: 0, vida: 0.24, f: 1.7 });
+}
+function desenharMagias() {
+  for (let i = magias.length - 1; i >= 0; i--) {
+    const m = magias[i];
+    m.t += 1 / 60; m.wx += m.vx / 60; m.y += m.vy / 60;
+    if (m.t >= m.vida) { magias.splice(i, 1); continue; }
+    const p = m.t / m.vida, a = Math.pow(1 - p, 0.5);
+    const x = Math.round(m.wx - worldX), y = Math.round(m.y);
+    if (x < -20 || x > W + 20) { magias.splice(i, 1); continue; }
+    cx.globalAlpha = a * 0.30; cx.fillStyle = LUZ_FORA;         // the tail it drags
+    for (let s = 1; s <= 4; s++) {
+      const w2 = 6 - s;
+      cx.fillRect(x - Math.round(m.vx / 60 * s * 0.7) - (w2 >> 1), y - Math.round(m.vy / 60 * s * 0.7) - (w2 >> 1), w2, w2);
+    }
+    cx.globalAlpha = 1;
+    luz(x, y, m.f * (1 - p * 0.35), a);
+    if (Math.random() < 0.6) {                                   // sparks shed along the way
+      parts.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: -6 - Math.random() * 22,
+        life: 0.35 + Math.random() * 0.3, c: MOTES[Math.floor(Math.random() * MOTES.length)],
+        aura: LUZ_MEIO, grav: -14 });
+    }
   }
 }
-function lamina(x, y, w, hh, vert) { laminaSeq([[x, y, w, hh]], vert); }
+// The wand itself: a worn wooden shaft two pixels thick, a bound grip, a twist of green
+// cord below the tip, and a tip that is always a little alight. Walked one pixel at a time
+// along the line and drawn in three passes — outline, body, sunlit side — so it stays a
+// clean stick at any angle instead of a fat staircase of overlapping blocks.
+function vara(x0, y0v, x1, y1v, brilho) {
+  const n = Math.max(2, Math.abs(x1 - x0), Math.abs(y1v - y0v));
+  const px = [], py = [];
+  for (let i = 0; i <= n; i++) {
+    px.push(Math.round(x0 + (x1 - x0) * i / n));
+    py.push(Math.round(y0v + (y1v - y0v) * i / n));
+  }
+  cx.fillStyle = "#20160f";
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i] - 1, py[i] - 1, 4, 4);
+  cx.fillStyle = "#6b4a2e";
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i], py[i], 2, 2);
+  cx.fillStyle = "#a87c4e";                        // the sun catches one side of the shaft
+  for (let i = 0; i <= n; i++) cx.fillRect(px[i] + 1, py[i], 1, 2);
+  cx.fillStyle = "#3f2a1a";                        // bound grip at the near end
+  for (let i = 0; i < Math.min(5, n); i++) cx.fillRect(px[i], py[i], 2, 2);
+  const c = Math.max(0, n - 4);                    // twist of green cord below the tip
+  cx.fillStyle = "#2ea36a"; cx.fillRect(px[c] - 1, py[c] - 1, 4, 3);
+  luz(px[n] + 1, py[n] + 1, brilho);
+}
 function drawHero() {
   // the leap: rises fast, hangs, then drops hard onto the ground
   const air = jumpT > 0;
@@ -1131,7 +1211,7 @@ function drawHero() {
   }
   leg(bx + 6, P[2], P[3], true);   // back leg
   leg(bx + 11, P[0], P[1], false); // front leg
-  // sword arm out of the front shoulder
+  // wand arm out of the front shoulder
   const asx = bx + 13 + Math.round(P[4] * 0.3);
   function braco(hx2, hy2) {                        // sleeve from the shoulder, hand on the grip
     const fw = Math.max(3, hx2 - asx - 3);
@@ -1146,50 +1226,72 @@ function drawHero() {
     cx.fillStyle = "#ffeacd"; cx.fillRect(hx2 + 3, hy2, 2, 5);
     cx.fillStyle = "#d8a87e"; cx.fillRect(hx2, hy2 + 4, 5, 1);
   }
-  // simple sword, 3-hit combo: slash / upper slash / LEAP SLAM
+  // The 3-hit combo, cast rather than swung. A new swing is detected here — attackT jumps
+  // back up and attackType steps on — so the bolt is spawned from the drawing code and
+  // nothing about what gets hit, how far or how hard is touched.
+  if (attackT > 0 && (attackT > ultAtkT || attackType !== ultAtkTipo)) lancarMagia(attackType, bx, y0);
+  ultAtkT = attackT; ultAtkTipo = attackType;
   if (attackT > 0) {
     attackT--;
-    const fade = "rgba(255,240,200," + Math.min(1, attackT / 6) + ")";
-    if (attackType === 0) {          // horizontal slash
-      lamina(bx + 25, y0 + 12, 26, 4, false);
-      cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 21, y0 + 10, 4, 8);
-      cx.fillStyle = "#c8912f"; cx.fillRect(bx + 21, y0 + 16, 4, 2);
-      cx.fillStyle = fade;
-      cx.fillRect(bx + 29, y0 + 4, 18, 2); cx.fillRect(bx + 43, y0 + 8, 12, 2);
-    } else if (attackType === 1) {   // upper diagonal slash
-      const passos = [];
-      for (let i = 0; i < 6; i++) passos.push([bx + 23 + i * 4, y0 + 10 - i * 4, 6, 4]);
-      laminaSeq(passos, false);
-      cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 19, y0 + 12, 4, 6);
-      cx.fillStyle = fade;
-      cx.fillRect(bx + 27, y0 - 12, 12, 2); cx.fillRect(bx + 37, y0 - 6, 12, 2);
-    } else {                          // LEAP SLAM: raised on the way up, driven down on the way in
+    const q = Math.min(1, attackT / 6);                 // the cast fading out
+    braco(asx + 5, y0 + 19);                            // arm first: the wand sits on top of it
+    if (attackType === 0) {            // a flat crescent of light thrown ahead of him
+      vara(bx + 18, y0 + 16, bx + 33, y0 + 12, 1.1);
+      const cxx = bx + 34, cyy = y0 + 14;
+      cx.globalAlpha = q * 0.7; cx.fillStyle = LUZ_FORA;
+      for (let i = 0; i < 16; i++) {
+        const a2 = -1.0 + i * 0.133;
+        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14) - 2, cyy + Math.round(Math.sin(a2) * 18) - 2, 6, 6);
+      }
+      cx.globalAlpha = q * 0.95; cx.fillStyle = LUZ_MEIO;
+      for (let i = 0; i < 16; i++) {
+        const a2 = -1.0 + i * 0.133;
+        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14) - 1, cyy + Math.round(Math.sin(a2) * 18) - 1, 4, 4);
+      }
+      cx.globalAlpha = q; cx.fillStyle = LUZ_CORE;
+      for (let i = 3; i < 13; i++) {
+        const a2 = -1.0 + i * 0.133;
+        cx.fillRect(cxx + Math.round(Math.cos(a2) * 14), cyy + Math.round(Math.sin(a2) * 18), 2, 2);
+      }
+      cx.globalAlpha = 1;
+    } else if (attackType === 1) {     // a spiral climbing off the tip
+      vara(bx + 17, y0 + 19, bx + 28, y0 + 1, 1.2);
+      for (let i = 0; i < 9; i++) {
+        const t2 = i / 8;
+        luz(bx + 28 + Math.round(Math.sin(t2 * 5.4 + tick * 0.2) * 9), y0 + 2 - Math.round(t2 * 32),
+          0.9 - t2 * 0.42, q * (1 - t2 * 0.5));
+      }
+    } else {                           // LEAP: gathered overhead, then driven into the ground
       const subindo = pj < 0.5;
-      if (subindo) {                  // overhead, both hands, blade pointing up
-        lamina(bx + 17, y0 - 28, 4, 30, true);
-        cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 13, y0 + 2, 12, 4);
-        cx.fillStyle = "rgba(255,240,200,.35)";      // gathering glow
-        cx.fillRect(bx + 11, y0 - 34, 16, 4); cx.fillRect(bx + 15, y0 - 40, 8, 4);
-      } else {                        // driven down and forward
-        const q = (pj - 0.5) * 2;
-        const passos = [];
-        for (let i = 0; i < 7; i++) passos.push([bx + 23 + i * 4, y0 + 2 + i * 4, 6, 4]);
-        laminaSeq(passos, false);
-        cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 19, y0 - 2, 8, 4);
-        cx.fillStyle = fade;         // arc trail sweeping from overhead to the ground
-        for (let i = 0; i < 6; i++) {
-          const a = (-0.9 + q * 1.7) - i * 0.16;
-          cx.fillRect(bx + 15 + Math.round(Math.cos(a) * 40), y0 + 4 + Math.round(Math.sin(a) * 40), 4, 4);
+      if (subindo) {                   // both hands up, light collecting above the tip
+        vara(bx + 18, y0 - 2, bx + 20, y0 - 24, 1.8 + pj * 2.4);
+        for (let i = 0; i < 5; i++) {  // motes falling in toward what he is gathering
+          const a2 = tick * 0.16 + i * 1.26, rr = 24 - pj * 30;
+          luz(bx + 19 + Math.round(Math.cos(a2) * rr), y0 - 26 + Math.round(Math.sin(a2) * rr * 0.5), 0.65, 0.8);
+        }
+      } else {                         // driven down and forward, a spear of light to the dirt
+        const qq = (pj - 0.5) * 2;
+        vara(bx + 18, y0 + 13, bx + 30, y0 + 30, 1.5);
+        const tx = bx + 29, ty = y0 + 32, alt = Math.max(0, GROUND - ty);
+        cx.globalAlpha = 0.30; cx.fillStyle = LUZ_FORA; cx.fillRect(tx - 3, ty, 11, alt);
+        cx.globalAlpha = 0.60; cx.fillStyle = LUZ_MEIO; cx.fillRect(tx - 1, ty, 7, alt);
+        cx.globalAlpha = 0.95; cx.fillStyle = LUZ_CORE; cx.fillRect(tx + 1, ty, 3, alt);
+        cx.globalAlpha = 1;
+        for (let i = 0; i < 6; i++) {  // the arc it swept through, still hanging in the air
+          const a2 = (-1.1 + qq * 1.7) - i * 0.16;
+          luz(bx + 15 + Math.round(Math.cos(a2) * 40), y0 + 4 + Math.round(Math.sin(a2) * 40), 0.65, 0.75 - i * 0.11);
         }
       }
     }
-    braco(asx + 5, y0 + 19);
   } else {
-    lamina(bx + 21, y0 - 12, 4, 28, true);                          // blade rests on the shoulder
-    cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 19, y0 + 16, 8, 3);  // guard
-    cx.fillStyle = "#c8912f"; cx.fillRect(bx + 19, y0 + 18, 8, 1);
-    cx.fillStyle = "#5a3b22"; cx.fillRect(bx + 21, y0 + 19, 4, 6);  // grip
-    braco(bx + 20, y0 + 19);
+    // at rest the wand is carried up and forward, tip lit — the silhouette anchor the
+    // blade used to be, and a reminder that the thing is always awake
+    braco(bx + 18, y0 + 13);
+    vara(bx + 19, y0 + 14, bx + 28, y0 - 4, 0.9 + Math.sin(tick * 0.09) * 0.16);
+    if (tick % 22 === 0) {             // one mote drifting off the tip now and then
+      parts.push({ x: bx + 29, y: y0 - 3, vx: 4 + Math.random() * 8, vy: -10 - Math.random() * 10,
+        life: 0.9, c: MOTES[Math.floor(Math.random() * MOTES.length)], aura: LUZ_MEIO, grav: -8 });
+    }
   }
   // dust puffs at the feet on each step (fluid running feel)
   if (fi !== lastFi && fi % 2 === 0) {
@@ -1533,11 +1635,17 @@ function drawScene() {
     }
   }
 
-  // sprouts planted by taps in steady mode
-  cx.fillStyle = "#38b764";
+  // sprouts planted by taps in steady mode — what the wand is actually for, so a fresh one
+  // still carries the light it was planted with for a second before settling into a plant
   sprouts.forEach(function (s) {
     const sx = Math.round(s.wx - worldX);
-    if (sx > -10 && sx < W + 10) { cx.fillRect(sx, GROUND - 5, 2, 5); cx.fillRect(sx - 2, GROUND - 7, 6, 3); }
+    if (sx > -10 && sx < W + 10) {
+      const novo = Math.max(0, (s.life - 540) / 60);
+      if (novo > 0) luz(sx + 1, GROUND - 6, 0.6 + novo * 0.6, novo * 0.7);
+      cx.fillStyle = "#1f6e40"; cx.fillRect(sx, GROUND - 5, 2, 5);
+      cx.fillStyle = "#2e9b54"; cx.fillRect(sx - 2, GROUND - 7, 6, 3);
+      cx.fillStyle = "#6fdd94"; cx.fillRect(sx - 1, GROUND - 7, 4, 1); cx.fillRect(sx + 1, GROUND - 5, 1, 5);
+    }
     s.life--;
   });
   sprouts = sprouts.filter(function (s) { return s.life > 0 && s.wx - worldX > -20; });
@@ -1579,6 +1687,13 @@ function drawScene() {
     parts.push({ x: W + 4, y: Math.random() * GROUND * 0.7, vx: -14 - Math.random() * 10, vy: 6 + Math.random() * 6,
       life: 6, c: Math.random() < 0.7 ? "#6fdd94" : "#ff7d9c", grav: 0 });
   }
+  // the mending leaves a residue: motes lifting off ground that has been worked on
+  if (h > 0.45 && Math.random() < 0.035) {
+    parts.push({ x: Math.random() * W, y: GROUND + Math.random() * 10,
+      vx: (Math.random() - 0.5) * 10, vy: -7 - Math.random() * 10,
+      life: 1.6 + Math.random(), c: MOTES[Math.floor(Math.random() * MOTES.length)],
+      aura: LUZ_MEIO, grav: -6 });
+  }
   // butterflies flutter near the ground when the world is thriving
   if (h > 0.75) {
     for (let b = 0; b < 2; b++) {
@@ -1594,22 +1709,32 @@ function drawScene() {
   shocks.forEach(function (s) {
     const sx = Math.round(s.wx - worldX), p = s.t / 26, a = Math.pow(1 - p, 0.55);
     const r = Math.round(4 + p * 74);
-    if (s.t < 6) {                                  // white flash right at the point of impact
-      cx.globalAlpha = (1 - s.t / 6) * 0.9; cx.fillStyle = "#ffffff";
+    if (s.t < 6) {                                  // the flash where the magic went in
+      cx.globalAlpha = (1 - s.t / 6) * 0.9; cx.fillStyle = LUZ_CORE;
       cx.fillRect(sx - 18 - s.t * 5, GROUND - 12 - s.t, 36 + s.t * 10, 14 + s.t);
-      cx.fillStyle = "#ffe9b0";
+      cx.fillStyle = LUZ_QUENTE;
       cx.fillRect(sx - 24 - s.t * 6, GROUND - 4, 48 + s.t * 12, 5);
+      cx.globalAlpha = (1 - s.t / 6) * 0.5; cx.fillStyle = LUZ_MEIO;
+      cx.fillRect(sx - 30 - s.t * 7, GROUND - 6, 60 + s.t * 14, 9);
     }
-    cx.globalAlpha = a * 0.55; cx.fillStyle = "#ffffff";
+    cx.globalAlpha = a * 0.55; cx.fillStyle = LUZ_CORE;
     cx.fillRect(sx - r, GROUND - 1, r * 2, 3);      // bright line racing outward
     cx.globalAlpha = a;
     const lift = 4 + Math.round(a * 14);
-    ["#ffe9b0", "#e8edf6", "#9b8468"].forEach(function (col, ci) {
+    [LUZ_CORE, LUZ_MEIO, LUZ_FORA].forEach(function (col, ci) {
       const rr = r - ci * 6;
       if (rr < 2) return;
       cx.fillStyle = col;
       cx.fillRect(sx - rr, GROUND - 4, 7, 6); cx.fillRect(sx + rr - 7, GROUND - 4, 7, 6);
       cx.fillRect(sx - rr + 2, GROUND - lift, 4, lift); cx.fillRect(sx + rr - 6, GROUND - lift, 4, lift);
+    });
+    cx.globalAlpha = a * 0.85;                       // and something green comes up where he hit
+    cx.fillStyle = "#2e9b54";
+    const br = Math.min(1, s.t / 8);
+    [-14, -6, 3, 11].forEach(function (o, oi) {
+      const bh = Math.round(br * (4 + oi % 3 * 3));
+      cx.fillRect(sx + o, GROUND - bh, 2, bh);
+      cx.fillStyle = "#6fdd94"; cx.fillRect(sx + o - 1, GROUND - bh - 2, 4, 2); cx.fillStyle = "#2e9b54";
     });
     cx.globalAlpha = a * 0.5;                        // cracked dirt left where he hit
     cx.fillStyle = "#3a2a1c";
@@ -1625,6 +1750,7 @@ function drawScene() {
 
   // THE SPARK — running hero
   drawHero();
+  desenharMagias();
 
   // particles (sparks, ash, leaves)
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -1632,9 +1758,14 @@ function drawScene() {
     p.vy += (p.grav || 0) / 60;
     p.x += p.vx / 60; p.y += p.vy / 60; p.life -= 1 / 60;
     if (p.life <= 0 || p.y > H || p.x < -6) { parts.splice(i, 1); continue; }
-    cx.globalAlpha = Math.min(1, p.life * 2);
+    const pa = Math.min(1, p.life * 2), px2 = Math.round(p.x), py2 = Math.round(p.y);
+    if (p.aura) {                                  // motes of channelled light carry a halo
+      cx.globalAlpha = pa * 0.26; cx.fillStyle = p.aura;
+      cx.fillRect(px2 - 2, py2 - 1, 6, 4); cx.fillRect(px2 - 1, py2 - 2, 4, 6);
+    }
+    cx.globalAlpha = pa;
     cx.fillStyle = p.c;
-    cx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);
+    cx.fillRect(px2, py2, 2, 2);
     cx.globalAlpha = 1;
   }
 
