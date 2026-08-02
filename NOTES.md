@@ -86,6 +86,46 @@ That ceiling is not a tuning failure, it is arithmetic already in this file: **t
 4–7% of total impact**, so no tap-shaped skill can ever be worth much here. A skill that
 wanted to matter more would have to pay in something other than swings.
 
+## The super — three combos land, and the next swing is not a swing
+
+| | value | why |
+|---|---|---|
+| arms after | 3 completed combos = 9 of **your own** swings | the owner's ask, literally |
+| what actually gates it | `superRecarga` **22s**, during which combos stop counting | nine swings is 1.3s while holding; without the cooldown it would fire every 1.3s |
+| pays in | the road clears (each trouble drops what it held) + **×1.15 for 4s** | *not* swing damage — see the 4–7% ceiling above |
+| where the multiplier lands | exactly where `bonusMutirao()` lands: production, drops, taps | one shape, one place to reason about |
+| charged by the wand / U4 | **never** | `clicar(auto)` and `clicar(false, true)` both skip the charge |
+| touches tiredness | **never**, in either direction | there is no path from `dispararSuper()` to `S.poluicao` |
+
+Measured: the winner goes **6m41s → 6m27s**, worth **3.5%** — about 2.7× what AUTO-FIRE is
+worth, which is the point: a tap-shaped payoff is capped at the 4–7% tap share, and this one
+is not tap-shaped. Every row keeps its place, the worst team health per row is unchanged
+(75% / 100% / 5%), and hands-off runs barely move (GO STEADY 12m02s → 12m01s) because they
+never swing. Split out with `superMult` forced to 1.0: **clearing the road alone is worth
+1 second** to someone who is already holding the button — they keep the road clear anyway —
+so the window is doing all the work and it is the only knob worth turning.
+`--patch=semSuper` reproduces the pre-super table to the second. The table as it stands:
+
+| strategy | time | worst team |
+|---|---|---|
+| rhythm + hold + world | **6m27s** | 75% |
+| projects STEADY + hold + world | 6m45s | 100% |
+| rhythm + hold | 7m17s | 75% |
+| STEADY + hold 25% + world | 7m22s | 100% |
+| projects STEADY + hold | 7m24s | 100% |
+| projects, GO STEADY + U4 | 10m57s | 100% |
+| projects, GO STEADY | 12m01s | 100% |
+| rhythm, hands off | 14m00s | 75% |
+| hold only, no projects | 41m59s | 100% |
+| projects FAST + hold + world | 47m43s | 5% |
+| projects FAST + hold | 52m40s | 5% |
+| projects, GO FAST | 1h25m29s | 5% |
+
+State the drawing side can read: `superFx = { t, dur, sx }` while the effect plays (`t`
+counts up in seconds, `t/dur` is the progress), `superT` (seconds of window left),
+`superCarga` (0..3), `superCd`, `superPronto()`, and the `#flash.super` wash.
+`desenharSuper()` is a self-contained placeholder meant to be replaced.
+
 ## The rhythm, explained
 
 The prototype exists to measure one decision and the game never told the player what they
@@ -134,6 +174,8 @@ real seconds and comparing — 501.34 vs 501.34.
 | thing | number | where it lands |
 |---|---|---|
 | a trouble walks in | 34 world px/s, ~3.8s of warning | `atualizarMobs(dt)` |
+| how many hits it takes | smog **2**, money bag **3**, barrel **5** (`CFG.mobHp`) | 2 / 3 / 4 swings from the button |
+| how much is left | pips over its head, `desenharVidaMob()` | drawn from `m.hp` / `m.hpMax` |
 | arrivals | one per 7s ÷ (1+smog), 3 alive at most | a worn-out team draws more |
 | queue | 20px apart, at HX+26/+46/+66 | all inside a swing's reach (80/96) |
 | standing in the way | **−10% production each**, −30% at three | multiplier, *never* tiredness |
@@ -244,7 +286,8 @@ The smoke test covers the long-press, the suppressed tap and the corrupt-record 
 Taps chain a 3-hit combo, all three cast rather than swung: a flat crescent of light
 thrown ahead → a spiral climbing off the wand tip → the **leap slam** (hero jumps ~52
 world px, gathers light overhead, drives a spear of it into the dirt, lands with a flash,
-an expanding wave and green things pushing up through the cracks). Holding the main button
+an expanding wave and green things pushing up through the cracks). Three combos on top of
+that arm **the super** — see its own section. Holding the main button
 — or the scene — repeats at ~7 hits/s, from a **single shared timer**, so holding both
 surfaces at once cannot double the rate. Sprouts are capped at 40 so holding in steady
 mode doesn't flood the scene. The bolt is spawned from the drawing code off the attack
@@ -763,6 +806,74 @@ toda sessão começa lendo a última entrada.
   `lerpC()` espalhados, e só então a densidade 1:3 — que é o passo arriscado e precisa ser
   medido com cuidado. Dúvida honesta: com a faixa separadora, a serra do fundo quase some;
   o próprio `DIRECAO.md` já tinha anotado isso como falha do mockup C.**
+
+- **2026-08-02 · o super, a vida dos bichinhos e o replanejamento da barra de baixo.**
+  Três pedidos do dono, na mesma sessão.
+
+  **(1) O SUPER.** Três combos completos armam; o golpe seguinte não é um golpe. O que
+  *de fato* segura a frequência não é a contagem de combos — nove golpes são 1,3s
+  segurando o botão — é a **recarga de 22s**, durante a qual os combos param de contar.
+  Isso faz do super um evento de ~23 em 23 segundos, esteja você segurando ou cutucando.
+  **Ele não paga em dano de golpe, e isso foi decisão medida, não de gosto**: o próprio
+  NOTES já registra que toque é 4–7% do impacto total, então nenhum prêmio em forma de
+  golpe pode valer muito aqui. Ele paga nas duas moedas da camada do mundo: a **rua limpa**
+  (tudo que estiver nela cai de uma vez, cada um largando o que carregava) e uma **janela
+  de mutirão curta, ×1,15 por 4s**, aplicada exatamente onde o `bonusMutirao()` é aplicado.
+  **Medido** (`node test/sim.js`): a corrida vencedora foi de **6m41s para 6m27s**, ou seja
+  **3,5%** — cerca de 2,7× o que vale o AUTO-FIRE. Nenhuma linha da tabela trocou de lugar,
+  a pior saúde do time por linha ficou idêntica (75% / 100% / 5%), e as corridas de mãos
+  livres quase não se moveram (GO STEADY 12m02s → 12m01s), porque elas não golpeiam. Separei
+  as duas metades forçando `superMult` a 1,0: **limpar a rua sozinho vale 1 segundo** para
+  quem já segura o botão — essa pessoa já mantém a rua limpa —, então quem faz o trabalho
+  é a janela, e é ela o único botão de calibragem que importa. Guardas: `--patch=semSuper`
+  reproduz a tabela anterior ao segundo; `--patch=u2Sempre` continua derrubando tudo para
+  **4m08s com o time a 36%**; `--patch=semMundo` continua reproduzindo 7m28s / 7m35s /
+  8m37s. **A regra dura foi cumprida por construção e virou teste**: os tiros da varinha
+  (`clicar(true)`) e os toques dos vizinhos (`clicar(false, true)`) **não carregam** o
+  super, então celular na mesa nunca constrói um; e o smoke test leva o cansaço a 100,
+  dispara um super inteiro e confere que ele saiu **100 → 100**.
+
+  **(2) A vida dos bichinhos era invisível.** A mecânica já existia — os golpes tiravam
+  `hp` — mas nada nunca a desenhou, então o bicho parecia invulnerável até estourar de
+  repente. Agora tem **pips na cabeça** (`desenharVidaMob()`, sem DOM, um contorno escuro e
+  n quadradinhos), e o número de pips é o que diz "este é o grande". O 3 contra 4 também
+  não lia como pequeno contra grande: virou **2 / 3 / 5**, amarrado aos sprites — a fumaça
+  é a menor coisa da rua e cai em **um combo** (2 golpes), o saco de dinheiro leva 3, o
+  tambor tóxico é o mais pesado e leva 4. O `CFG.mobHp` e o `CFG.mobMix` passaram a viver
+  no CFG para o `test/formulas.js` calcular o `hpMedio(modo)` esperado em vez de carregar
+  um 3,3 copiado à mão. **Medido**: a tabela se moveu no máximo 4s numa linha
+  (`projects FAST + hold + world` 49m20s → 49m16s) e a vencedora ficou em 6m41s antes e
+  depois — como tinha de ser, porque o hp médio ponderado pela mistura de spawn praticamente
+  não mudou (3,22 → 3,24 em GO STEADY).
+
+  **(3) Os quatro botões tinham o mesmo peso.** Eram quatro lajes idênticas para quatro
+  funções diferentes. O bloco foi replanejado para a forma dizer o que cada coisa é: linha
+  de cima `[tocha] [ ——— o RITMO em que você está ——— ]`; linha de baixo, `PROJECTS` e
+  `UPGRADES` empilhados **do lado** (foi o que o dono pediu) ao lado da **ação principal**,
+  que agora ocupa ~63% da largura e a altura inteira da linha. **Medido**: bloco de 93px
+  para 122px, `--hControles` de 109 para 138 — e ele continua sendo **medido do bloco real**,
+  não chumbado. O teste dessa regra ficou mais forte do que era: agora ele afere contra o
+  `#controls` (e não contra uma linha *dentro* dele, que é justamente o que um replanejamento
+  move sem querer), confere que a variável está a menos de 24px da altura real, **cresce o
+  bloco em 40px e exige que a variável siga e volte** (142 → 182 → 142), e confere que a
+  tarja REAL DATA também não encosta no bloco. Folha de projetos em 706 contra o topo dos
+  controles em 712.
+
+  **Quebrou no caminho, duas coisas, as duas pegas pelo teste.** (a) A tarja de aviso passou
+  a mostrar a janela do super **por cima da chamada da comunidade** — e a chamada é a única
+  coisa do jogo com prazo para fechar; a prioridade da tarja foi reordenada para a chamada
+  vir primeiro. (b) Os testes de cadência de golpe ficaram intermitentes: segurar por 1s
+  chega perto dos nove golpes, então às vezes o super disparava no meio da medição e inflava
+  o número ("segurar as duas superfícies dobrou a cadência", que era falso); os dois blocos
+  agora estacionam o super antes de medir, e ele tem bloco próprio. Verde, 61 FPS.
+
+  **Deixei de fora de propósito:** um contador de "upgrade disponível" no botão UPGRADES
+  (é UI nova, não estrutura, e a agente de estética está mexendo na mesma fileira) e
+  qualquer segunda skill. **Dúvida nova:** a rua limpa vale 1 segundo para quem segura o
+  botão, e não medi quanto ela vale para quem **quase não toca** — essa pessoa também
+  quase não carrega o super, então talvez o prêmio esteja indo justamente para quem menos
+  precisa dele. Vale medir uma corrida com `hold: 0.05` antes de calibrar mais.
+  **Próximo passo: medir a curva do dia 2, que continua pendente desde a sessão do mundo.**
 
 ## Would cut with one more day
 
