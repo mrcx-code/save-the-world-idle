@@ -76,6 +76,8 @@
   #flash.vai { animation: lavagem .5s ease-out 1; }
   #flash.fast { background: radial-gradient(ellipse at 50% 70%, rgba(255,107,87,.85) 0%, rgba(177,62,83,.5) 45%, transparent 78%); }
   #flash.steady { background: radial-gradient(ellipse at 50% 70%, rgba(111,221,148,.8) 0%, rgba(56,183,100,.45) 45%, transparent 78%); }
+  /* the super: the whole frame goes warm, not a corner of it */
+  #flash.super { background: radial-gradient(ellipse at 26% 72%, rgba(255,233,176,.95) 0%, rgba(255,205,117,.7) 34%, rgba(111,221,148,.4) 66%, transparent 92%); }
   @keyframes lavagem { 0% { opacity: .72 } 35% { opacity: .34 } 100% { opacity: 0 } }
   .pop { animation: estala .42s ease-out 1; }
   @keyframes estala { 0% { transform: scale(1.14); filter: brightness(1.9) } 100% { transform: scale(1); filter: none } }
@@ -114,24 +116,24 @@
   /* ---- bottom controls ---- */
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
     bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
-  /* THE MENU IS A TRAY, NOT FOUR IDENTICAL SLABS. Four buttons of equal width and equal
-     weight told the eye they were four equal things, and they are not: the rhythm readout
-     is the decision the whole game exists to measure, projects is the purchase you make
-     over and over, and upgrades and the torch are places you visit occasionally. They get
-     width and value in that order, inside one dark tray with hairline dividers, so the row
-     reads as a menu bar rather than a shelf of buttons. Markup untouched — this is width,
-     fill and value only. */
-  #menuRow { display: flex; gap: 0; margin-bottom: 7px; padding: 3px;
-    background: linear-gradient(180deg, #202a4e, #10162c);
-    border: 2px solid var(--contorno); border-radius: 2px;
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.10); }
-  #menuRow button { flex: 1; padding: 7px 4px; font-size: var(--fs-sm); border: 0; border-radius: 0;
-    background: transparent; box-shadow: none; color: #b9c8e8;
-    display: flex; align-items: center; justify-content: center; gap: 6px; }
-  #menuRow button + button { border-left: 1px solid rgba(255,255,255,.09); }
-  #menuRow button:not(:disabled):active { transform: none; background: rgba(255,255,255,.09); box-shadow: none; }
-  #openProjects { flex: 1.35 !important; color: var(--gold); font-weight: 800; }
-  #openUpgrades, #openTorch { flex: .8 !important; }
+  /* Four entries with four different weights instead of four identical slabs.
+     Row 1: the thing you KEEP (small square) beside the RHYTHM you are running (wide
+     readout). Row 2: the things you BUILD with, stacked at the side, beside the main
+     action, which takes the rest of the block. Whatever this row ends up measuring,
+     --hControles is read off the real block on load and on resize — see medirControles(). */
+  #linhaTopo { display: flex; gap: 6px; margin-bottom: 6px; }
+  #linhaMain { display: flex; gap: 6px; align-items: stretch; }
+  #controls button { display: flex; align-items: center; justify-content: center; gap: 6px; }
+  /* the thing you keep: an icon, and only an icon */
+  .btnIcone { flex: 0 0 auto; width: 46px; padding: 8px 0; }
+  /* the things you build with: a stacked pair, named, at the side */
+  #colLado { display: flex; flex-direction: column; gap: 6px; flex: 0 0 37%; max-width: 176px; min-width: 0; }
+  #colLado button { flex: 1 1 0; min-height: 34px; padding: 5px 8px; font-size: var(--fs-sm);
+    justify-content: flex-start; gap: 5px; }
+  #colLado b { font-weight: 700; font-size: var(--fs-sm); }
+  #colLado .rot { font-size: 8px; letter-spacing: .5px; opacity: .8; margin-left: auto; }
+  /* Poster chrome from the estetica pass; the components below it are the jogabilidade
+     pass's new UI, kept because they are structure, not style. */
   button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno); border-radius: 2px;
     cursor: pointer; color: var(--chromeT); text-transform: uppercase;
     background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
@@ -140,10 +142,8 @@
   button:disabled { opacity: .5; cursor: default; }
   button:not(:disabled):active { transform: translateY(2px);
     box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14); }
-  /* the mode button is a STATE readout, not an icon that swaps — and it is the widest thing
-     in the row because it is the decision the prototype was built to measure */
-  #modeQuick { flex: 2.1 !important; gap: 5px; padding: 6px 5px; border: 2px solid var(--contorno) !important;
-    border-radius: 2px; margin-left: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.14) !important; }
+     this whole prototype exists to measure, so it gets a line of its own */
+  #modeQuick { flex: 1 1 auto; min-width: 0; gap: 6px; padding: 6px 8px; justify-content: flex-start; }
   #modeQuick .mq { display: flex; flex-direction: column; align-items: flex-start; min-width: 0;
     line-height: 1.25; overflow: hidden; }
   #modeQuick .mq b { font-size: 9px; font-weight: normal; }
@@ -153,8 +153,11 @@
   /* it is costing you right now: say so without words */
   #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
   @keyframes doendo { 0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 16px rgba(255,107,87,.9) } 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } }
-  /* the one action of the game, and it should not be arguable which one it is */
-  #btnClique { width: 100%; padding: 13px 10px; font-size: var(--fs-lg); font-weight: 800;
+  /* the main action: the rest of the block, and the only thing in it with weight */
+  /* the one action of the game, and it should not be arguable which one it is: the new
+     layout's geometry, wearing the gold the chrome pass reserved for exactly this button */
+  #btnClique { flex: 1 1 auto; min-width: 0; min-height: 74px; padding: 11px 10px;
+    font-size: var(--fs-lg); font-weight: 800;
     background: linear-gradient(180deg, #ffe28f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
     color: #2a1a06; border-width: 3px; letter-spacing: .02em;
     display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -170,6 +173,16 @@
   /* the wand's charge, on the button that swings it */
   #foco { position: absolute; left: 0; top: 0; height: 4px; width: 0%; background: var(--purple);
     box-shadow: 0 0 6px rgba(141,91,214,.9); transition: width .2s; }
+  /* the super's charge, on the button that swings it: one square per completed combo */
+  .cs { position: absolute; left: 10px; bottom: 5px; display: flex; gap: 3px; }
+  .cs i { display: block; width: 6px; height: 6px; background: rgba(18,36,46,.16);
+    box-shadow: inset 0 0 0 1px rgba(18,36,46,.42); }
+  .cs i.on { background: var(--contorno); box-shadow: none; }
+  #btnClique.super { background: #ffe9b0;
+    box-shadow: 0 5px 0 var(--contorno), 0 0 26px rgba(255,205,117,.95);
+    animation: superPronto .5s steps(2, end) infinite; }
+  #btnClique.super .cs i { background: var(--contorno); box-shadow: none; }
+  @keyframes superPronto { 0% { filter: none } 50% { filter: brightness(1.18) saturate(1.25) } 100% { filter: none } }
   #btnClique.canal { box-shadow: 0 5px 0 var(--contorno), 0 0 30px rgba(141,91,214,.95);
     animation: canalizar .55s steps(2, end) infinite; }
   @keyframes canalizar { 0% { filter: none } 50% { filter: brightness(1.25) saturate(1.3) } 100% { filter: none } }
@@ -327,15 +340,24 @@
 <div id="alerta"></div>
 <div id="fato"></div>
 
+<!-- Four entries, four different jobs, and they used to be four identical slabs in a row.
+     Now the block says what each one is: the RHYTHM you are running is a wide readout (it
+     is the one decision this prototype exists to measure), the TORCH is a small keepsake
+     button beside it, the two things you BUILD with are a stacked pair at the side, and
+     the main action takes the whole rest of the block under your thumb. -->
 <div id="controls">
-  <div id="menuRow">
-    <button id="openProjects"><canvas class="pi" data-i="house" width="12" height="12"></canvas><span id="nGeradores">0</span></button>
-    <button id="openUpgrades"><canvas class="pi" data-i="up" width="12" height="12"></canvas></button>
-    <button id="openTorch"><canvas class="pi" data-i="torch" width="12" height="12"></canvas></button>
+  <div id="linhaTopo">
+    <button id="openTorch" class="btnIcone" aria-label="torch"><canvas class="pi" data-i="torch" width="12" height="12"></canvas></button>
     <button id="modeQuick"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas><span
       class="mq"><b id="modeNome">FAST</b><i id="modeSub"></i></span></button>
   </div>
-  <button id="btnClique"><div id="foco"></div><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
+  <div id="linhaMain">
+    <div id="colLado">
+      <button id="openProjects"><canvas class="pi" data-i="house" width="12" height="12"></canvas><b id="nGeradores">0</b><span class="rot">PROJECTS</span></button>
+      <button id="openUpgrades"><canvas class="pi" data-i="up" width="12" height="12"></canvas><span class="rot">UPGRADES</span></button>
+    </div>
+    <button id="btnClique"><div id="foco"></div><span id="cargaSuper" class="cs"></span><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
+  </div>
 </div>
 
 <div class="sheet" id="sheetProjects">
@@ -496,6 +518,13 @@ const CFG = {
   mobVel: 34,              // world px/s a trouble advances toward you
   mobIntervalo: 7,         // seconds between arrivals (shorter when the team is worn out)
   mobMax: 3, mobFila: 20,  // ...and they queue up, one body-width apart
+  // How many hits each one takes, and how often each shows up. The spread is deliberate
+  // and it is read off the sprites: the smog wisp is the smallest thing on the road and
+  // goes down in one combo, the toxic barrel is the heaviest and takes two. 3-vs-4 was
+  // invisible. The mix lives here too so the simulator can compute the expected hp of an
+  // arrival instead of carrying a hand-copied average.
+  mobHp: { smog: 2, cash: 3, barrel: 5 },
+  mobMix: { carvao: { smog: 0.45, barrel: 0.75 }, limpo: { smog: 0.20, barrel: 0.42 } },
   bloqueioPorMob: 0.10,    // production a trouble blocks while it stands in your way
   dropVida: 9,             // seconds a drop waits on the ground
   dropBase: 3, dropPorProjeto: 0.55,
@@ -512,7 +541,17 @@ const CFG = {
   // picking a drop up, answering a call). Leave the phone on a table and it never fires.
   custoSkillAuto: 2000,
   focoMax: 40, focoMob: 8, focoDrop: 5, focoChamada: 25,
-  autoFogoTiros: 10, autoFogoDreno: 4
+  autoFogoTiros: 10, autoFogoDreno: 4,
+  // --- THE SUPER. Land three combos and the next swing is not a swing.
+  // It deliberately does NOT pay in swing damage: taps are 4–7% of total impact (NOTES),
+  // so a bigger hit could never feel worth the build-up. It pays in the two things the
+  // world layer already trades in — the road, and a short window where the street works
+  // with you. Never tiredness, in either direction.
+  superCombos: 3,        // completed combos that arm it
+  superRecarga: 22,      // seconds before it starts charging again — this is what makes it rare
+  superSeg: 4,           // how long the street stays with you afterwards
+  superMult: 1.15,        // ...and by how much, on production, drops and taps alike
+  superFxSeg: 1.1        // how long the screen effect runs. Drawing only, no economy.
 };
 
 let S = {
@@ -542,10 +581,13 @@ function bloqueioMundo() {
   return Math.max(0, 1 - Math.min(n, CFG.mobMax) * CFG.bloqueioPorMob);
 }
 const bonusMutirao = () => (mutiraoT > 0 ? CFG.mutiraoMult : 1);   // the whole street shows up
+// the super's window: a smaller, shorter mutirão you earned by playing rather than by
+// being there when the pot came out. Same shape on purpose — a multiplier, never tiredness.
+const bonusSuper = () => (superT > 0 ? CFG.superMult : 1);
 // coming back on a new day is worth something: the neighbourhood knows you now
 const bonusDias = () => 1 + CFG.bonusDia * Math.min(Math.max(0, R.dias.length - 1), CFG.diasMax);
 const ganhoClique = () => 1 * forcaToque() * bonusInovacao() * eficiencia() * bonusJusto()
-  * bonusMutirao() * bonusDias();
+  * bonusMutirao() * bonusSuper() * bonusDias();
 
 function tetoLimpoAtual() { return S.u3 ? 4 : CFG.tetoLimpo; }
 function rampaAtual() {
@@ -561,7 +603,7 @@ function prodPorSegundo() {
   if (S.modo === "carvao") porGerador = CFG.prodCarvao * (S.u1 ? 2 : 1);
   else porGerador = CFG.prodLimpoBase * rampaAtual();
   return S.geradores * porGerador * bonusInovacao() * eficiencia() * bonusJusto()
-    * bloqueioMundo() * bonusMutirao() * bonusDias();
+    * bloqueioMundo() * bonusMutirao() * bonusSuper() * bonusDias();
 }
 function poluicaoPorSegundo() {
   if (S.modo !== "carvao") return 0;
@@ -698,6 +740,82 @@ let drops = [], mutiraoT = 0, chamada = null, chamadaT = 0, mobT = 0;
 let chamadaDobrada = false, diaNovo = false, voltouDepoisDe = 0;
 
 // ============================================================
+// THE SUPER — three combos land, and the next swing is not a swing
+//
+// What it pays in, and why it is not a bigger hit. NOTES has the ceiling written down:
+// taps are 4–7% of total impact, so doubling or tripling a swing could never feel worth a
+// build-up. So the super pays in the two currencies the world layer already uses:
+//   1. the road — every trouble on it goes down at once, each leaving what it was holding,
+//      which is worth up to the −30% they were taking off production;
+//   2. a short window where the street works with you, ×superMult for superSeg seconds,
+//      applied exactly where the mutirão is applied.
+// What gates it is NOT the combo count — nine swings is 1.3s while holding. It is
+// `superRecarga`: after it fires, combos stop counting for 22s. That makes the super a
+// once-every-~23s event whether you are holding the button or poking at it, which is what
+// lets the payoff be tuned as a per-23s thing.
+//
+// The rule the whole file obeys: **it does not touch tiredness, in either direction.**
+// Not the emission, not the decay, not a heal. The one shape this game has already died
+// of is automation that pays down tiredness.
+//
+// FOR THE ESTÉTICA AGENT — everything the spectacle needs is here and readable:
+//   superFx      · null, or { t, dur, sx } while the effect plays. t counts up in seconds.
+//   superT       · seconds of window left (0 when it is over)
+//   superCarga   · 0..CFG.superCombos, how charged it is
+//   superCd      · seconds until it can start charging again
+//   superPronto()· true while it is armed and the next swing will fire it
+//   #flash.super · the full-frame wash class, fired by piscarSuper()
+// desenharSuper() below is a placeholder screen effect and is meant to be replaced.
+// ============================================================
+let superCarga = 0, superCd = 0, superT = 0, superFx = null, superSwings = 0, superVezes = 0;
+const superPronto = () => superCarga >= CFG.superCombos;
+
+// One player swing's worth of charge. Only the player's own swings count: the neighbours'
+// auto-taps (U4) and the wand's channelled shots pass through here marked, so a phone left
+// on a table never builds a super. Same reasoning as AUTO-FIRE's focus.
+function carregarSuper() {
+  if (superPronto() || superCd > 0) return;
+  superSwings++;
+  if (superSwings % CFG.superCombos === 0) {       // one more completed combo
+    superCarga++;
+    if (superPronto()) {
+      floats.push({ x: HX - 12, y: GROUND - 64, txt: "SUPER READY", life: 60 });
+      burst(HX + 6, GROUND - 26, 14, ["#ffcd75", "#6fdd94", "#ffe9b0"]);
+    }
+  }
+}
+function piscarSuper() {
+  const f = $("flash");
+  if (!f) return;
+  f.className = ""; void f.offsetWidth; f.className = "vai super";
+}
+function dispararSuper() {
+  superCarga = 0; superSwings = 0; superCd = CFG.superRecarga; superVezes++;
+  superT = CFG.superSeg;
+  superFx = { t: 0, dur: CFG.superFxSeg, sx: HX + 6 };
+  // 1. the road goes. Everything standing on it falls at once and leaves what it held —
+  // the same clear the community call does, because it is the same idea: everyone at once.
+  mobs.forEach(function (m) {
+    if (m.dying > 0) return;
+    m.hp = 0; m.dying = 8;
+    soltarDrop(m, Math.round(m.wx - worldX));
+  });
+  // 2. and the street stays with you for a few seconds
+  floats.push({ x: HX - 22, y: GROUND - 52, txt: "ALL TOGETHER!", life: 62 });
+  floats.push({ x: HX - 4, y: GROUND - 74, txt: "×" + CFG.superMult + " " + CFG.superSeg + "s", life: 50 });
+  burst(HX + 6, GROUND - 22, 34, ["#ffcd75", "#6fdd94", "#ffe9b0", "#e8edf6"]);
+  // a line of light going into the ground all the way down the road, not just under him
+  for (let i = 0; i < 4; i++) shocks.push({ wx: worldX + HX + 6 + i * 34, t: i * 3 });
+  piscarSuper();
+  desenhar();
+}
+function atualizarSuper(dt) {
+  if (superCd > 0) superCd = Math.max(0, superCd - dt);
+  if (superT > 0) superT = Math.max(0, superT - dt);
+  if (superFx) { superFx.t += dt; if (superFx.t >= superFx.dur) superFx = null; }
+}
+
+// ============================================================
 // SKILLS — a category apart, and AUTO-FIRE is its first entry
 //
 // Why this is not a second "Neighbors join in": U4 is a flat 2 taps/s that runs whether or
@@ -751,7 +869,7 @@ function soltarDrop(m, sx) {
   drops.push({
     wx: worldX + sx + 5, type: m.type, t: 0,
     valor: (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
-      * bonusInovacao() * eficiencia() * bonusJusto() * bonusMutirao() * bonusDias()
+      * bonusInovacao() * eficiencia() * bonusJusto() * bonusMutirao() * bonusSuper() * bonusDias()
   });
   if (drops.length > 8) drops.shift();
 }
@@ -768,6 +886,12 @@ function coletarDrop(d, auto) {
   d.morto = true;
 }
 
+// One arrival. `hpMax` is kept beside `hp` so the readout can show how much of a thing is
+// left without anyone having to look the type up in a table.
+function novoMob(tipo, wx) {
+  const hp = CFG.mobHp[tipo] || 3;
+  return { wx: wx, type: tipo, hp: hp, hpMax: hp, flash: 0, dying: 0, parado: false };
+}
 // Movement, spawning and state. Drawing lives in drawMobs() and is not touched here.
 function atualizarMobs(dt) {
   const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
@@ -776,10 +900,9 @@ function atualizarMobs(dt) {
   if (mobT >= espera) {
     mobT = 0;
     if (mobs.filter(function (m) { return !m.dying; }).length < CFG.mobMax) {
-      const r = Math.random(), dirty = S.modo === "carvao";
-      const tipo = r < (dirty ? 0.45 : 0.20) ? "smog" : r < (dirty ? 0.75 : 0.42) ? "barrel" : "cash";
-      mobs.push({ wx: worldX + W + 12, type: tipo, hp: tipo === "barrel" ? 4 : 3,
-        flash: 0, dying: 0, parado: false });
+      const r = Math.random(), mix = CFG.mobMix[S.modo] || CFG.mobMix.limpo;
+      const tipo = r < mix.smog ? "smog" : r < mix.barrel ? "barrel" : "cash";
+      mobs.push(novoMob(tipo, worldX + W + 12));
     }
   }
   // They walk in and queue up in front of the hero instead of standing on each other.
@@ -880,7 +1003,11 @@ function tocarMundo(px, py) {
   return false;
 }
 
-function clicar(auto) {
+// `auto`     — a shot the wand fired by itself: earns, but never heals.
+// `naoConta` — a swing that is not the player's hand (the neighbours' auto-taps). It plays
+//              out identically; it just cannot charge the super, so a phone on a table
+//              never builds one.
+function clicar(auto, naoConta) {
   const g = ganhoClique();
   S.energia += g; S.energiaTotal += g;
   // the team recovers while you organise together, not while you burn them out:
@@ -916,6 +1043,8 @@ function clicar(auto) {
   }
   floats.push({ x: HX + 14, y: GROUND - 34, txt: "+" + g.toFixed(1), life: 40 });
   if (S.modo === "limpo" && sprouts.length < 40) sprouts.push({ wx: worldX + HX - 6, life: 600 });
+  // the super, last: an armed swing spends the charge, any other player swing builds it
+  if (!auto && !naoConta) { if (superPronto()) dispararSuper(); else carregarSuper(); }
   desenhar();
 }
 // What one more project would actually add, right now, in the rhythm you are actually in.
@@ -1044,6 +1173,7 @@ function transicionar() {
   // the road starts clear — but the skill is kept: that is what makes it a skill
   drops = []; mobs = []; chamada = null; chamadaT = 0; mutiraoT = 0;
   foco = 0; canalizando = 0; autoFogoAcc = 0;
+  superCarga = 0; superSwings = 0; superCd = 0; superT = 0; superFx = null;
   R.tochas++; salvarRetencao();
   salvar(); desenhar();
 }
@@ -2794,8 +2924,62 @@ function drawScene() {
 // Drawn after drawScene() on purpose: an affordance has to stay legible, so it sits on
 // top of the colour grade instead of inside it. Sprites are not touched here — these are
 // markers over the world, not monsters.
+// A trouble's remaining hits, drawn over its head. Pure function of `m.hp` / `m.hpMax`,
+// no DOM, one keyline plus n little blocks — cheap enough to run for every mob every frame.
+// ESTÉTICA: this whole readout is one function on purpose. The state it needs is `m.hp`,
+// `m.hpMax`, `m.type`, `m.flash` and `m.dying`; restyle or replace the body freely.
+const VIDA_TOPO = { smog: 30, barrel: 23, cash: 21 };   // world px above ground per sprite
+function desenharVidaMob(m) {
+  if (m.dying > 0 || !m.hpMax) return;
+  const sx = Math.round(m.wx - worldX);
+  if (sx < -20 || sx > W + 20) return;
+  const n = m.hpMax, larg = n * 3 - 1;
+  const x0 = sx + 5 - (larg >> 1), y = GROUND - (VIDA_TOPO[m.type] || 22);
+  cx.fillStyle = "#10121c";                       // keyline: it has to read on any ground
+  cx.fillRect(x0 - 1, y - 1, larg + 2, 5);
+  for (let i = 0; i < n; i++) {
+    const cheio = i < m.hp;
+    cx.fillStyle = cheio ? (m.flash > 0 ? "#ffffff" : "#e8edf6") : "#4a4458";
+    cx.fillRect(x0 + i * 3, y, 2, 3);
+  }
+}
+
+// THE SUPER, on screen. Placeholder spectacle: a wall of light leaving the hero and
+// crossing the whole frame, a bright horizon line, and the road lit from underneath while
+// the window lasts. It is deliberately one self-contained function reading one object —
+// ESTÉTICA: replace the body, keep the contract (`superFx = { t, dur, sx }`, `superT`).
+function desenharSuper() {
+  if (superT > 0) {                                   // the window: the road stays lit
+    const p = 0.35 + 0.25 * Math.sin(animT * 9);
+    cx.globalAlpha = p * 0.30; cx.fillStyle = "#ffe9b0";
+    cx.fillRect(0, GROUND - 3, W, 5);
+    cx.globalAlpha = 1;
+  }
+  if (!superFx) return;
+  const p = Math.min(1, superFx.t / superFx.dur), a = Math.pow(1 - p, 0.7);
+  const r = Math.round(p * (W + 120));
+  // a wall of light leaving him in both directions — the whole width, not a local burst
+  [["#ffe9b0", 0, 26], ["#ffcd75", 6, 18], ["#6fdd94", 13, 10]].forEach(function (c) {
+    const rr = r - c[1] * 4;
+    if (rr < 2) return;
+    cx.globalAlpha = a * 0.9; cx.fillStyle = c[0];
+    cx.fillRect(superFx.sx - rr, GROUND - 6 - c[2], 5, c[2] + 10);
+    cx.fillRect(superFx.sx + rr - 5, GROUND - 6 - c[2], 5, c[2] + 10);
+    cx.globalAlpha = a * 0.22;
+    cx.fillRect(superFx.sx - rr, GROUND - 4 - (c[2] >> 1), rr * 2, c[2] + 6);
+    cx.globalAlpha = 1;
+  });
+  // and the sky answers: one bright band across the horizon, fading out
+  cx.globalAlpha = a * 0.45; cx.fillStyle = "#ffe9b0";
+  cx.fillRect(0, GROUND - 2, W, 3);
+  cx.globalAlpha = a * 0.18;
+  cx.fillRect(0, GROUND - 30, W, 28);
+  cx.globalAlpha = 1;
+}
+
 function desenharMundo() {
   const pulso = 0.6 + 0.4 * Math.sin(animT * 6);
+  desenharSuper();
   // what a beaten trouble left behind, waiting for a thumb
   drops.forEach(function (d) {
     const sx = Math.round(d.wx - worldX);
@@ -2817,6 +3001,11 @@ function desenharMundo() {
     cx.fillRect(sx - 3 - r, y + 3, 3, 1); cx.fillRect(sx + 5 + r - 3, y + 3, 3, 1);
     cx.globalAlpha = 1;
   });
+  // how much of a trouble is left, over its head. Damage was already in the game — hits
+  // came off `hp` — but nothing ever showed it, so it read as if nothing was happening
+  // until the thing suddenly popped. Pips, not a bar: at two to five hits you can count
+  // them at a glance, and the *number* of pips is what says "this one is the big one".
+  mobs.forEach(function (m) { desenharVidaMob(m); });
   // a trouble standing in the way: two ticks at its feet say "this one is tappable"
   mobs.forEach(function (m) {
     if (!m.parado || m.dying > 0) return;
@@ -2913,7 +3102,24 @@ function desenhar() {
     $("bonus").textContent = bonusInovacao().toFixed(1);
   }
   desenharSkills();
+  desenharSuperHUD();
   alertaMundo();
+}
+
+// The super's charge, on the button that will spend it: one square per completed combo,
+// built from CFG so the count cannot drift from the mechanic.
+function desenharSuperHUD() {
+  const el = $("cargaSuper"), bc = $("btnClique");
+  if (!el) return;
+  if (el.children.length !== CFG.superCombos) {
+    el.innerHTML = "";
+    for (let i = 0; i < CFG.superCombos; i++) el.appendChild(document.createElement("i"));
+  }
+  for (let i = 0; i < el.children.length; i++) {
+    el.children[i].className = i < superCarga ? "on" : "";
+  }
+  bc.classList.toggle("super", superPronto());
+  $("dicaHold").textContent = superPronto() ? "SUPER" : "HOLD";
 }
 
 // A project is the thing that earns while you are not touching the screen, and the sheet
@@ -3067,12 +3273,18 @@ function alertaMundo() {
   if (modoAviso) {                        // the rhythm you just chose owns the line first
     classe = modoAviso.rapido ? "perigo" : "festa";
     txt = modoAviso.txt;
+  } else if (chamada) {                   // a window that is closing beats anything else
+    classe = "chama";
+    txt = "THEY NEED HANDS — TAP THE POT · " + Math.ceil(chamada.janela - chamada.t) + "s";
+  } else if (superT > 0) {                // ...then the super, because it is the rarest
+    classe = "festa";
+    txt = "ALL TOGETHER! THE STREET IS WITH YOU · ×" + CFG.superMult + " · " + Math.ceil(superT) + "s";
+  } else if (superPronto()) {
+    classe = "chama";
+    txt = "SUPER READY — SWING IT";
   } else if (canalizando > 0) {
     classe = "magia";
     txt = "THE WAND IS CHANNELLING · " + CFG.autoFogoTiros + "/s · " + Math.ceil(canalizando) + "s";
-  } else if (chamada) {
-    classe = "chama";
-    txt = "THEY NEED HANDS — TAP THE POT · " + Math.ceil(chamada.janela - chamada.t) + "s";
   } else if (mutiraoT > 0) {
     classe = "festa";
     txt = "MUTIRAO! EVERYONE IS WORKING · ×" + CFG.mutiraoMult + " · " + Math.ceil(mutiraoT) + "s";
@@ -3236,12 +3448,13 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarDrops(dt);
     atualizarChamada(dt);
     atualizarWand(dt);
+    atualizarSuper(dt);
     if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
-    if (S.u4) { // neighbors keep helping on their own
+    if (S.u4) { // neighbors keep helping on their own — but they do not charge your super
       autoAcc += dt * CFG.autoTapsPorSeg;
       let n = Math.min(4, Math.floor(autoAcc));
       autoAcc -= Math.floor(autoAcc);
-      while (n-- > 0) clicar();
+      while (n-- > 0) clicar(false, true);
     }
     worldX += dt * (22 + Math.min(60, prodPorSegundo() * 0.9));
     // rAF stops in a background tab and dt is clamped, so this counts time actually

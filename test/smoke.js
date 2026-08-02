@@ -24,6 +24,7 @@ function chromiumPath() {
   await page.waitForTimeout(900);
   // read the tuning out of the page instead of restating it here
   const CFG_TIROS = await page.evaluate(() => CFG.autoFogoTiros);
+  const CFG_COMBOS = await page.evaluate(() => CFG.superCombos);
   await page.tap('#btnBegin');
   await page.waitForTimeout(300);
 
@@ -47,7 +48,7 @@ function chromiumPath() {
   // ---- the world is the other half of the button ----
   // a tap on the scene swings exactly like the CTA does
   const noMundo = await page.evaluate(async () => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; S.geradores = 0;
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null; S.geradores = 0;
     const antes = S.energiaTotal, c0 = combo;
     const cv = document.getElementById('scene');
     cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 400 }));
@@ -62,6 +63,9 @@ function chromiumPath() {
 
   // holding on the scene repeats, and stops on release
   const seguraMundo = await page.evaluate(async () => {
+    // hold long enough and the super goes off, which would inflate the numbers below;
+    // it has its own block further down, so park it here
+    superT = 0; superCarga = 0; superSwings = 0; superCd = 1e9; superFx = null;
     const cv = document.getElementById('scene');
     const a = S.energiaTotal;
     cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 400 }));
@@ -78,6 +82,9 @@ function chromiumPath() {
 
   // both surfaces held at once must NOT double the hit rate — one timer, not two
   const dobrado = await page.evaluate(async () => {
+    // hold long enough and the super goes off, which would inflate the numbers below;
+    // it has its own block further down, so park it here
+    superT = 0; superCarga = 0; superSwings = 0; superCd = 1e9; superFx = null;
     const cv = document.getElementById('scene'), bc = document.getElementById('btnClique');
     const a = S.energiaTotal;
     bc.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
@@ -109,12 +116,134 @@ function chromiumPath() {
   if (comFolha.aberta) errors.push('a scene tap did not close the open sheet');
   if (comFolha.ganho > 0.01) errors.push('a scene tap swung while a sheet was open');
 
+  // ---- THE SUPER: three combos land, and the next swing is not a swing ----
+  const sup = await page.evaluate(async () => {
+    fecharTudo();
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
+    superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
+    S.geradores = 10; S.poluicao = 0; S.modo = 'limpo'; S.u2 = false; S.u4 = false;
+    const passos = [];
+    // exactly CFG.superCombos completed combos arm it, and not one swing sooner
+    for (let i = 0; i < CFG.superCombos * 3; i++) { clicar(); passos.push(superCarga); }
+    const armado = superPronto(), cargaCheia = superCarga;
+    const botao = document.getElementById('btnClique').className;   // read it while it is armed
+    const dica = document.getElementById('dicaHold').textContent;
+    const pipsAcesos = document.querySelectorAll('#cargaSuper i.on').length;
+    // a swing one short of a full combo must not arm it
+    const antesDeArmar = passos[CFG.superCombos * 3 - 2];
+
+    // the road is full when it goes off
+    ['smog', 'barrel', 'cash'].forEach((t, i) => {
+      const m = novoMob(t, worldX + HX + 26 + i * 20); m.parado = true; mobs.push(m);
+    });
+    const bloqueadoAntes = bloqueioMundo(), taxaAntes = prodPorSegundo();
+    const cansacoAntes = S.poluicao, dropsAntes = drops.length;
+    clicar();                                   // ...and this is the super
+    const emPe = mobs.filter(m => m.dying <= 0).length;
+    const r = { armado, cargaCheia, antesDeArmar, bloqueadoAntes, taxaAntes,
+      bloqueadoDepois: bloqueioMundo(), taxaDepois: prodPorSegundo(),
+      cansacoAntes, cansacoDepois: S.poluicao, emPe, novosDrops: drops.length - dropsAntes,
+      janela: superT, recarga: superCd, cargaDepois: superCarga, fx: !!superFx,
+      classeFlash: document.getElementById('flash').className,
+      botao, dica, pipsAcesos };
+
+    // while it is recharging, swings do not build it
+    for (let i = 0; i < CFG.superCombos * 3 + 3; i++) clicar();
+    r.cargaNaRecarga = superCarga;
+
+    // neither the wand's shots nor the neighbours' auto-taps charge it
+    superCd = 0; superCarga = 0; superSwings = 0;
+    for (let i = 0; i < CFG.superCombos * 3; i++) clicar(true);        // wand
+    for (let i = 0; i < CFG.superCombos * 3; i++) clicar(false, true); // neighbours
+    r.cargaSemMao = superCarga;
+
+    // and the whole thing never touches tiredness
+    superCd = 0; superCarga = 0; superSwings = 0; S.poluicao = 100; S.u2 = false;
+    for (let i = 0; i < CFG.superCombos * 3 + 1; i++) clicar();
+    r.cansacoDepoisDoSuper = S.poluicao;
+    r.disparouDeNovo = superT > 0;
+
+    superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
+    mobs.length = 0; drops.length = 0; S.poluicao = 0;
+    return r;
+  });
+  console.log('super -> armed after', CFG_COMBOS * 3, 'swings:', sup.armado,
+    '| charge', sup.antesDeArmar, '->', sup.cargaCheia, '| pips lit', sup.pipsAcesos, '| button "' + sup.botao + '" says "' + sup.dica + '"');
+  console.log('  it fires -> road', sup.emPe, 'left standing (was 3), drops +' + sup.novosDrops,
+    '| block ×' + sup.bloqueadoAntes.toFixed(2), '-> ×' + sup.bloqueadoDepois.toFixed(2),
+    '| rate', sup.taxaAntes.toFixed(1), '->', sup.taxaDepois.toFixed(1));
+  console.log('  window', sup.janela.toFixed(1) + 's · recharge', sup.recarga.toFixed(0) + 's'
+    + ' | screen effect:', sup.fx, '| flash "' + sup.classeFlash + '"');
+  console.log('  charge while recharging:', sup.cargaNaRecarga,
+    '| from the wand and the neighbours:', sup.cargaSemMao,
+    '| tiredness 100 ->', sup.cansacoDepoisDoSuper);
+  if (!sup.armado) errors.push('three combos did not arm the super');
+  if (sup.antesDeArmar >= sup.cargaCheia) errors.push('the super armed before the third combo finished');
+  if (sup.cargaDepois !== 0) errors.push('the super did not spend its charge');
+  if (sup.emPe > 0) errors.push('the super did not clear the road');
+  if (sup.novosDrops < 3) errors.push('the super cleared the road without leaving the drops');
+  if (!(sup.bloqueadoDepois > sup.bloqueadoAntes)) errors.push('clearing the road did not lift the block');
+  if (!(sup.taxaDepois > sup.taxaAntes)) errors.push('the super did not raise production');
+  if (!(sup.janela > 0)) errors.push('the super opened no window');
+  if (!(sup.recarga > 0)) errors.push('the super has no cooldown — it would fire every 1.3s while held');
+  if (!sup.fx) errors.push('the super produced no screen effect state');
+  if (!/super/.test(sup.classeFlash)) errors.push('the super did not wash the frame');
+  if (!/super/.test(sup.botao)) errors.push('the button never showed the super was ready');
+  if (sup.pipsAcesos !== CFG_COMBOS) errors.push('the charge readout does not show a full super');
+  if (sup.dica !== 'SUPER') errors.push('the button still said HOLD with a super armed');
+  if (sup.cargaNaRecarga !== 0) errors.push('the super charged while it was recharging');
+  if (sup.cargaSemMao !== 0) errors.push('the wand or the neighbours charged the super');
+  if (sup.cansacoDepoisDoSuper !== 100) errors.push('THE SUPER TOUCHED TIREDNESS');
+  if (!sup.disparouDeNovo) errors.push('the super never fired a second time');
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-super.png') });
+
+  // ---- how much of a trouble is left, and how much there was to begin with ----
+  // The damage was always there; nothing ever showed it. Two things are checked: the
+  // spread between the little one and the big one is wide enough to feel, and the readout
+  // actually puts pixels on the screen over the right head.
+  const vida = await page.evaluate(async () => {
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
+    const hp = {}, golpes = {};
+    for (const t of ['smog', 'cash', 'barrel']) {
+      hp[t] = novoMob(t, 0).hp;
+      // hits from the button: the 3-hit combo deals 1, 1, 2
+      let restante = hp[t], n = 0, c = 0;
+      while (restante > 0) { restante -= (c % 3 === 2) ? 2 : 1; c++; n++; }
+      golpes[t] = n;
+    }
+    // and it is drawn: paint one barrel's readout onto the scene and look at the pixels
+    mobs.length = 0;
+    const m = novoMob('barrel', worldX + HX + 40);
+    m.parado = true; mobs.push(m);
+    const y = GROUND - VIDA_TOPO.barrel, x0 = Math.round(m.wx - worldX) + 5 - ((m.hpMax * 3 - 1) >> 1);
+    const leia = () => Array.from(cx.getImageData(x0, y, m.hpMax * 3 - 1, 3).data);
+    drawScene(); desenharMundo();
+    const cheio = leia();
+    m.hp = 1;
+    drawScene(); desenharMundo();
+    const ferido = leia();
+    mobs.length = 0;
+    return { hp, golpes, mudou: cheio.some((v, i) => v !== ferido[i]),
+      pintou: cheio.some((v, i) => i % 4 === 3 && v > 0) };
+  });
+  console.log('trouble health -> smog', vida.hp.smog, 'hits', vida.golpes.smog,
+    '| cash', vida.hp.cash, 'hits', vida.golpes.cash,
+    '| barrel', vida.hp.barrel, 'hits', vida.golpes.barrel);
+  console.log('  health readout drawn:', vida.pintou, '| it changes when damaged:', vida.mudou);
+  if (!(vida.hp.barrel >= vida.hp.smog + 3)) errors.push('big and small troubles do not differ enough');
+  if (!(vida.golpes.barrel > vida.golpes.cash && vida.golpes.cash > vida.golpes.smog)) {
+    errors.push('the three troubles do not take different numbers of hits');
+  }
+  if (vida.hp.barrel > 6) errors.push('the health spread grew into a damage system');
+  if (!vida.pintou) errors.push('the health readout drew nothing');
+  if (!vida.mudou) errors.push('the health readout does not change when a trouble is damaged');
+
   // ---- troubles walk in, block the work, and pay when they are cleared ----
   const encontro = await page.evaluate(async () => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
     S.geradores = 10; S.poluicao = 0; S.modo = 'limpo';
     const livre = prodPorSegundo();
-    mobs.push({ wx: worldX + W + 12, type: 'smog', hp: 3, flash: 0, dying: 0, parado: false });
+    mobs.push(novoMob('smog', worldX + W + 12));
     const longe = mobs[0].wx - worldX;
     for (let i = 0; i < 400; i++) atualizarMobs(0.05);      // 20s of walking
     const perto = mobs[0].wx - worldX;
@@ -170,7 +299,7 @@ function chromiumPath() {
 
   // ---- the community call: show up inside the window and the street works with you ----
   await page.evaluate(async () => {
-    mobs.length = 0; drops.length = 0; mutiraoT = 0;
+    mobs.length = 0; drops.length = 0; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
     abrirChamada(false);
     await new Promise(r => setTimeout(r, 250));
   });
@@ -196,7 +325,7 @@ function chromiumPath() {
 
   // a missed call closes on its own and costs nothing
   const perdida = await page.evaluate(async () => {
-    mutiraoT = 0; abrirChamada(false);
+    mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null; abrirChamada(false);
     const antes = S.energiaTotal;
     for (let i = 0; i < 300; i++) atualizarChamada(0.1);   // 30s: past the window
     return { aberta: !!chamada, perdeu: S.energiaTotal < antes };
@@ -207,7 +336,7 @@ function chromiumPath() {
   // ---- what a project is, and buying more than one of them ----
   // the sheet has to say what you GET, not only what you pay
   const explica = await page.evaluate(() => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
     S.geradores = 12; S.energia = 0; S.poluicao = 0; S.modo = 'limpo'; S.tempoLimpo = 200;
     S.u1 = S.u3 = false; S.qtdCompra = 1;
     desenhar();
@@ -279,7 +408,7 @@ function chromiumPath() {
   // Mid-game, GO STEADY with the ramp fully climbed: the panel has to show that switching
   // buys a burst now and costs almost everything later.
   const ritmo = await page.evaluate(() => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; modoAviso = null;
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null; modoAviso = null;
     S.geradores = 43; S.energia = 40000; S.energiaTotal = 30000; S.poluicao = 0;
     S.u1 = S.u3 = S.u6 = true; S.modo = 'limpo'; S.tempoLimpo = 200;
     desenhar();
@@ -375,17 +504,52 @@ function chromiumPath() {
   });
   if (/GO STEADY —/.test(decaiu)) errors.push('the mode line never goes away');
 
-  // NOTES records this regression once already: no panel may cover the menu bar
+  // NOTES records this regression once already: no panel may cover the control block.
+  // Measured against #controls, not one row inside it, so re-planning the block cannot
+  // quietly move the thing the test is protecting.
   const cobre = await page.evaluate(async () => {
     document.getElementById('openProjects').click();
     await new Promise(r => setTimeout(r, 350));
     const s = document.getElementById('sheetProjects').getBoundingClientRect();
-    const m = document.getElementById('menuRow').getBoundingClientRect();
-    return { fundoFolha: s.bottom, topoMenu: m.top, altura: s.height, jan: window.innerHeight };
+    const m = document.getElementById('controls').getBoundingClientRect();
+    const f = document.getElementById('fato').getBoundingClientRect();
+    const h = getComputedStyle(document.documentElement).getPropertyValue('--hControles');
+    return { fundoFolha: s.bottom, topoMenu: m.top, altura: s.height, jan: window.innerHeight,
+      hVar: parseFloat(h), hReal: m.height, fundoFato: f.bottom };
   });
-  console.log('projects sheet bottom', Math.round(cobre.fundoFolha), 'vs menu top', Math.round(cobre.topoMenu),
+  console.log('projects sheet bottom', Math.round(cobre.fundoFolha), 'vs controls top', Math.round(cobre.topoMenu),
     '| sheet height', Math.round(cobre.altura), 'of', cobre.jan);
-  if (cobre.fundoFolha > cobre.topoMenu) errors.push('the projects sheet covers the menu bar');
+  console.log('  --hControles', Math.round(cobre.hVar), 'measured from a', Math.round(cobre.hReal),
+    'px control block | REAL DATA ends at', Math.round(cobre.fundoFato));
+  if (cobre.fundoFolha > cobre.topoMenu) errors.push('the projects sheet covers the control block');
+  if (cobre.fundoFato > cobre.topoMenu) errors.push('the REAL DATA ticker covers the control block');
+  // the variable has to keep coming from the real block, not from a hardcoded number
+  if (!(cobre.hVar >= cobre.hReal && cobre.hVar <= cobre.hReal + 24)) {
+    errors.push('--hControles is no longer measured from the control block');
+  }
+
+  // ...and it has to be re-measured on resize, which is the other half of that rule
+  const aposResize = await page.evaluate(async () => {
+    const c = document.getElementById('controls');
+    const antes = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles'));
+    const cresce = document.createElement('div');   // a row growing by 40px, the way a button that gains a line would
+    cresce.style.height = '40px';
+    c.appendChild(cresce);
+    window.dispatchEvent(new Event('resize'));
+    await new Promise(r => setTimeout(r, 120));
+    const depois = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles'));
+    const alto = c.getBoundingClientRect().height;
+    c.removeChild(cresce);
+    window.dispatchEvent(new Event('resize'));
+    await new Promise(r => setTimeout(r, 120));
+    return { antes, depois, alto,
+      volta: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles')) };
+  });
+  console.log('  a button that grows ->', Math.round(aposResize.antes), '->', Math.round(aposResize.depois),
+    '(block', Math.round(aposResize.alto) + 'px), back to', Math.round(aposResize.volta));
+  if (!(aposResize.depois >= aposResize.alto)) errors.push('--hControles did not follow a control block that grew');
+  if (!(aposResize.depois >= aposResize.antes + 38)) errors.push('--hControles did not grow with the block');
+  if (Math.abs(aposResize.volta - aposResize.antes) > 1) errors.push('--hControles did not come back down');
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-ritmo.png') });
   await page.evaluate(() => {
     fecharTudo();
@@ -400,7 +564,7 @@ function chromiumPath() {
     S.geradores = 0; S.energia = 999999; S.energiaTotal = 0; S.poluicao = 0; S.modo = 'carvao';
     S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
     S.skillAuto = false; S.transicoes = 0; foco = 0; canalizando = 0;
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; modoAviso = null;
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null; modoAviso = null;
     desenhar();
     comprarSkill();                       // should refuse: no torch has been passed
     return { comprou: S.skillAuto, botao: document.getElementById('btnSkillAuto').disabled,
@@ -551,7 +715,7 @@ function chromiumPath() {
   await page.evaluate(() => {
     localStorage.removeItem('proto_savetheworld_retencao');
     R = { dias: [], segundos: 0, tochas: 0 }; carregarRetencao();
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
     S.geradores = 0; S.poluicao = 0; S.modo = 'carvao';
   });
 

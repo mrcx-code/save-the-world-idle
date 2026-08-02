@@ -30,7 +30,7 @@ const novoEstado = (over = {}) => Object.assign({
   u1: false, u2: false, u3: false, u4: false, u5: false, u6: false, u7: false,
   inovacao: 0, transicoes: 0,
   // the world answering back: troubles standing in the way, a mutirão running, days played
-  mobsParados: 0, mutirao: 0, dias: 1,
+  mobsParados: 0, mutirao: 0, superT: 0, dias: 1,
   // skills: kept through every torch, unlike u1..u7
   skillAuto: false
 }, over);
@@ -43,11 +43,14 @@ const forcaToque = S => (S.u5 ? CFG.forcaToqueU5 : 1);
 // a trouble that reached you blocks part of the work — a multiplier, never tiredness
 const bloqueioMundo = S => Math.max(0, 1 - Math.min(S.mobsParados || 0, CFG.mobMax) * CFG.bloqueioPorMob);
 const bonusMutirao = S => (S.mutirao > 0 ? CFG.mutiraoMult : 1);
+// the super's window: a shorter, smaller mutirão, earned by swinging rather than by being
+// there when the pot came out. Multiplier only — it never touches tiredness.
+const bonusSuper = S => (S.superT > 0 ? CFG.superMult : 1);
 const bonusDias = S => 1 + CFG.bonusDia * Math.min(Math.max(0, (S.dias || 1) - 1), CFG.diasMax);
 const valorDrop = S => (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
-  * bonusInovacao(S) * eficiencia(S) * bonusJusto(S) * bonusMutirao(S) * bonusDias(S);
+  * bonusInovacao(S) * eficiencia(S) * bonusJusto(S) * bonusMutirao(S) * bonusSuper(S) * bonusDias(S);
 const ganhoClique = S => 1 * forcaToque(S) * bonusInovacao(S) * eficiencia(S) * bonusJusto(S)
-  * bonusMutirao(S) * bonusDias(S);
+  * bonusMutirao(S) * bonusSuper(S) * bonusDias(S);
 
 const tetoLimpoAtual = S => (S.u3 ? 4 : CFG.tetoLimpo);
 function rampaAtual(S) {
@@ -59,7 +62,7 @@ function prodPorSegundo(S) {
     ? CFG.prodCarvao * (S.u1 ? 2 : 1)
     : CFG.prodLimpoBase * rampaAtual(S);
   return S.geradores * porGerador * bonusInovacao(S) * eficiencia(S) * bonusJusto(S)
-    * bloqueioMundo(S) * bonusMutirao(S) * bonusDias(S);
+    * bloqueioMundo(S) * bonusMutirao(S) * bonusSuper(S) * bonusDias(S);
 }
 function poluicaoPorSegundo(S) {
   if (S.modo !== 'carvao') return 0;
@@ -120,6 +123,14 @@ const comprar = (S, u, custo) => {
   S.energia -= custo; S[u] = true; return true;
 };
 
+// What an arrival is worth in hits, on average, in the rhythm you are running. Read from
+// CFG.mobHp and CFG.mobMix rather than restated, so widening the spread between the little
+// smog wisp and the heavy barrel moves the simulation with it.
+function hpMedio(modo) {
+  const mix = CFG.mobMix[modo] || CFG.mobMix.limpo, hp = CFG.mobHp;
+  return mix.smog * hp.smog + (mix.barrel - mix.smog) * hp.barrel + (1 - mix.barrel) * hp.cash;
+}
+
 const UPGRADES = [
   { id: 'u1', custo: CFG.custoU1, nome: 'Big campaigns' },
   { id: 'u2', custo: CFG.custoU2, nome: 'Friends help friends' },
@@ -133,7 +144,7 @@ const UPGRADES = [
 module.exports = {
   CFG, HOLD_TPS, UPGRADES, novoEstado,
   eficiencia, bonusInovacao, custoGerador, bonusJusto, forcaToque, ganhoClique,
-  bloqueioMundo, bonusMutirao, bonusDias, valorDrop,
+  bloqueioMundo, bonusMutirao, bonusSuper, bonusDias, valorDrop, hpMedio,
   tetoLimpoAtual, rampaAtual, prodPorSegundo, poluicaoPorSegundo,
   inovacaoAoTransicionar, simular, simularOffline, clicar, comprarGerador, comprar,
   transicionar
