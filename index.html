@@ -343,12 +343,18 @@
   .explica.sub { margin: 7px 0 0; }
   .explica b { color: var(--gold); }
   .explica i { color: #b7d16a; font-style: normal; }
-  /* how many at once: three fixed targets read faster than a control you have to cycle */
-  .selQtd { display: flex; gap: 6px; margin-bottom: 7px; }
-  .selQtd button { flex: 1; padding: 10px 4px; font-size: var(--fs-xs); }
-  .selQtd button.ativo { color: #221806; border-color: rgba(120,60,0,.35);
-    background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
-    box-shadow: 0 2px 7px rgba(120,60,0,.28), inset 0 1px 0 rgba(255,255,255,.55); }
+  /* buying is 1-or-MAX and nothing else: the gold primary buys one at the next price, the
+     compact green MAX beside it spends whatever the current energy covers. No third toggle,
+     no extra row — the owner wanted it direct. */
+  .compra { display: flex; gap: 6px; align-items: stretch; }
+  .compra .btnCompra { flex: 1 1 auto; width: auto; }
+  .btnMax { flex: 0 0 auto; min-width: 78px; padding: 8px 10px; font-size: var(--fs-xs); line-height: 1.25;
+    text-align: center; color: #1c2408; text-shadow: 0 1px 0 rgba(255,255,255,.4);
+    border: 1px solid rgba(60,90,10,.4); border-radius: var(--raioSm);
+    background: linear-gradient(180deg, #d8e29a 0%, #9fb45a 60%, #7f9440 100%);
+    box-shadow: 0 3px 9px rgba(60,80,10,.28), inset 0 1px 0 rgba(255,255,255,.5); }
+  .btnMax b { font-size: var(--fs-sm); }
+  .btnMax:disabled { opacity: .42; }
   .modo { display: flex; gap: 6px; margin-top: 8px; }
   .modo button { flex: 1; padding: 13px 6px; font-size: var(--fs-sm); }
   #modoCarvao, #modoLimpo { background: linear-gradient(180deg, #3a4324, #242a16); color: #a9a184; }
@@ -516,10 +522,10 @@
   <div class="sheetHead"><div class="t">PROJECTS — <span id="nGeradores2">0</span> RUNNING</div>
     <button class="fechar" data-close="sheetProjects">✕</button></div>
   <div class="explica" id="oQueEh"></div>
-  <div class="selQtd">
-    <button data-q="1">×1</button><button data-q="10">×10</button><button data-q="max">MAX</button>
+  <div class="compra">
+    <button class="btnCompra" id="btnGerador"></button>
+    <button class="btnMax" id="btnGeradorMax"></button>
   </div>
-  <button class="btnCompra" id="btnGerador"></button>
   <div class="explica sub" id="oQueDa"></div>
   <div class="ritmo">
     <div class="rCol" id="rColA">
@@ -732,7 +738,7 @@ let S = {
   u1: false, u2: false, u3: false,
   u4: false, u5: false, u6: false, u7: false,
   inovacao: 0, transicoes: 0,
-  qtdCompra: 1,              // 1 / 10 / "max" — remembered, because nobody wants to re-pick it
+  qtdCompra: 1,              // vestigial: buying is now the 1-or-MAX pair, no remembered target
   skillAuto: false,          // learned once, survives every torch — unlike u1..u7
   capVisto: 0,               // how many chapter cards this run has shown — reset by the torch
   introSeen: false,
@@ -6400,23 +6406,24 @@ function desenharProjetos() {
       + (S.geradores === 1 ? " project" : " projects") + " — they work on their own, forever"
     : "projects earn <b>every second, by themselves</b> — taps are the only income you have until then";
 
-  const alvo = S.qtdCompra === "max" ? Infinity : (S.qtdCompra || 1);
-  const compra = quantosCabem(alvo);
-  const b = $("btnGerador");
+  // the primary button always buys ONE, at the next project's price
   const c1 = custoGerador();
-  if (compra.n > 0) {
-    b.textContent = "+ " + compra.n + (compra.n === 1 ? " PROJECT — " : " PROJECTS — ") + fmt(compra.gasto);
+  const b = $("btnGerador");
+  if (S.energia >= c1) {
+    b.textContent = "+ PROJECT — " + fmt(c1);
     b.disabled = false;
   } else {
     b.textContent = "+ PROJECT — " + fmt(c1) + " (NOT ENOUGH)";
     b.disabled = true;
   }
+  // the compact MAX beside it: how many the current energy affords, in one tap
+  const compraMax = quantosCabem(Infinity);
+  const bm = $("btnGeradorMax");
+  bm.innerHTML = "MAX<br><b>×" + compraMax.n + "</b>";
+  bm.disabled = compraMax.n <= 0;
   $("oQueDa").innerHTML = "each adds <i>+" + taxaCurta(um) + "</i> forever &middot; next one costs "
     + fmt(c1) + ", and every one after is +"
     + Math.round((CFG.custoGeradorFator - 1) * 100) + "%";
-  document.querySelectorAll(".selQtd button").forEach(function (el) {
-    el.classList.toggle("ativo", String(S.qtdCompra) === el.dataset.q);
-  });
 }
 
 // The skills surface. One skill ships; the sheet is a list, so a second one is markup and
@@ -6645,13 +6652,8 @@ document.addEventListener("DOMContentLoaded", () => {
   ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
     cv.addEventListener(ev, function () { soltar("mundo"); });
   });
-  $("btnGerador").onclick = function () { comprarGerador(S.qtdCompra); };
-  document.querySelectorAll(".selQtd button").forEach(function (el) {
-    el.onclick = function () {
-      S.qtdCompra = el.dataset.q === "max" ? "max" : Number(el.dataset.q);
-      desenhar();
-    };
-  });
+  $("btnGerador").onclick = function () { comprarGerador(1); };
+  $("btnGeradorMax").onclick = function () { comprarGerador("max"); };
   $("modoCarvao").onclick = () => { marcarGuia("rhythm"); definirModo("carvao"); };
   $("modoLimpo").onclick = () => { marcarGuia("rhythm"); definirModo("limpo"); };
   $("modeQuick").onclick = () => { marcarGuia("rhythm"); definirModo(S.modo === "carvao" ? "limpo" : "carvao"); };
