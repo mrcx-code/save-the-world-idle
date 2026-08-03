@@ -101,7 +101,7 @@
     background: linear-gradient(180deg, rgba(36,50,92,.96), rgba(18,25,51,.96));
     /* purple, not gold: REAL DATA owns the gold left edge, and a made-up line must never
        be able to pass for a sourced one */
-    border: 3px solid var(--contorno); border-left: 5px solid var(--purple);
+    border: 3px solid var(--contorno); border-left: 5px solid var(--purple); border-radius: 10px;
     box-shadow: 0 5px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.13);
     padding: 12px 12px 13px; }
   #cartao.mostra { display: block; animation: cartaoVai 5.4s ease-out 1 forwards; }
@@ -384,7 +384,7 @@
   #lore { position: fixed; inset: 0; z-index: 50; background: rgba(10,11,20,.92);
     display: flex; align-items: center; justify-content: center; padding: 16px; }
   #lore.escondido { display: none; }
-  .loreBox { background: var(--panel); border: 4px solid var(--ink);
+  .loreBox { background: var(--panel); border: 4px solid var(--ink); border-radius: 14px;
     box-shadow: inset 0 0 0 2px var(--panel2), 6px 6px 0 #000; max-width: 440px; padding: 18px 16px; }
   .loreBox h2 { font-size: var(--fs-lg); color: var(--gold); margin-bottom: 12px; text-shadow: 2px 2px 0 var(--ink); }
   #loreArt { display: block; width: 100%; image-rendering: pixelated; border: 3px solid var(--ink);
@@ -1750,12 +1750,16 @@ const HAZE_FAST = [236, 176, 96];        // hot, opaque, and lighter than what i
 let ritmoV = 0, ritmoUlt = null, ritmoT = 0, ritmoVirou = 0;
 function ritmoPasso() {
   const agora = performance.now();
-  const dt = ritmoT ? Math.min(0.1, (agora - ritmoT) / 1000) : 0;
+  const primeira = !ritmoT;
+  const dt = primeira ? 0 : Math.min(0.1, (agora - ritmoT) / 1000);
   ritmoT = agora;
   const modo = (typeof S !== "undefined" && S.modo) || "limpo";
   const alvo = modo === "carvao" ? 1 : 0;
   if (ritmoUlt !== null && ritmoUlt !== modo) ritmoVirou = 1;   // one-shot: the air turns over
   ritmoUlt = modo;
+  // Reopening the game in GO FAST must not show a clear sky for a second while the ease
+  // catches up: the very first frame arrives in whatever weather the save was left in.
+  if (primeira) ritmoV = alvo;
   if (dt) {
     const k = 1 - Math.pow(0.02, dt / 1.1);
     ritmoV += (alvo - ritmoV) * k;
