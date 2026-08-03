@@ -6593,9 +6593,9 @@ function desenhar() {
   $("wisChip").textContent = S.inovacao > 0 ? "★ wisdom " + S.inovacao : "";
 
   // ---- the board's progress panel: a percentage, a bar, and a line under it ----
-  const pctRua = Math.round(worldHealth() * 100);
-  $("ruaPct").textContent = pctRua + "%";
-  $("barRua").style.height = pctRua + "%";
+  // owner: STREET stays visible but stops updating. The number and bar keep whatever they
+  // showed at last render, so the element occupies its slot and does not visually change.
+  // (Was: pctRua = round(worldHealth()*100); write to #ruaPct/#barRua.)
   // ...and the two cards that carry a number of their own
   const naoTem = [1, 2, 3, 4, 5, 6, 7].filter(function (n) { return !S["u" + n]; });
   const podeComprar = naoTem.filter(function (n) { return S.energia >= CFG["custoU" + n]; }).length;
@@ -6810,6 +6810,10 @@ function desenharRitmo() {
 // The one line that tells you why the rate just moved, and what your thumb can do about
 // it. Only one thing at a time: a call beats a party, a party beats a complaint.
 function alertaMundo() {
+  // owner: cut the top alert strip. Neutered: never picks a class, never gets .mostra,
+  // so the #alerta element stays in the DOM but never becomes visible.
+  return;
+  // ---- unreachable below (kept as history for the removal) ----
   const el = $("alerta");
   let classe = "", txt = "";
   const parados = mobs.filter(function (m) { return m.parado && m.dying <= 0; }).length;
@@ -6978,21 +6982,16 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnEpilogo").onclick = function () { fecharTudo(); };
   $("btnSkillAuto").onclick = comprarSkill;
   $("openProjects").onclick = () => { marcarGuia("projects"); abrir("sheetProjects"); };
-  $("abrirEspeciais").onclick = () => abrir("sheetEspeciais");
+  // owner: cut special projects. Button stays in the projects sheet, click is inert.
+  $("abrirEspeciais").onclick = function () {};
   $("openUpgrades").onclick = () => { marcarGuia("upgrades"); abrir("sheetUpgrades"); };
-  // the board puts a gear at the end of the top rail; the only settings-shaped surface this
-  // game has is the three-day-test readout, so that is what it opens
-  $("openConfig").onclick = function () { mostrarRetencao(); abrir("sheetStats"); };
-  // tap the torch to pass it; hold it to see whether anyone is still coming back
+  // owner: cut the three-day-test / retention panel. The gear button and the torch button
+  // still exist and still take a click, but neither opens sheetStats anymore. The gear now
+  // does nothing (kept as a placeholder — later we'll wire real settings to it), and the
+  // torch just opens its sheet with no long-press behavior.
+  $("openConfig").onclick = function () {};
   const bt = $("openTorch");
-  let pressT = null, longo = false;
-  function cancelarLongo() { if (pressT) { clearTimeout(pressT); pressT = null; } }
-  bt.addEventListener("pointerdown", function () {
-    longo = false;
-    pressT = setTimeout(function () { longo = true; mostrarRetencao(); abrir("sheetStats"); }, 600);
-  });
-  ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) { bt.addEventListener(ev, cancelarLongo); });
-  bt.onclick = function () { if (longo) { longo = false; return; } marcarGuia("torch"); abrir("sheetTorch"); };
+  bt.onclick = function () { marcarGuia("torch"); abrir("sheetTorch"); };
   document.querySelectorAll(".fechar").forEach(function (b) {
     b.onclick = function () { $(b.dataset.close).classList.remove("aberto"); };
   });
@@ -7072,7 +7071,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   requestAnimationFrame(frame);
   setInterval(salvar, 10000);
-  setInterval(girarFato, 25000);
+  // owner: cut the REAL DATA rotation. The first girarFato() at boot still populates the
+  // banner, so it stays visually identical to now — it just never rotates to the next fact.
+  // setInterval(girarFato, 25000);
   window.addEventListener("beforeunload", function () { salvar(); salvarRetencao(); });
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) { salvar(); salvarRetencao(); } else { marcarDia(); }

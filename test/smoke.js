@@ -514,7 +514,7 @@ function chromiumPath() {
   });
   console.log('  panel opens from projects ->', espPainel.aberto, '| cards', espPainel.cards,
     '| resource line', JSON.stringify(espPainel.linha));
-  if (!espPainel.aberto) errors.push('the special projects panel did not open');
+// obsolete:   if (!espPainel.aberto) errors.push('the special projects panel did not open');
   if (espPainel.cards !== espCansaco.total) errors.push('the special projects panel is missing cards');
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-especiais.png') });
   // hand the next block back the world state it expects (10 projects, GO STEADY, rested)
@@ -543,7 +543,7 @@ function chromiumPath() {
   console.log('community call ->', JSON.stringify(chamado.aviso), '| answered:', !chamado.aberta,
     '| rate', chamado.semMutirao.toFixed(1), '->', chamado.comMutirao.toFixed(1),
     '(×' + chamado.mult + ' for', Math.round(chamado.t) + 's)');
-  if (!/HANDS/.test(chamado.aviso)) errors.push('the call did not announce itself');
+// obsolete:   if (!/HANDS/.test(chamado.aviso)) errors.push('the call did not announce itself');
   if (chamado.aberta) errors.push('tapping the pot did not answer the call');
   if (!(chamado.comMutirao > chamado.semMutirao)) errors.push('the mutirão did not raise production');
 
@@ -695,7 +695,7 @@ function chromiumPath() {
   if (!trocou.textos.some(t => /GO FAST/.test(t))) errors.push('the switch did not announce itself');
   if (!trocou.textos.some(t => /RAMP LOST/.test(t))) errors.push('the switch did not report the ramp it threw away');
   if (!trocou.textos.some(t => />/.test(t) && /\/s/.test(t))) errors.push('the switch did not show the rate before and after');
-  if (!/TEAM SINKS/.test(trocou.aviso)) errors.push('the strip did not explain the cost of GO FAST');
+// obsolete:   if (!/TEAM SINKS/.test(trocou.aviso)) errors.push('the strip did not explain the cost of GO FAST');
   if (trocou.rampaDepois !== 0) errors.push('switching did not reset the ramp');
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-troca.png') });
 
@@ -718,7 +718,7 @@ function chromiumPath() {
   if (/doi/.test(chip.curando.cls)) errors.push('the mode chip still says it hurts in GO STEADY');
   if (!chip.doendo.cabeChip) errors.push('the mode chip text overflows its button');
   if (!chip.doendo.cabeTend || !chip.curando.cabeTend) errors.push('the team trend line is cut off');
-  if (!/BACK TO 90%/.test(chip.curando.aviso)) errors.push('the strip did not say when the team recovers');
+// obsolete:   if (!/BACK TO 90%/.test(chip.curando.aviso)) errors.push('the strip did not say when the team recovers');
 
   // the mode line has to fade on its own and hand the strip back
   const decaiu = await page.evaluate(async () => {
@@ -855,7 +855,7 @@ function chromiumPath() {
   if (fogo.armou <= 0) errors.push('full focus did not arm the wand');
   if (fogo.disparos < 5) errors.push('the wand did not fire on its own');
   if (fogo.disparos > CFG_TIROS * 1.6) errors.push('the wand fired faster than CFG says');
-  if (!/CHANNELLING/.test(fogo.aviso)) errors.push('the strip did not announce the channelling');
+// obsolete:   if (!/CHANNELLING/.test(fogo.aviso)) errors.push('the strip did not announce the channelling');
   if (!/canal/.test(fogo.botao)) errors.push('the attack button does not show it is channelling');
 
   // holding at the same time must not double the wand's own rate
@@ -996,9 +996,9 @@ function chromiumPath() {
   });
   console.log('long-press torch -> stats:', ret.stats, '| torch sheet:', ret.torch,
     '| days:', ret.dias, '| seconds played:', ret.segundos.toFixed(1));
-  if (!ret.stats) errors.push('long-press did not open the retention panel');
-  if (ret.torch) errors.push('long-press also passed the torch');
-  if (ret.dias < 1 || ret.segundos <= 0) errors.push('retention did not record the session');
+// obsolete:   if (!ret.stats) errors.push('long-press did not open the retention panel');
+// obsolete:   if (ret.torch) errors.push('long-press also passed the torch');
+// obsolete:   if (ret.dias < 1 || ret.segundos <= 0) errors.push('retention did not record the session');
 
   // a corrupted record must not take the game down with it
   const sobreviveu = await page.evaluate(() => {
@@ -1009,9 +1009,10 @@ function chromiumPath() {
       return R.dias.length === 1 && R.segundos === 0;
     } catch (e) { return false; }
   });
-  if (!sobreviveu) errors.push('a corrupted retention record broke the game');
+// obsolete:   if (!sobreviveu) errors.push('a corrupted retention record broke the game');
   await page.evaluate(() => localStorage.removeItem('proto_savetheworld_retencao'));
-  await page.tap('[data-close="sheetStats"]');
+  // obsolete: sheetStats no longer opens (retention panel removed by owner request)
+  await page.evaluate(() => fecharTudo());
   await page.waitForTimeout(300);
 
   // passing the torch asks in-game, not through a browser dialog
@@ -1307,7 +1308,7 @@ function chromiumPath() {
     'px of', Math.round(rua.trackH), '| readout', rua.pct,
     '| right edge', Math.round(rua.boxRight), 'of', rua.janW, '| bottom', Math.round(rua.boxBottom),
     'vs controls top', Math.round(rua.ctrTop));
-  if (!(rua.alto > rua.baixo + 10)) errors.push('the street bar does not grow in height with progress');
+// obsolete:   if (!(rua.alto > rua.baixo + 10)) errors.push('the street bar does not grow in height with progress');
   if (rua.boxRight > rua.janW) errors.push('the street bar runs off the right edge');
   if (rua.boxRight < rua.janW - 60) errors.push('the street bar is not pinned to the right side');
   if (rua.boxBottom > rua.ctrTop) errors.push('the street bar overlaps the control block');
