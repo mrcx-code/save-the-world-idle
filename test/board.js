@@ -20,11 +20,22 @@ function chromiumPath() {
 const BOARD = process.env.BOARD || path.resolve(
   'C:/Users/User/AppData/Local/Temp/claude/C--Users-User-OneDrive-Documentos-game/9e48b8f1-799a-446d-ab30-84fa6af2e465/scratchpad/design/board.png');
 // the CENÁRIOS strip, in board pixels — the panel is cropped and saved so the crop itself
-// can be looked at rather than trusted. The strip's panels are not equal widths: the gaps
-// between them measure at x 16, 248, 466, 682, 876, 1064, 1285 and 1518.
+// can be looked at rather than trusted. The strip's panels are not equal widths.
+//
+// THE CROPS WERE MEASURING THE MOUNT. Waves 11 to 20 read RUA at (18,724,228,106) and PRAÇA
+// at (252,724,212,106), and a row/column scan of the board says those windows carry the
+// panel's cream mount — L 227 against a picture of L 90 — on four rows at the top and on
+// several columns at one side, and the RUA one runs eight columns into the PRAÇA panel next
+// to it. Four rows of L 227 in 106 is about five points of luma on a number the whole series
+// has been chasing three points of. The scan puts the painted area of every panel in the
+// strip at y 728..852, and the vertical borders at x 17, 246, 467, 681, 865. So the windows
+// below are the PICTURE and nothing else. The old numbers are still in the Diário and are
+// still what waves 11-20 were aiming at; the shift is booked in wave 21's entry.
 const PAINEIS = {
-  rua: { nome: 'RUA DO BAIRRO', x: 18, y: 724, w: 228, h: 106 },
-  praca: { nome: 'PRACA COMUNITARIA', x: 252, y: 724, w: 212, h: 106 }
+  rua: { nome: 'RUA DO BAIRRO', x: 18, y: 728, w: 220, h: 125 },
+  praca: { nome: 'PRACA COMUNITARIA', x: 251, y: 728, w: 206, h: 125 },
+  orla: { nome: 'ORLA', x: 469, y: 728, w: 210, h: 125 },
+  mata: { nome: 'MATA ATLANTICA', x: 685, y: 728, w: 180, h: 125 }
 };
 const PAINEL = PAINEIS[process.env.CEN || 'rua'] || PAINEIS.rua;
 const CROP = { x: PAINEL.x, y: PAINEL.y, w: PAINEL.w, h: PAINEL.h };
