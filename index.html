@@ -3060,33 +3060,51 @@ function drawScene() {
   // The dirt path he runs on: it used to be one flat 5px band straight across the widest
   // part of the frame. Now a sunlit crown, ruts and pebbles that scroll with the world, and
   // a shadow where the grass leans over the edge.
+  // ---- THE COBBLES ----
+  // The board's street is paved, and the paving is most of what makes those thumbnails read
+  // as a Brazilian neighbourhood rather than a countryside path. Eight courses laid in
+  // perspective: each one is taller, wider and scrolls faster than the one behind it, and
+  // each stone gets a lit top edge and a dark joint so the plane has grain instead of noise.
+  // Only the walkable band is paved; the near apron below it stays a plain shaded slab with
+  // a few big worn stones in it, which is both cheaper and what the board's foregrounds do.
   cx.fillStyle = P.trilha;
   cx.fillRect(0, GROUND, W, 8);
-  cx.fillStyle = P.trilhaL;
-  cx.fillRect(0, GROUND, W, 2);
-  const rutA = P.sulcoA, rutB = P.sulcoB;
-  const rk0 = Math.floor(worldX / 9) - 1;
-  for (let k = rk0; k < rk0 + Math.ceil(W / 9) + 2; k++) {
-    const gx = Math.round(k * 9 - worldX), r2 = hash01(k * 31 + 7);
-    cx.fillStyle = rutA;
-    cx.fillRect(gx, GROUND + 3, 5 + Math.floor(r2 * 4), 1);
-    if (r2 > 0.72) cx.fillRect(gx + 2, GROUND + 6, 3, 1);
-    if (r2 < 0.18) { cx.fillStyle = rutB; cx.fillRect(gx + 4, GROUND + 4, 2, 2); }
+  {
+    // the joint has to be a real value step below the stone or the whole thing reads as
+    // horizontal stripes instead of paving — that was the first attempt and it was wrong
+    const junta = rgbS(mixA(P.sulcoAA, [24, 20, 12], 0.45));
+    const faces = [P.trilha, P.trilhaL, rgbS(mixA(P.trilhaA, P.sulcoAA, 0.30)),
+      rgbS(mixA(P.trilhaA, P.sulcoAA, 0.60))];
+    let y = GROUND;
+    for (let i = 0; i < 8 && y < H; i++) {
+      const alt = 3 + (i >> 1), larg = 9 + i * 2, vel = 0.55 + i * 0.075;
+      const desl = worldX * vel, k0 = Math.floor(desl / larg) - 1;
+      cx.fillStyle = junta; cx.fillRect(0, y, W, alt);
+      for (let k = k0; k < k0 + Math.ceil(W / larg) + 2; k++) {
+        const gx = Math.round(k * larg - desl) + ((i & 1) ? larg >> 1 : 0);
+        const r2 = hash01(k * 31 + i * 7);
+        cx.fillStyle = faces[Math.floor(r2 * 4) & 3];
+        cx.fillRect(gx, y, larg - 2, alt - 1);                 // the stone, joints all round it
+        if (alt > 3) { cx.fillStyle = P.trilhaL; cx.fillRect(gx, y, larg - 2, 1); }
+      }
+      y += alt;
+    }
+    cx.fillStyle = "rgba(0,0,0,.20)"; cx.fillRect(0, y, W, 1); // the kerb, into the near apron
   }
-  cx.fillStyle = "rgba(0,0,0,.22)";
-  cx.fillRect(0, GROUND + 8, W, 1);
-  // speckle + tonal grass patches across the ground plane (hi-bit texture)
+  // Weeds coming up through the joints, and worn patches on the near apron. The board's
+  // street is paved AND overgrown — the plants are winning in every one of those thumbnails
+  // — so this is green pushing through stone rather than a lawn under it.
   const spk0 = Math.floor(worldX * 1.15 / 7) - 1;
   for (let k = spk0; k < spk0 + Math.ceil(W / 7) + 2; k++) {
     const gx = Math.round(k * 7 - worldX * 1.15);
-    const gy = GROUND + 9 + Math.floor(hash01(k * 23 + 3) * (H - GROUND - 12));
+    const gy = GROUND + 30 + Math.floor(hash01(k * 23 + 3) * (H - GROUND - 33));
     cx.fillStyle = "rgba(0,0,0,.16)";
-    cx.fillRect(gx, gy, 2, 1);
-    if (hash01(k * 5 + 8) > 0.6) cx.fillRect(gx + 3, gy + 2, 1, 1);
+    cx.fillRect(gx, gy, 3, 1);
     const gr2 = hash01(k * 13 + 11);
-    if (gr2 < 0.4) { // lighter/darker grass dashes
-      cx.fillStyle = gr2 < 0.2 ? P.gramaA : P.gramaB;
-      cx.fillRect(gx + 2, GROUND + 8 + Math.floor(hash01(k * 19 + 2) * (H - GROUND - 10)), 4, 2);
+    if (gr2 < 0.30) {                                    // a weed in a joint
+      const gy2 = GROUND + 3 + Math.floor(hash01(k * 19 + 2) * (H - GROUND - 8));
+      cx.fillStyle = gr2 < 0.15 ? P.gramaA : P.gramaB;
+      cx.fillRect(gx + 2, gy2, 1, 3); cx.fillRect(gx + 3, gy2 + 1, 1, 2);
     }
   }
   // grass tufts, dirt specks and flowers scroll with the world
@@ -3164,30 +3182,51 @@ function drawScene() {
           galhos("#4a3020", "#6b4830");
         }
       }
-    } else if (kind < 7) { // cottage: lit right wall, shaded left, roof overhang and a chimney
-      const paredes = [["#8a5c3e", "#a8764f", "#553826"], ["#7a6e62", "#968a7c", "#4e463e"], ["#836a52", "#9e8266", "#544335"]][k % 3];
-      const telhas = [["#a06a42", "#c2895a"], ["#8a4f4a", "#a86a64"], ["#4a6b52", "#68896c"]][k % 3];
-      sombra(sx + 21, GROUND, 38);
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 8, GROUND - 20, 27, 20);
-      cx.fillStyle = paredes[0]; cx.fillRect(sx + 9, GROUND - 19, 25, 19);
-      cx.fillStyle = paredes[2]; cx.fillRect(sx + 9, GROUND - 19, 4, 19);       // shaded left
-      cx.fillStyle = paredes[1]; cx.fillRect(sx + 31, GROUND - 19, 3, 19);      // sunlit right
-      cx.fillStyle = "#6b4a35"; cx.fillRect(sx + 28, GROUND - 34, 5, 8);        // chimney
-      cx.fillStyle = "#8a6549"; cx.fillRect(sx + 31, GROUND - 34, 2, 8);
-      cx.fillStyle = telhas[0]; cx.fillRect(sx + 4, GROUND - 27, 35, 8);        // roof, overhanging
-      cx.fillStyle = telhas[1]; cx.fillRect(sx + 4, GROUND - 27, 35, 2);
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 4, GROUND - 20, 35, 2);        // eave shadow
-      cx.fillStyle = "#3a2416"; cx.fillRect(sx + 25, GROUND - 13, 8, 13);       // door
-      cx.fillStyle = "#5a3a22"; cx.fillRect(sx + 26, GROUND - 12, 6, 12);
-      cx.fillStyle = "#ffcd75"; cx.fillRect(sx + 30, GROUND - 7, 1, 1);
-      if (alive) {                                                             // light spilling out
-        cx.globalAlpha = 0.20; cx.fillStyle = "#ffe08a";
-        cx.fillRect(sx + 10, GROUND - 18, 11, 12); cx.globalAlpha = 1;
+    } else if (kind < 7) { // the house on the street, out of the board's CENÁRIOS strip:
+      // a painted two-storey with a terracotta tiled roof pitched over a deep eave, a tall
+      // shuttered window upstairs, a doorway straight onto the pavement, and plants — on the
+      // sill, in a pot by the door, and climbing the wall. Nothing on that board is bare.
+      const paredes = [["#c9a86a", "#e2c489", "#8a6f42"], ["#d8c9a2", "#f0e2bb", "#93855f"],
+        ["#b58f6e", "#d4ab84", "#7d6047"], ["#a8b48c", "#c6d0a6", "#6f7a58"]][k % 4];
+      const telhas = ["#96482c", "#b45c38", "#6d3320"];
+      sombra(sx + 21, GROUND, 40);
+      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 6, GROUND - 32, 31, 32);
+      cx.fillStyle = paredes[0]; cx.fillRect(sx + 7, GROUND - 31, 29, 31);
+      cx.fillStyle = paredes[2]; cx.fillRect(sx + 7, GROUND - 31, 4, 31);       // shaded left
+      cx.fillStyle = paredes[1]; cx.fillRect(sx + 33, GROUND - 31, 3, 31);      // sunlit right
+      cx.fillStyle = "rgba(0,0,0,.13)"; cx.fillRect(sx + 7, GROUND - 15, 29, 1); // the floor line
+      // the roof: pantiles, drawn as a run of half-round ridges so it is not one slab
+      cx.fillStyle = telhas[2]; cx.fillRect(sx + 2, GROUND - 39, 39, 8);
+      for (let t2 = 0; t2 < 13; t2++) {
+        cx.fillStyle = telhas[t2 % 2]; cx.fillRect(sx + 2 + t2 * 3, GROUND - 38, 2, 7);
       }
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 16, 9, 9);
-      cx.fillStyle = alive ? "#ffe08a" : "#241f1a"; cx.fillRect(sx + 12, GROUND - 15, 7, 7);
-      cx.fillStyle = "#2a1c12";
-      cx.fillRect(sx + 15, GROUND - 15, 1, 7); cx.fillRect(sx + 12, GROUND - 12, 7, 1);
+      cx.fillStyle = "#d07048"; cx.fillRect(sx + 2, GROUND - 39, 39, 2);        // the sunlit ridge
+      cx.fillStyle = "rgba(0,0,0,.30)"; cx.fillRect(sx + 3, GROUND - 31, 37, 2); // under the eave
+      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 25, GROUND - 14, 9, 14);       // the doorway
+      cx.fillStyle = "#4a6b52"; cx.fillRect(sx + 26, GROUND - 13, 7, 13);       // a painted door
+      cx.fillStyle = "#68896c"; cx.fillRect(sx + 31, GROUND - 13, 1, 13);
+      cx.fillStyle = "#eba748"; cx.fillRect(sx + 30, GROUND - 7, 1, 1);
+      // the upstairs window, shuttered, with the light of a room behind it
+      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 29, 11, 12);
+      cx.fillStyle = alive ? "#fde79d" : "#3a3428"; cx.fillRect(sx + 12, GROUND - 28, 9, 10);
+      cx.fillStyle = "#7d6047"; cx.fillRect(sx + 12, GROUND - 28, 2, 10); cx.fillRect(sx + 19, GROUND - 28, 2, 10);
+      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 17, 11, 2);       // the sill
+      cx.fillStyle = "#8a6f42"; cx.fillRect(sx + 11, GROUND - 17, 11, 1);
+      if (alive) {                                                             // light spilling out
+        cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d";
+        cx.fillRect(sx + 9, GROUND - 27, 15, 12); cx.globalAlpha = 1;
+      }
+      // plants: a box on the sill, a pot by the door, and a vine up the shaded corner
+      cx.fillStyle = "#96482c"; cx.fillRect(sx + 13, GROUND - 19, 7, 3);
+      cx.fillStyle = "#3e4721"; cx.fillRect(sx + 12, GROUND - 21, 9, 2);
+      cx.fillStyle = "#767f34"; cx.fillRect(sx + 13, GROUND - 22, 3, 2); cx.fillRect(sx + 18, GROUND - 21, 2, 2);
+      cx.fillStyle = "#96482c"; cx.fillRect(sx + 20, GROUND - 5, 5, 5);
+      cx.fillStyle = "#525d2a"; cx.fillRect(sx + 19, GROUND - 9, 7, 4);
+      cx.fillStyle = "#767f34"; cx.fillRect(sx + 20, GROUND - 11, 2, 3); cx.fillRect(sx + 23, GROUND - 10, 2, 2);
+      cx.fillStyle = "#3e4721";
+      for (let v = 0; v < 9; v++) cx.fillRect(sx + 7 + (v & 1 ? 0 : 2), GROUND - 4 - v * 3, 3, 3);
+      cx.fillStyle = "#525d2a";
+      for (let v = 1; v < 8; v += 2) cx.fillRect(sx + 9, GROUND - 4 - v * 3, 2, 2);
     } else if (kind < 8) { // pond: muddy bank, the sky reflected in it, drifting shimmer
       cx.fillStyle = P.aguaFundo;
       cx.fillRect(sx + 5, GROUND + 2, 36, 13);
@@ -3298,25 +3337,132 @@ function drawScene() {
     }
     // project buildings appear as you launch projects
     if (S.geradores > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
-      if (S.modo === "limpo") { // windmill with hub and shadowed pole
-        cx.fillStyle = "#a9a9b8"; cx.fillRect(sx + 40, GROUND - 34, 1, 34);
-        cx.fillStyle = "#d8d8e0"; cx.fillRect(sx + 41, GROUND - 34, 2, 34);
-        cx.save(); cx.translate(sx + 41, GROUND - 34); cx.rotate(tick / 14);
-        cx.fillStyle = "#f4f4f4";
-        cx.fillRect(-1, -15, 2, 30); cx.fillRect(-15, -1, 30, 2);
-        cx.restore();
-        cx.fillStyle = "#2b2f45"; cx.fillRect(sx + 39, GROUND - 36, 5, 5);
-        cx.fillStyle = "#ffcd75"; cx.fillRect(sx + 40, GROUND - 35, 3, 3);
-      } else { // brick factory with lit windows and double smoke
-        cx.fillStyle = "#4a3a34"; cx.fillRect(sx + 35, GROUND - 23, 22, 23);
-        cx.fillStyle = "#7a5a50"; cx.fillRect(sx + 36, GROUND - 22, 20, 22);
-        cx.fillStyle = "#5d4540"; cx.fillRect(sx + 36, GROUND - 22, 20, 3);
-        cx.fillStyle = "#ffe08a"; cx.fillRect(sx + 39, GROUND - 15, 4, 5); cx.fillRect(sx + 48, GROUND - 15, 4, 5);
-        cx.fillStyle = "#3e4760"; cx.fillRect(sx + 50, GROUND - 34, 6, 12);
-        cx.fillStyle = "rgba(130,130,130,.7)";
+      // A project is a thing somebody built on their own roof. GO STEADY grows it a garden
+      // and a water tank; GO FAST bolts a generator to it and it smokes. White wind turbines
+      // were the loudest thing on screen that is nowhere on the board.
+      if (S.modo === "limpo") { // the rooftop garden: a tank, beds, a vine down the wall
+        cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 34, GROUND - 27, 22, 27);
+        cx.fillStyle = "#b58f6e"; cx.fillRect(sx + 35, GROUND - 26, 20, 26);
+        cx.fillStyle = "#8a6f42"; cx.fillRect(sx + 35, GROUND - 26, 3, 26);
+        cx.fillStyle = "#96482c"; cx.fillRect(sx + 33, GROUND - 30, 24, 4);   // the parapet
+        cx.fillStyle = "#d07048"; cx.fillRect(sx + 33, GROUND - 30, 24, 1);
+        cx.fillStyle = "#7d8894"; cx.fillRect(sx + 48, GROUND - 40, 8, 10);   // the water tank
+        cx.fillStyle = "#9fa9b4"; cx.fillRect(sx + 54, GROUND - 40, 2, 10);
+        cx.fillStyle = "#3a4227"; cx.fillRect(sx + 47, GROUND - 41, 10, 2);
+        cx.fillStyle = "#3e4721"; cx.fillRect(sx + 35, GROUND - 36, 12, 6);   // the beds on top
+        cx.fillStyle = "#525d2a"; cx.fillRect(sx + 35, GROUND - 37, 12, 2);
+        cx.fillStyle = "#767f34";
+        cx.fillRect(sx + 37, GROUND - 39 + (Math.floor(tick / 22) % 2), 2, 3);
+        cx.fillRect(sx + 42, GROUND - 38, 2, 2);
+        cx.fillStyle = "#eba748"; cx.fillRect(sx + 44, GROUND - 39, 2, 2);    // something flowering
+        cx.fillStyle = "#3e4721";
+        for (let v = 0; v < 8; v++) cx.fillRect(sx + 35 + (v & 1 ? 0 : 2), GROUND - 3 - v * 3, 3, 3);
+        cx.fillStyle = "#fde79d"; cx.fillRect(sx + 41, GROUND - 18, 4, 5); cx.fillRect(sx + 48, GROUND - 18, 4, 5);
+      } else { // the same building with a generator bolted on, and it smokes
+        cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 34, GROUND - 27, 22, 27);
+        cx.fillStyle = "#8a7360"; cx.fillRect(sx + 35, GROUND - 26, 20, 26);
+        cx.fillStyle = "#645343"; cx.fillRect(sx + 35, GROUND - 26, 3, 26);
+        cx.fillStyle = "#5c3b1f"; cx.fillRect(sx + 33, GROUND - 30, 24, 4);
+        cx.fillStyle = "#fde79d"; cx.fillRect(sx + 41, GROUND - 18, 4, 5); cx.fillRect(sx + 48, GROUND - 18, 4, 5);
+        cx.fillStyle = "#3f4235"; cx.fillRect(sx + 44, GROUND - 38, 9, 8);    // the generator
+        cx.fillStyle = "#585c4b"; cx.fillRect(sx + 51, GROUND - 38, 2, 8);
+        cx.fillStyle = "#2a2b1a"; cx.fillRect(sx + 46, GROUND - 46, 4, 9);    // its flue
+        cx.fillStyle = "rgba(150,145,130,.62)";
         const p = (tick % 36) / 36, p2 = ((tick + 18) % 36) / 36;
-        cx.fillRect(sx + 50 + p * 7, GROUND - 40 - p * 16, 5 - p * 2, 4);
-        cx.fillRect(sx + 50 + p2 * 7, GROUND - 40 - p2 * 16, 5 - p2 * 2, 4);
+        cx.fillRect(sx + 45 + p * 7, GROUND - 52 - p * 16, 5 - p * 2, 4);
+        cx.fillRect(sx + 45 + p2 * 7, GROUND - 52 - p2 * 16, 5 - p2 * 2, 4);
+      }
+    }
+  }
+
+  // ---- THE FRAME ----
+  // Every CENÁRIOS thumbnail on the board is composed the same way: dark foliage and dark
+  // masonry crowding both edges and the top corners, with the light kept in a slot down the
+  // middle. Without it a side-scroller is a wide empty sky with a strip of things along the
+  // bottom, which is exactly what this frame was. These are near, dark, low in contrast and
+  // barely parallax — they are the proscenium, not scenery, and they never reach the middle
+  // third where the character and the troubles live.
+  {
+    const escuro = P.frenteC, meio = P.frenteL, borda = P.mataNearL;
+    const fim = GROUND + 12;
+    const desl = worldX * 0.05;
+    // The inner edge is a profile, not a stack of blobs: for every row, one number says how
+    // far in the mass reaches, and it is a wide swell plus a small lobe so the silhouette
+    // scallops like foliage instead of stepping like boxes.
+    // widths are fractions of W, never pixels: the canvas is window.innerWidth/3, so a
+    // hardcoded 60 is a fifth of the frame on one phone and the whole of it on another
+    const wBase = W * 0.058, wSwell = W * 0.062, wLobo = W * 0.024;
+    const perfil = function (y, fase) {
+      const t = y / fim;
+      return Math.max(0, Math.round(wBase + wSwell * Math.pow(1 - t, 1.5)
+        + Math.sin(y * 0.11 + fase) * wLobo
+        + Math.sin(y * 0.031 + fase * 1.7) * wLobo * 1.3
+        + Math.sin(y * 0.62 + fase * 3.3) * wLobo * 0.55));   // the leaf scallop
+    };
+    const lado = function (dir, fase) {
+      for (let y = -2; y < fim; y++) {
+        const w2 = perfil(y, fase);
+        if (w2 <= 0) continue;
+        const x0 = dir > 0 ? 0 : W - w2;
+        // texture, not stripes: a coarse checker of two greens broken by a third
+        const banda = ((y >> 2) + (dir > 0 ? 0 : 1)) & 1;
+        cx.fillStyle = banda ? escuro : meio;
+        cx.fillRect(x0, y, w2, 1);
+        if (((y * 7 + (dir > 0 ? 0 : 3)) % 11) < 3) {
+          cx.fillStyle = banda ? meio : escuro;
+          cx.fillRect(x0 + (dir > 0 ? Math.round(w2 * 0.3) : 1), y, Math.max(2, w2 >> 2), 1);
+        }
+        cx.fillStyle = borda;                                 // the light that gets round it
+        cx.fillRect(dir > 0 ? w2 - 2 : W - w2, y, 2, 1);
+      }
+    };
+    lado(1, desl * 0.02);
+    lado(-1, 4.1 + desl * 0.02);
+  }
+
+  // ---- POWER LINES ----
+  // Every single CENÁRIOS and LUZ & ATMOSFERA thumbnail on the board has them: leaning
+  // concrete-and-timber poles with a crossarm, a fat knot of cable at the top and wires
+  // sagging away across the sky. They are the one silhouette that says "this street" faster
+  // than anything else, so they get their own pass, drawn over the buildings and under the
+  // hero, with a catenary between consecutive poles rather than a straight line.
+  {
+    const passo = 62, vel = 0.92, base = GROUND - 1;
+    const k0 = Math.floor(worldX * vel / passo) - 1;
+    const alt = function (k) { return 46 + Math.round(hash01(k * 17 + 4) * 9); };
+    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+      const sx = Math.round(k * passo - worldX * vel);
+      const hA = alt(k), hB = alt(k + 1);
+      const topA = base - hA, topB = base - hB, nx = Math.round(sx + passo);
+      // the wires first, so the poles overlap them where they are tied off
+      for (let f = 0; f < 3; f++) {
+        const dy = f * 3, sag = 7 + f * 2;
+        cx.fillStyle = f === 1 ? "rgba(20,23,12,.85)" : "rgba(20,23,12,.62)";
+        for (let x = Math.max(-2, sx); x <= Math.min(W + 2, nx); x += 2) {
+          const t = (x - sx) / passo;
+          const y = topA + dy + (topB - topA) * t + Math.round(Math.sin(t * Math.PI) * sag);
+          cx.fillRect(x, y, 2, 1);
+        }
+      }
+      if (sx < -14 || sx > W + 14) continue;
+      const incl = hash01(k * 23 + 9) > 0.6 ? 1 : 0;      // half of them lean
+      cx.fillStyle = "#3a3527";
+      for (let y = 0; y < hA; y++) cx.fillRect(sx + Math.round(y / hA * incl), base - y, 3, 1);
+      cx.fillStyle = "#57503c";
+      for (let y = 0; y < hA; y++) cx.fillRect(sx + 2 + Math.round(y / hA * incl), base - y, 1, 1);
+      cx.fillStyle = "#3a3527"; cx.fillRect(sx - 4 + incl, topA + 2, 11, 2);   // the crossarm
+      cx.fillStyle = "#57503c"; cx.fillRect(sx - 4 + incl, topA + 2, 11, 1);
+      cx.fillStyle = "#2a2b1a"; cx.fillRect(sx - 2 + incl, topA + 4, 2, 2); cx.fillRect(sx + 3 + incl, topA + 4, 2, 2);
+      cx.fillStyle = "#1f2412"; cx.fillRect(sx - 1 + incl, topA + 6, 5, 4);    // the knot of cable
+      if (hash01(k * 41 + 3) > 0.55) {                                          // a lamp on the arm
+        const on = h > 0.3;
+        cx.fillStyle = "#2a2b1a"; cx.fillRect(sx + 6 + incl, topA + 4, 4, 2);
+        cx.fillStyle = on ? "#fde79d" : "#4a4a3a"; cx.fillRect(sx + 7 + incl, topA + 6, 2, 2);
+        if (on) { cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d"; cx.fillRect(sx + 3 + incl, topA + 6, 9, 12); cx.globalAlpha = 1; }
+      }
+      if (h > 0.4) {                                    // and something climbing it, of course
+        cx.fillStyle = "#3e4721";
+        for (let y = 2; y < Math.round(hA * 0.5); y += 3) cx.fillRect(sx + (y & 2 ? -1 : 3), base - y, 2, 2);
       }
     }
   }
