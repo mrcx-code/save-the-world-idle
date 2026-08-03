@@ -1822,6 +1822,92 @@ toda sessão começa lendo a última entrada.
   board 63 86 115 125 61 contra nosso 106 112 140 134 102, ou seja as bordas dele são metade
   do valor das nossas, e isso é a mesma pergunta pela lateral.**
 
+- **2026-08-03 · visual — a franja saiu do meio, e a moldura virou duas casas em vez de um arco.**
+  Três incrementos que ficaram e dois que foram desfeitos, cada um com `node test/smoke.js`
+  verde. **FPS 61 do começo ao fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado —
+  **medido: `node test/sim.js` byte a byte idêntico**.
+
+  **O placar, `test/board.js`, quadro inteiro, contra o painel RUA DO BAIRRO:**
+
+  | | luma | C* | topo→chão | esq→dir |
+  |---|---|---|---|---|
+  | BOARD | 90,1 | 19,5 | 141 101 83 60 66 | 63 86 115 125 61 |
+  | JOGO MANHÃ antes | 118,7 | 16,7 | 125 131 116 120 102 | 106 112 140 134 102 |
+  | JOGO MANHÃ depois | **115,7** | **16,5** | **130 126 110 115 99** | **93 115 141 138 90** |
+  | JOGO TARDE antes | 124,5 | 22,7 | 125 134 130 127 108 | 116 117 139 137 113 |
+  | JOGO TARDE depois | 121,6 | 22,2 | 127 130 125 122 105 | 106 119 140 141 103 |
+  | JOGO NOITE antes | 59,8 | 8,7 | 56 63 66 64 50 | 56 57 66 65 54 |
+  | JOGO NOITE depois | 58,4 | 8,8 | 57 62 63 61 49 | 52 58 66 66 49 |
+
+  **As duas bordas caíram 13 e 12 pontos e o meio SUBIU (140→141 e 134→138), que é a
+  assinatura do board pela lateral: quadro pesado nas quinas, rua aberta no miolo.**
+
+  **(1) O board põe folha nas QUINAS e não põe nada no topo do meio.** A onda 13 já tinha
+  atribuído: lá em cima só 22% do quadro era céu e 78% era franja a L 115. `dMeio` caiu de
+  0,16·W (20,8 px de folha rasgada pendurada dentro da faixa visível, de lado a lado) para
+  **0,045·W**, que são 6 px e moram inteiros **atrás da barra de HUD** — o meio da borda de
+  cima deixou de existir como imagem. A massa não sumiu, mudou de lugar: `alcance` de 0,46·W
+  para 0,34·W (quina, não tampa) e `dTopo` de 0,46·W para 0,72·W. O festão de folha passou a
+  ser pesado pelo mesmo termo da quina, senão devolvia ±12 px de folha exatamente onde o meio
+  tinha acabado de abrir. **Medido: quinto de cima 125 → 133; o sol voltou a aparecer no
+  print.**
+
+  **(2) Uma coluna três vezes mais larga em cima do que embaixo é um arco, e o arco É o
+  túnel.** Base 0,058·W contra bojo 0,24·W dava 39 px de massa no topo e 7,6 px na linha do
+  chão: as duas se encontravam por cima do meio e morriam na altura dos olhos — buraco de
+  fechadura, que é o que os dois prints recusados sempre foram. Agora base **0,092·W** e bojo
+  **0,16·W**: 33 px em cima, 12 px embaixo, lados retos como os prédios que emolduram todo
+  painel de rua do board. O limite de jogabilidade continua valendo e continua apertando (a
+  terceira vaga da fila de monstros).
+
+  **(3) E o resto da massa das colunas foi tomado em VALOR, não em largura — é assim que o
+  board consegue quina escura sem fechar o quadro.** Os verdes da moldura eram os **mesmos
+  dois** da faixa de grama do primeiro plano; agora têm três próprios (`colunaC/colunaL/
+  colunaB`) a ~2/3 da luma, e a alvenaria desceu os mesmos degraus. **A primeira versão
+  escalou os três canais por igual e custou C\* 16,7 → 15,6** — croma que três ondas
+  pagaram. Reautorada **abrindo a rampa entre os canais conforme o valor cai** (folha escura
+  num quadro com esta luz rebatida não é um verde mais cinza, é um mais fundo e mais
+  saturado): **C\* 16,5, ou seja 0,2 de custo em vez de 1,1.** A copa passou a nascer dos
+  verdes das próprias colunas, então quina e coluna voltaram a ser uma massa só.
+
+  **Tentei e desfiz, os dois medidos:** (a) `alcance` 0,34 → 0,40·W para devolver 1,3 ponto
+  de céu aberto — **devolveu na moeda errada**: céu aberto do quadro inteiro 32,1% → 31,4%
+  mas o **visível** 32,6% → 32,5%, isto é, cada pixel devolvido ficou atrás da barra, e o
+  quinto de cima pagou um ponto (130 → 129). (b) Base da coluna 0,092 → 0,115·W: **mediu
+  exatamente o que prometia — bordas 93/90 → 86/84** — **e o print recusou**: naquela largura
+  a coluna da direita começa a comer o terceiro monstro da fila, a fresta de céu entre as
+  duas fecha num poço, o menino anda para trás nos três eixos (MANHÃ luma 25 → 29, croma
+  74 → 81, dE 18 → 21 de 485) e o céu aberto atravessa os 31,2% para baixo, 30,1%. **É a
+  terceira vez que este projeto confia no print contra o número e a terceira vez que o print
+  estava certo.** Os dois estão escritos no arquivo ao lado do número que os matou.
+
+  **O que ficou segurado:** poncho **123,4** à NOITE no dígito (miolo 195,6 / cristal 214,7
+  seguem sendo o mais quente do quadro); o menino à NOITE **54 / 12 / 11 de 485**, parado;
+  rua doente segue **mais clara** que a sã (ARCO DOENTE/MANHÃ 139,1 contra SÃ 113,4) e
+  desbotada, não escura. **O que NÃO ficou segurado, e é a dívida desta onda:** céu aberto
+  visível **31,2% → 32,6%**, +1,4 — abrir o topo do meio necessariamente abre céu, e o único
+  lugar onde ainda dá para devolver à vista é o próprio topo do meio. E o menino à MANHÃ
+  piorou de **16 / 92 / 12** para **23 / 73 / 16 de 485**: a croma dele melhorou 19 posições,
+  a luma e o dE pioraram 7 e 4, e a atribuição está feita — os rivais novos são blocos em
+  (105,18) e (110,18), a fronteira entre o céu recém-aberto e a massa da quina, logo abaixo
+  da barra. Razão dele contra o rival mais forte: 0,57 na luma, 0,81 no dE.
+
+  **Conferido em três níveis de saúde e quatro horas** (`test/cruz.js`): sem erro de console,
+  e à NOITE as janelas acesas das colunas viraram pontos quentes contra alvenaria de verdade
+  escura, que é ganho e não estava previsto.
+
+  **Medido no fim:** smoke verde nos três commits, **FPS 61**, `sim.js` idêntico.
+  **Próximo passo: as bordas ficaram em 93/90 contra 63/61 do board e essa distância agora
+  tem um limite medido, não uma opinião — largura acabou (o print recusa 0,115·W) e valor
+  quase acabou (`luzDoDia()` soma ~+26 de luma em cima de qualquer coisa que a moldura
+  autore à MANHÃ, então baixar mais a tinta rende cada vez menos). O que sobra e ainda não
+  foi tentado é o terceiro caminho, o único que o board também usa: as bordas dele são
+  escuras porque estão em SOMBRA PRÓPRIA, com o sol vindo do fundo da rua — ou seja um
+  gradiente de valor ao longo do X do quadro inteiro, e não tinta mais escura na moldura.
+  Dúvida honesta: isso é perigosamente perto de pós-processamento, que a direção C proíbe
+  em letra maiúscula, então talvez a resposta certa seja "está no limite" e a próxima onda
+  deva ir gastar o esforço no céu aberto de 32,6%.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
