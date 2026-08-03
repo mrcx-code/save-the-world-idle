@@ -1369,6 +1369,90 @@ toda sessão começa lendo a última entrada.
   saturada de um quadro pode estar lendo primeiro por um canal que a minha medida não olha —
   não sei se estou subestimando ele.**
 
+- **2026-08-03 · visual — a medida ganhou croma, a medida ganhou vergonha, e o proscênio
+  finalmente fechou por cima.** Três incrementos, cada um com `node test/smoke.js` verde.
+  **FPS 61 do começo ao fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado —
+  **medido: `node test/sim.js` dá saída byte a byte idêntica nos três commits** (`diff`
+  vazio, três vezes).
+
+  **(1) A dúvida da onda passada: a medida era cega para cor.** `medir.js` agora pontua cada
+  bloco da grade por **três eixos** sobre o mesmo centro-entorno: **LUMA** (intacta, então
+  todo número das ondas anteriores continua querendo dizer a mesma coisa), **CROMA** (a mesma
+  ideia rodada só no plano `a*b*`, valor jogado fora — figura cinza em rua cinza tira zero
+  por mais clara que seja) e **DE** (CIE76 nos três eixos). Mais uma leitura simples de C*
+  médio, para a frase "ele é a única coisa saturada do quadro" virar fato ou mentira.
+
+  **A resposta honesta é que a cor não o resgata, e à NOITE a frase é falsa.** Medido no
+  pior caso: à MANHÃ o C* dele é **24,2 contra 16,6 do quadro** (razão 1,45) — ele é mesmo o
+  mais saturado —, mas em *contraste* de croma ele cai para **182/873**, o pior dos três
+  eixos, contra 100/873 na luma; quem ganha em croma é **o monstro mais próximo**, em
+  (105,158). À NOITE o C* dele é **7,4 contra 9,9 do quadro** (razão **0,74**): ele é
+  **menos** saturado que a rua ao redor, porque `luzPersonagem` o tinge 80% para o azul da
+  hora. Aí a croma ajuda um pouco (65/873 contra 165/873 na luma) e o DE fica em 93/873,
+  razão 0,78 contra 0,62 da luma. **Resumo: à noite a cor melhora a posição dele, de manhã
+  não muda nada, e em nenhuma das duas ele é o primeiro. Não mexi na arte por causa disso** —
+  a medida não pediu, e subir a saturação dele à noite desfaria a escolha que a onda 7 tomou
+  medindo.
+
+  **Dois bugs da bancada, achados no caminho, e os dois vinham envenenando todo antes/depois
+  deste repositório.** (a) **`desenhar()` é o HUD, não o quadro** — a tela é pintada por
+  `drawScene()` + `desenharMundo()` de dentro do laço rAF, então todo preparo daqui vinha
+  medindo o quadro que o laço tinha deixado para trás: a tabela saía **uma hora atrasada** em
+  relação ao rótulo. (b) O laço seguia andando com `worldX` e `animT` e **respawnava monstros
+  dentro do controle sem monstros**. Hoje: `QUADRO()` explícito, rAF congelado, preparo e
+  leitura dentro de um `evaluate` só, `worldX`/`animT`/campo de partículas fixados. A NOITE
+  repete no dígito.
+
+  **(2) Os pips desproporcionais.** Continuam **sem tomar a tinta da hora** — pip que fica
+  azul à meia-noite entrou no mundo em que ele deveria estar por cima. Mas não podiam ignorar
+  o *nível*: com os monstros no piso 0,26, o `#e8edf6` cru era a coisa mais clara do quadro.
+  **Medido**, faixa do mundo à NOITE: dos **189 px acima de luma 200**, **108 eram o mostrador
+  de vida**, com pico **237** — acima do miolo do Cetro (195,6) e do cristal (214,7), o que
+  inverte a única regra que a onda da luz tinha fixado. Agora escurecem **só em valor**,
+  neutros, com piso alto (0,67; o flash do acerto fica em 0,82, porque dois quadros de branco
+  é a confirmação de que você acertou). **Antes → depois à NOITE: acima de 200, 108 px → 0;
+  pico 237 → 159; e ainda põem 108 px acima de luma 150 num quadro cujo percentil 99,5 é
+  111.** Inconfundível, sem ser o mais alto. MANHÃ intacta (241 → 223 px acima de 200).
+
+  **(3) A maior distância que sobrava, medida em vez de julgada.** Parti o quadro do mundo em
+  faixas e pontuei cada uma como pontuo os blocos: **CEU alto 38% do quadro a dE local 8,9 /
+  2,8; CEU baixo 30% a 6,9 / 3,6; HORIZONTE 16% a 23,4 / 11,8; RUA 14% a 20,2 / 7,7** (MANHÃ
+  / NOITE). **Dois terços da imagem a um terço da densidade de evento de todas as outras
+  faixas** — e o bloco do proscênio dizia desde que foi escrito que fechava "as duas bordas
+  **e os cantos de cima**" e nunca desenhou senão as duas colunas. Agora a copa vem por cima:
+  mais funda nos cantos, afinando numa franja recortada no meio, de modo que a fresta de luz
+  vira um **arco**, que é como todo painel de rua do board está composto. **Não acrescenta
+  objeto nenhum** a um quadro já cheio — é a mesma massa, os mesmos dois verdes, a mesma
+  borda acesa e o mesmo quase-zero de parallax das colunas de onde ela sai, e desbota com o
+  mundo: rua doente ganha arco ocre e empoeirado, não verde.
+
+  **Medido:** dE local do CEU alto **8,9 → 10,0** à MANHÃ e **2,8 → 3,1** à NOITE. A nota do
+  próprio menino **não se move em nenhuma das duas horas** (48,4 / 20,2), e contra o que de
+  fato disputa com ele — proscênio à parte, que agora quer dizer três lados, por uma regra de
+  posição que teria excluído o bloco vencedor **antes** desta mudança também — a posição dele
+  se segura: MANHÃ **52/519 → 49/485** na luma e **39/519 → 38/485** no dE; NOITE **76 → 76**,
+  igual no dígito. O que ele perde é só contra a moldura: o bloco do topo do quadro, ao lado
+  do sol, vai de **64,0 para 75,2**, então a razão dele contra a coisa mais alta de
+  **qualquer** lugar cai de **0,76 para 0,64** à MANHÃ. Aquele bloco está 180 px acima da
+  cabeça dele, no canto da imagem.
+
+  **Tentei e desfiz, os dois medidos:** afinar a borda acesa da copa no vão do meio, na
+  teoria de que o brilho é que criava o rival — comprou 0,01, que é ruído, e o desenho mais
+  simples ficou. E copa **só nos cantos**, sem franja no meio — comprou 0,02 de razão, custou
+  0,6 de céu autorado e quebrou o arco em dois borrões.
+
+  **Conferido em três níveis de saúde e quatro horas** (`test/cruz.js`, novo — os `cruz-*.png`
+  não tinham script que os regerasse).
+
+  **Medido no fim:** smoke verde nos três incrementos, **FPS 61**, `sim.js` idêntico.
+  **Próximo passo: a faixa CEU baixo continua sendo a mais vazia do quadro — 30% da imagem a
+  dE local 6,9, e a copa não a alcança; é o vão entre a franja de folhagem e a linha do
+  telhado, e no board é exatamente onde ficam as fachadas do meio-termo e a segunda fiada de
+  telhados recuando para o ponto de fuga. Dúvida honesta: o jogo é side-scroller e não tem
+  ponto de fuga, então não sei se uma segunda camada de telhados a 0,45× preenche aquilo ou
+  só empilha mais silhueta numa faixa que já tem serra, cidade e marco disputando os mesmos
+  40 px.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
