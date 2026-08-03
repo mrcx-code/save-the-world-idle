@@ -2931,6 +2931,39 @@ toda sessão começa lendo a última entrada.
   passo:** se um dia quiser HUD com os `ui_*`, precisa de um set que cubra os 9 glifos (falta
   sol/ferramenta/tocha/varinha/chama), não os 7 atuais.
 
+- **2026-08-03 — três correções de leitura da UI (só apresentação, economia intocada).**
+  Lente: **Primeiros cinco minutos** — o dono não entendia o que a tela estava dizendo.
+  (1) **Seletor de quantidade nos PROJECTS.** A linha ×1/×10/MAX era "imensa" e tinha
+  três estados pra uma decisão que é binária. Tirei a linha `.selQtd` inteira. Agora a
+  compra é direta: um botão dourado primário que compra **UM** ao próximo preço, e um
+  botão verde compacto **MAX ×N** ao lado que gasta o que a energia atual cobre — reusa o
+  caminho de `quantosCabem(Infinity)`/`comprarGerador("max")`, sem matemática nova.
+  `S.qtdCompra` virou vestigial. `smoke.js` já verificava que MAX compra a conta certa e
+  nunca gasta a mais — passou **sem edição** (ele chama `comprarGerador('max')` direto e
+  não consulta o DOM do seletor).
+  (2) **A panela do mutirão parecia monstro.** A barra de janela fechando ficava na
+  **mesma altura** das barras de vida dos monstros e drenava verde→vermelho igual a HP —
+  o dono leu a panela como inimigo. Troquei por marcadores que monstro nenhum tem: pill
+  com o nome **"MUTIRAO"**, um **relógio radial** dourado com os segundos no centro, e uma
+  seta gorda apontando pra panela. Nenhuma barra horizontal na altura de HP. `abrirChamada`
+  /`atenderChamada`/`atualizarChamada` intocados — só o desenho mudou. Print lado a lado com
+  monstro confirma: não se parecem mais.
+  (3) **Anúncio central de transição** (`#anuncio`), o que o dono pediu: "um texto no meio
+  da tela indicando o que está acontecendo". Painel escuro arredondado, texto creme/ouro,
+  `pointer-events: none` (nunca come um toque), fade in/out de 2s, some sozinho. Dispara só
+  em **transições** observadas (não inventa estado): panela abre → "THE POT IS OUT",
+  mutirão começa → "MUTIRAO! …×1.35", trabalhos bloqueando produção → "TROUBLES IN THE
+  WAY", super dispara → "ALL TOGETHER! …", tocha liberada → "TORCH READY". `semearAnuncios()`
+  adota o estado no load pra não gritar em rajada ao voltar. Faixa do topo mantida pra
+  status contínuo.
+  **Medido:** `sim.js` **byte-idêntico** ao baseline nos três incrementos, **FPS 61** em
+  todos, `smoke.js` **verde** antes e depois. Prints lidos por mim: sheet de projetos com o
+  par 1-ou-MAX; panela com relógio radial ao lado de monstro com barra vermelha; anúncio
+  "MUTIRAO!" centralizado. **Próximo passo:** o anúncio some ao fim da animação CSS (ends em
+  opacity 0, `forwards`); pra fotografar tive que forçar `opacity:1` inline — funciona no
+  jogo, mas se um dia quiser um harness que pose o anúncio, congelar a animação como os
+  `*shot.js` fazem.
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the

@@ -191,6 +191,27 @@
   #alerta.magia { background: #3b3418; box-shadow: inset 0 0 0 2px var(--purple); color: #e0c47a; }
   @keyframes pulsa { 0% { opacity: 1 } 50% { opacity: .62 } 100% { opacity: 1 } }
 
+  /* a momentary shout in the MIDDLE of the screen when a big thing CHANGES. The top strip
+     carries standing status; this fires only on transitions the owner kept missing. It never
+     eats a tap (pointer-events: none) and clears itself after the fade. Styled like the
+     sheets: dark rounded panel, cream/gold text. */
+  #anuncio { position: fixed; z-index: 30; left: 50%; top: 32%; transform: translate(-50%, -50%);
+    max-width: min(340px, 88vw); text-align: center; pointer-events: none;
+    padding: 13px 20px; border-radius: var(--raio); border: 3px solid var(--ink);
+    background: linear-gradient(180deg, #333c22 0%, #242a16 60%, #1e2312 100%);
+    box-shadow: 0 5px 0 var(--ink), inset 0 1px 0 rgba(255,255,255,.13);
+    color: #fbe7ae; text-shadow: 1px 1px 0 var(--ink); font-size: var(--fs-lg); line-height: 1.45;
+    opacity: 0; }
+  #anuncio.mostra { animation: anuncia 2s ease forwards; }
+  #anuncio.festa { color: #d3e6a2; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--good); }
+  #anuncio.chama { color: #fbe7ae; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--gold); }
+  #anuncio.perigo { color: #eeae90; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--bad); }
+  @keyframes anuncia {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.86) }
+    14% { opacity: 1; transform: translate(-50%, -50%) scale(1) }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1) }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1) } }
+
   /* REAL DATA became a thin ticker instead of a slab. It was eating a fifth of the screen
      to say one sentence; this hands most of that height back to the world.
      Keeps --hControles rather than a fixed 122px: that variable is measured from the real
@@ -474,6 +495,7 @@
 
 <div id="offline"></div>
 <div id="alerta"></div>
+<div id="anuncio"></div>
 <div id="fato"></div>
 <div id="cartao"><div class="cn" id="cartaoN"></div><div class="ct" id="cartaoT"></div>
   <div class="cv" id="cartaoV"></div></div>
@@ -6600,6 +6622,50 @@ function alertaMundo() {
   }
 }
 
+// A momentary shout in the MIDDLE of the screen when a big thing CHANGES. The strip above
+// carries standing status; this fires only on transitions, so the player always knows what
+// just happened. It observes existing state — it invents no game state — and never eats a
+// tap (pointer-events: none in CSS).
+let anuncioTimer = null;
+function anunciar(txt, tom) {
+  const el = $("anuncio");
+  el.textContent = txt;
+  el.className = "";                 // restart the fade even mid-flight
+  void el.offsetWidth;
+  el.className = "mostra" + (tom ? " " + tom : "");
+  clearTimeout(anuncioTimer);
+  anuncioTimer = setTimeout(function () { el.className = ""; }, 2000);
+}
+let anChamada = false, anMutirao = false, anSuper = false, anBloqueio = false, anTocha = false;
+function semearAnuncios() {          // adopt the current state without shouting, so a reload
+  anChamada = !!chamada;             // or an offline jump does not fire a burst on the first frame
+  anMutirao = mutiraoT > 0;
+  anSuper = superT > 0;
+  anBloqueio = bloqueioMundo() < 0.999;
+  anTocha = S.energiaTotal >= CFG.metaPrestigio;
+}
+function verificarAnuncios() {
+  const temChamada = !!chamada;
+  if (temChamada && !anChamada) anunciar("THE POT IS OUT — tap it, quick!", "chama");
+  anChamada = temChamada;
+
+  const temMutirao = mutiraoT > 0;   // rising edge covers "the player answered the call"
+  if (temMutirao && !anMutirao) anunciar("MUTIRAO! Everyone's helping — ×" + CFG.mutiraoMult, "festa");
+  anMutirao = temMutirao;
+
+  const temSuper = superT > 0;
+  if (temSuper && !anSuper) anunciar("ALL TOGETHER! The street swings — ×" + CFG.superMult, "festa");
+  anSuper = temSuper;
+
+  const bloqueado = bloqueioMundo() < 0.999;   // troubles are actively holding production back
+  if (bloqueado && !anBloqueio) anunciar("TROUBLES IN THE WAY — tap them to clear", "perigo");
+  anBloqueio = bloqueado;
+
+  const tocha = S.energiaTotal >= CFG.metaPrestigio;   // a run just reached its end
+  if (tocha && !anTocha) anunciar("TORCH READY — pass it on", "chama");
+  anTocha = tocha;
+}
+
 let fatoIdx = 0;
 function girarFato() {
   const f = dadosReais[fatoIdx % dadosReais.length]; fatoIdx++;
@@ -6742,6 +6808,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   girarFato();
   desenhar();
+  semearAnuncios();      // adopt current state so the first frames do not shout on load
   medirControles();
   window.addEventListener("resize", medirControles);
 
@@ -6761,6 +6828,7 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarChamada(dt);
     atualizarWand(dt);
     atualizarSuper(dt);
+    verificarAnuncios();
     if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
     if (cartaoT > 0) cartaoT -= dt;
     if (S.u4) { // neighbors keep helping on their own — but they do not charge your super
