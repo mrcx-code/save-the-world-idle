@@ -113,7 +113,7 @@
     background: linear-gradient(180deg, rgba(36,50,92,.96), rgba(18,25,51,.96));
     /* purple, not gold: REAL DATA owns the gold left edge, and a made-up line must never
        be able to pass for a sourced one */
-    border: 3px solid var(--contorno); border-left: 5px solid var(--purple); border-radius: 10px;
+    border: 3px solid var(--contorno); border-left: 5px solid var(--purple);
     box-shadow: 0 5px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.13);
     padding: 12px 12px 13px; }
   #cartao.mostra { display: block; animation: cartaoVai 5.4s ease-out 1 forwards; }
@@ -148,7 +148,7 @@
   /* one line that says what the world wants from you right now */
   #alerta { display: none; position: fixed; z-index: 11; border-radius: var(--raio); left: 50%; transform: translateX(-50%);
     top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
-    border: 3px solid var(--ink); border-radius: 9px; padding: 7px 9px; font-size: var(--fs-xs); line-height: 1.7;
+    border: 3px solid var(--ink); padding: 7px 9px; font-size: var(--fs-xs); line-height: 1.7;
     text-align: center; background: rgba(14,15,26,.9); }
   #alerta.mostra { display: block; }
   #alerta.perigo { background: #43241a; box-shadow: inset 0 0 0 2px var(--bad); color: #eeae90; }
@@ -211,11 +211,8 @@
   button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno);
     border-radius: var(--raioSm);
     cursor: pointer; color: var(--chromeT); text-transform: uppercase;
-    background:
-      linear-gradient(158deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.03) 44%, rgba(255,255,255,0) 62%),
-      linear-gradient(180deg, #33436f 0%, var(--chromeA) 54%, var(--chromeB) 100%);
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22),
-      inset 0 -2px 0 rgba(0,0,0,.26);
+    background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14);
     touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   button:disabled { opacity: .5; cursor: default; }
   button:not(:disabled):active { transform: translateY(2px);
@@ -249,7 +246,7 @@
     display: flex; align-items: center; justify-content: center; gap: 10px;
     text-shadow: 0 1px 0 rgba(255,255,255,.45);
     box-shadow: 0 6px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.55),
-      inset 0 -3px 0 rgba(120,60,0,.28); position: relative; overflow: hidden; }
+      inset 0 -3px 0 rgba(120,60,0,.28); position: relative; }
   #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
     color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
   #btnClique.segurando { transform: translateY(3px);
@@ -1822,9 +1819,7 @@ function pal(h) {
   const P = { _h: hv };
   const resolva = function (e) { return luzDoDia(mixA(palMix(e[0], e[1], hv, tc), horizonC(hv), e[2])); };
   for (const k in PALETA) { const c = resolva(PALETA[k]); P[k + "A"] = c; P[k] = rgbS(c); }
-  // thick air eats the bright strip on the horizon: the band is the value architecture, so
-  // it is dimmed rather than moved, and it comes straight back when you go steady
-  P.faixa = rgbS(mixA(mixA(horiz, [255, 255, 255], 0.30), HAZE_FAST, rq * 0.34));
+  P.faixa = rgbS(mixA(horiz, [255, 255, 255], 0.30));
   // the hillside families, sick end shared so a bleached favela is one grey mass with the
   // faintest memory of paint in it — which is exactly what a bleached photograph looks like
   const fam = function (arr, cinza, dist) {
@@ -1880,12 +1875,7 @@ function skyCanvas(h) {
   skyKey = key;
   const g = skyCv.getContext("2d");
   for (let y = 0; y <= GROUND + 1; y++) {
-    const t = Math.pow(y / (GROUND + 1), 1.15);
-    let c = rampaCeu(h, t);
-    // the sky is most of the frame, so this is where the rhythm is actually felt. Haze
-    // banks at the horizon and thins out overhead — 8% at the zenith, 42% at the skyline
-    if (rq) c = mixA(c, HAZE_FAST, rq * (0.08 + 0.34 * t));
-    g.fillStyle = rgbS(c);
+    g.fillStyle = rgbS(rampaCeu(h, Math.pow(y / (GROUND + 1), 1.15)));
     g.fillRect(0, y, W, 1);
   }
   // The sun as a real disc with a corona, not a plus sign. Sick, it is a flat pale wafer
@@ -1938,12 +1928,7 @@ function chaoCanvas(h) {
   const perto = palMix(desbotar([124, 104, 76]), [124, 104, 76], h, tc);   // at your feet
   const longeC = palMix(desbotar([168, 148, 116]), [168, 148, 116], h, tc); // where it meets the path
   for (let y = 0; y < alt; y++) {
-    const t = Math.pow(y / alt, 0.62);
-    let c = mixA(longeC, perto, t);
-    // the ground under your feet is the one thing the rhythm barely touches: 12% at the
-    // path, 3% at the bottom edge. It is the anchor the value architecture is built on.
-    if (rq) c = mixA(c, HAZE_FAST, rq * (0.12 - 0.09 * t));
-    g.fillStyle = rgbS(c);
+    g.fillStyle = rgbS(mixA(longeC, perto, Math.pow(y / alt, 0.62)));
     g.fillRect(0, y, W, 1);
   }
   return chaoCv;
@@ -2170,44 +2155,27 @@ const CASH_MOB = { pal: {
   "KZTGGGgggGGGgttuuK",
   ".KZZTTTTTTTTtuuuK.",
   "..KKKKKKKKKKKKKK.."] };
-// The drum was the odd one out and the render said so side by side: its siblings are
-// rounded solids whose whole face is a six-tone ramp from a dark left rim to a lit right
-// one, and the drum was a hard 90° rectangle whose interior was ONE flat green with a
-// single dark pixel on the left and a single light pixel on the right — a wall, not a
-// volume. It was also the SMALLEST of the three (16×20 against 18×16 and 18×13) while
-// being the heaviest thing on the road at 5 hits. Same construction now — chamfered
-// silhouette, unbroken dark keyline, the same left-to-right tone ramp across the body,
-// 2×2 eyes and a dark mouth bar cut out of that ramp — just bigger: 20×22, taller than
-// either sibling. Its own language is kept where it identifies the thing: two steel
-// hoops (shaded on the same ramp instead of flat slabs), a lit lid, and the hazard
-// chevron. Nothing about hp, hitboxes or spawn changed — the hit test reads `m.wx + 5`,
-// not the sprite.
 const BARREL_MOB = { pal: {
-  K: "#0d0e16", Z: "#26401a", D: "#38581f", B: "#4d7a2c", H: "#69a441", W: "#8fc95e",
-  V: "#bfe98c", Y: "#e8f06a", E: "#1a1620",
-  M: "#232f3c", n: "#3a4d5f", m: "#5f7688", s: "#93a8b8" }, map: [
-  ".....KKKKKKKKKK.....",
-  "....KBBHHHWWVVVK....",
-  "..KDBBBBBBHHHHWWWK..",
-  ".KDDBBBBBBHHHHWWWVK.",
-  "KZDDBBBBBBHHHHWWWVVK",
-  "KnnmmmmmmmmmsssssssK",
-  "KMMMMMnnnnnnnnmmmmmK",
-  "KZDDBBBBBBHHHHWWWVVK",
-  "KZDDBEEBBBHHEEWWWVVK",
-  "KZDDBEEBBBHHEEWWWVVK",
-  "KZDDBBBBBBHHHHWWWVVK",
-  "KZDDBBBKKKKKKHWWWVVK",
-  "KZDDBBBBBBHHHHWWWVVK",
-  "KnnmmmmmmmmmsssssssK",
-  "KMMMMMnnnnnnnnmmmmmK",
-  "KZDDBBBBBBHHHHWWWVVK",
-  "KZDDBYYBBBHHHYYWWVVK",
-  "KZDDBBBYYBHYYHWWWVVK",
-  "KZDDBBBBBYYHHHWWWVVK",
-  "KZDDBBBBBBHHHHWWWVVK",
-  ".KDDBBBBBBHHHHWWWVK.",
-  "..KKKKKKKKKKKKKKKK.."] };
+  K: "#0d0e16", Z: "#2f4a1f", D: "#3f6428", B: "#5a8a3c", H: "#7fb356", W: "#a8d97c",
+  Y: "#d8e86a", E: "#1a1620", M: "#333d4b", m: "#5f6d7c" }, map: [
+  "...KKKKKKKKKK...",
+  ".KKZDDBBBHHWWKK.",
+  "KZZDDBBBBBHHHWWK",
+  "KZDmmmmmmmmmmHWK",
+  "KZDMMMMMMMMMMHWK",
+  "KZDBBBBBBBBBBHWK",
+  "KZDBBEEBBEEBBHWK",
+  "KZDBBEEBBEEBBHWK",
+  "KZDBBBBBBBBBBHWK",
+  "KZDBBKKKKKKBBHWK",
+  "KZDBBBBBBBBBBHWK",
+  "KZDmmmmmmmmmmHWK",
+  "KZDMMMMMMMMMMHWK",
+  "KZDBYYBBBBYYBHWK",
+  "KZDBBYYBBYYBBHWK",
+  "KZDBBBYYYYBBBHWK",
+  "KZZDDBBBBBHHHWWK",
+  ".KKDDBBBHHWWKK.."] };
 // ---- foliage: canopies with volume, baked once ----
 // Three stacked rectangles and a dozen random stipple pixels never read as a tree with a
 // lit side and a shaded side. These are hand-shaded maps — deep shadow into the lower left,
@@ -2303,10 +2271,8 @@ function drawMobs(smog) {
       sombra(sx + 9, GROUND, 13, 0.13);          // it floats, so its shadow is soft and wide
       drawMap("smog", SMOG_MOB.map, SMOG_MOB.pal, sx, GROUND - 25 + bob, m.flash > 0);
     } else if (m.type === "barrel") {
-      // 20 wide now, drawn one px left so it still stands on the same centre as its
-      // siblings (sx+9) — the hit test never looked at the sprite, so this is paint only
-      sombra(sx + 9, GROUND, 20, 0.26);
-      drawMap("barrel", BARREL_MOB.map, BARREL_MOB.pal, sx - 1, GROUND - 22 + (bob ? 1 : 0), m.flash > 0);
+      sombra(sx + 8, GROUND, 18, 0.26);
+      drawMap("barrel", BARREL_MOB.map, BARREL_MOB.pal, sx, GROUND - 18 + (bob ? 1 : 0), m.flash > 0);
     } else {
       sombra(sx + 9, GROUND, 18, 0.26);
       drawMap("cash", CASH_MOB.map, CASH_MOB.pal, sx, GROUND - 16 - (bob ? 0 : 1), m.flash > 0);
@@ -2857,13 +2823,8 @@ function drawHero() {
 
 function drawScene() {
   const h = worldHealth();
-  const R = ritmoPasso();           // 0 = GO STEADY, 1 = GO FAST, eased across ~1.1s
   const P = pal(h);                 // the whole world's colour, resolved once per health step
   const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
-  // The air in front of a world being pushed is thick BEFORE the team is worn: the old
-  // `smog` only ever answered to tiredness, which lags the decision by minutes. Rhythm
-  // gets its own share of it so the switch is felt now, and tiredness still stacks on top.
-  const smogV = Math.min(0.92, smog + R * 0.26 + R * smog * 0.4);
   // sky, sun and glow: dithered gradient baked once per health step
   cx.drawImage(skyCanvas(h), 0, 0);
   // Clouds. They were three flat rectangles of one grey — the crudest thing in the sky and
@@ -3595,97 +3556,50 @@ function drawScene() {
 
   // smog: layered bands with ragged ends and a lit top, drifting at different speeds.
   // Four flat grey rectangles used to be the whole of it.
-  if (smogV > 0.03) {
-    const off = (tick * (0.5 + R * 0.45)) % (W + 60);   // pushed air also moves faster
-    const corpo = rgbS(mixA([203, 195, 178], [214, 176, 130], R));
-    const topo = rgbS(mixA([232, 225, 210], [244, 214, 164], R));
+  if (smog > 0.03) {
+    const off = (tick * 0.5) % (W + 60);
     [[0.03, 18, 0.30, 12, 1.00], [0.38, 34, 0.32, 10, 0.80],
      [0.70, 12, 0.28, 13, 0.90], [0.18, 52, 0.34, 9, 0.65]].forEach(function (c, i) {
       const bx2 = ((c[0] * W + off * (0.7 + i * 0.16)) % (W + 60)) - 40;
       const bw = Math.round(c[2] * W), bh = c[3];
-      cx.globalAlpha = smogV * c[4] * 0.55;
-      cx.fillStyle = corpo;                      // smoke SCATTERS light: haze lightens the
+      cx.globalAlpha = smog * c[4] * 0.55;
+      cx.fillStyle = "#cbc3b2";                  // smoke SCATTERS light: haze lightens the
       cx.fillRect(bx2 + 7, c[1], bw - 14, bh);   // sky and flattens it, it does not darken it
       cx.fillRect(bx2, c[1] + 3, bw, bh - 6);
-      cx.globalAlpha = smogV * c[4] * 0.40;
-      cx.fillStyle = topo;
+      cx.globalAlpha = smog * c[4] * 0.40;
+      cx.fillStyle = "#e8e1d2";
       cx.fillRect(bx2 + 12, c[1], bw - 26, 3);
       cx.globalAlpha = 1;
     });
   }
-  // A LOW BANK ON THE HORIZON, only in GO FAST. Two soft-ended strips of the same warm
-  // haze sitting right on the separator band, drifting the other way from the high smoke —
-  // it is what makes the distance close in on you rather than just tint.
-  if (R > 0.02) {
-    cx.fillStyle = rgbS(mixA([236, 210, 172], HAZE_FAST, 0.45));
-    for (let i = 0; i < 2; i++) {
-      const bw = Math.round(W * (0.55 + i * 0.25));
-      const bx2 = ((i * 0.5 * W - tick * (0.22 + i * 0.13)) % (W + bw) + W + bw) % (W + bw) - bw;
-      cx.globalAlpha = R * (0.20 - i * 0.06);
-      cx.fillRect(bx2 + 8, GROUND - 24 + i * 5, bw - 16, 7 - i * 2);
-      cx.fillRect(bx2, GROUND - 22 + i * 5, bw, 4 - i);
-    }
-    cx.globalAlpha = 1;
-  }
-  // birds when healing — GO STEADY puts more of them up, and earlier
-  if (h > (R > 0.5 ? 0.62 : 0.44)) {
+  // birds when healing
+  if (h > 0.55) {
     cx.fillStyle = "#0e0f1a";
-    for (let b = 0; b < (R < 0.5 ? 5 : 2); b++) {
+    for (let b = 0; b < 3; b++) {
       const bx = (tick * (1.4 + b * 0.3) + b * 100) % (W + 20) - 10;
       const by = 22 + b * 10 + Math.sin((tick + b * 7) / 6) * 2;
       cx.fillRect(bx, by, 3, 1); cx.fillRect(bx + 3, by - 1, 2, 1); cx.fillRect(bx - 2, by - 1, 2, 1);
     }
   }
 
-  // AMBIENT WEATHER, AND IT IS WHERE THE RHYTHM LIVES CLOSEST TO YOUR EYE.
-  // Two opposite airs, and they cross-fade with R rather than switching:
-  //   GO FAST  — ash falling, and CINDERS lifting off the road. Things going up off hot
-  //              ground is the single clearest read of "this is being burned to run".
-  //   GO STEADY — pollen and petals drifting in, motes rising off worked ground.
-  if (smogV > 0.2 && Math.random() < smogV * 0.25) {
+  // ambient weather: ash falls when the air is dirty, leaves drift when healthy
+  if (smog > 0.2 && Math.random() < smog * 0.25) {
     parts.push({ x: Math.random() * W, y: -2, vx: -6 - Math.random() * 6, vy: 10 + Math.random() * 8,
-      life: 4, c: R > 0.4 ? "#b0a08a" : "#8f8f8f", grav: 0 });
+      life: 4, c: "#8f8f8f", grav: 0 });
   }
-  // Cinders are deliberately DULLED ochre, not fire orange. The direction's hardest rule is
-  // that in a sick frame the wand is the only warm saturated thing on screen, and a road
-  // full of bright embers would take that away from it. These sit under the wand in chroma.
-  if (R > 0.15 && Math.random() < R * 0.26) {
-    const cs = ["#d98f4c", "#c47a3a", "#e0a75e", "#b06a35"];
-    parts.push({ x: Math.random() * W, y: GROUND + Math.random() * 6,
-      vx: (Math.random() - 0.35) * 14, vy: -14 - Math.random() * 16,
-      life: 0.7 + Math.random() * 0.8, c: cs[Math.floor(Math.random() * cs.length)], grav: -8 });
-  }
-  // leaves blow in on a healthy world; going steady doubles the traffic
-  if (h > 0.65 && Math.random() < 0.05 + (1 - R) * 0.06) {
+  if (h > 0.65 && Math.random() < 0.05) {
     parts.push({ x: W + 4, y: Math.random() * GROUND * 0.7, vx: -14 - Math.random() * 10, vy: 6 + Math.random() * 6,
       life: 6, c: Math.random() < 0.7 ? "#6fdd94" : "#ff7d9c", grav: 0 });
   }
   // the mending leaves a residue: motes lifting off ground that has been worked on
-  if (h > 0.45 && Math.random() < 0.035 + (1 - R) * 0.05) {
+  if (h > 0.45 && Math.random() < 0.035) {
     parts.push({ x: Math.random() * W, y: GROUND + Math.random() * 10,
       vx: (Math.random() - 0.5) * 10, vy: -7 - Math.random() * 10,
       life: 1.6 + Math.random(), c: MOTES[Math.floor(Math.random() * MOTES.length)],
       aura: LUZ_MEIO, grav: -6 });
   }
-  // THE TURN ITSELF: a gust that crosses the frame once, in the colour of what you chose.
-  // It reuses the particle field rather than being a wash over the screen, so it happens
-  // IN the world and behind the hero, not on the glass in front of it.
-  if (ritmoVirou > 0.02) {
-    const paraFogo = R > 0.5;
-    for (let i = 0; i < 3; i++) {
-      const cs = paraFogo ? ["#ff9d5c", "#ffbe63", "#c8b49a"] : ["#6fdd94", "#b5e08c", "#ffcd75"];
-      parts.push({
-        x: paraFogo ? W + 6 : -6,
-        y: GROUND - Math.random() * GROUND * 0.55,
-        vx: paraFogo ? -70 - Math.random() * 70 : 60 + Math.random() * 70,
-        vy: paraFogo ? -6 - Math.random() * 18 : 4 - Math.random() * 26,
-        life: 1.1 + Math.random() * 0.7, c: cs[Math.floor(Math.random() * cs.length)],
-        aura: paraFogo ? null : LUZ_MEIO, grav: paraFogo ? -8 : 10 });
-    }
-  }
-  // butterflies flutter near the ground when the world is thriving — and they will not come
-  // out over a road you are burning
-  if (h > (R > 0.5 ? 0.88 : 0.66)) {
+  // butterflies flutter near the ground when the world is thriving
+  if (h > 0.75) {
     for (let b = 0; b < 2; b++) {
       const bx = (tick * (0.8 + b * 0.5) + b * 140) % (W + 30) - 15;
       const by = GROUND - 14 - b * 9 + Math.round(Math.sin((tick + b * 11) / 5) * 3);
@@ -3810,7 +3724,7 @@ function drawScene() {
 // no DOM, one keyline plus n little blocks — cheap enough to run for every mob every frame.
 // ESTÉTICA: this whole readout is one function on purpose. The state it needs is `m.hp`,
 // `m.hpMax`, `m.type`, `m.flash` and `m.dying`; restyle or replace the body freely.
-const VIDA_TOPO = { smog: 30, barrel: 27, cash: 21 };   // world px above ground per sprite
+const VIDA_TOPO = { smog: 30, barrel: 23, cash: 21 };   // world px above ground per sprite
 function desenharVidaMob(m) {
   if (m.dying > 0 || !m.hpMax) return;
   const sx = Math.round(m.wx - worldX);
