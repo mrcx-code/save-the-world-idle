@@ -3496,14 +3496,22 @@ function drawScene() {
     // rectangles. The top is found per column as the highest disc over that column, which
     // is what gives the bulging crown and the notches between lobes that read as cloud.
     const w0 = Math.max(9, Math.round(classe * cs));
-    const lobos = [[0.16, 0.10, 0.19], [0.37, -0.10, 0.25], [0.58, 0.03, 0.22],
-                   [0.78, 0.13, 0.17], [0.47, 0.06, 0.20]];
+    // ...and one silhouette stamped ten times is a row of polka dots, which is the thing the
+    // board's sky is least like. Two lobe sets — one that towers over a narrow shoulder, one
+    // that spreads flat — and a vertical stretch on the bulge, so the chain carries tall and
+    // flat pieces at the same width instead of one shape at ten sizes.
+    const lobos = hash01(k * 61 + 4) > 0.5
+      ? [[0.16, 0.10, 0.19], [0.37, -0.10, 0.25], [0.58, 0.03, 0.22],
+         [0.78, 0.13, 0.17], [0.47, 0.06, 0.20]]
+      : [[0.20, 0.12, 0.17], [0.44, -0.18, 0.21], [0.62, -0.02, 0.24],
+         [0.82, 0.14, 0.15], [0.33, 0.05, 0.18]];
+    const alt = 0.80 + hash01(k * 71 + 6) * 0.65;
     const topo = new Array(w0 + 1);
     for (let x = 0; x <= w0; x++) {
       let t2 = cy;
       for (let l = 0; l < lobos.length; l++) {
         const lx = lobos[l][0] * w0, lr = lobos[l][2] * w0, d = Math.abs(x - lx);
-        if (d < lr) t2 = Math.min(t2, cy + lobos[l][1] * w0 - Math.sqrt(lr * lr - d * d));
+        if (d < lr) t2 = Math.min(t2, cy + (lobos[l][1] * w0 - Math.sqrt(lr * lr - d * d)) * alt);
       }
       topo[x] = Math.round(t2);
     }
