@@ -3035,7 +3035,15 @@ function heroLuzPasso() {
   const k = horaKey() >> 2;                        // 24 steps a day, a few re-bakes a minute
   if (k !== heroPasso) {
     heroPasso = k; heroCor = {}; cetroCor = {};
-    HERO_HORA = {}; for (const c in HERO_COLORS) HERO_HORA[c] = hc(HERO_COLORS[c]);
+    // THE KEYLINE IS NOT A COLOUR OF HIS, IT IS THE EDGE OF HIM, and it was taking the same
+    // dose as his skin: floored a third of the way back and tinted 80%, so at NOITE the line
+    // that separates him from the street was itself most of the way to the street's own blue.
+    // A keyline that takes the hour is not a keyline. It gets a third of the floor and a bit
+    // over half the tint, so it stays a dark edge at every hour while still belonging to the
+    // picture — this is the only thing on him that is allowed to go nearly black at night.
+    HERO_HORA = {};
+    for (const c in HERO_COLORS) HERO_HORA[c] = hc(HERO_COLORS[c]);
+    HERO_HORA.K = rgbS(luzPersonagem(hexA(HERO_COLORS.K), 0.02, 0.30, 1.05));
     CETRO_H = {}; for (const c in CETRO) CETRO_H[c] = cc(CETRO[c]);
   }
   return heroPasso;
