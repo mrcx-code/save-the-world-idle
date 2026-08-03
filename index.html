@@ -3198,9 +3198,20 @@ function luzPersonagem(c, piso, forcaF, recupC) {
   // C* 15.8 to 18.0 as this wave gave the sky, the haze and the stone back their colour. He
   // did not get duller; the field caught up, and his chroma rank fell 83 -> 201 of 485 for it.
   // The direction has said from the first line that HE DOES NOT DESATURATE WITH THE WORLD, so
-  // the floor is the direction written down: a constant 1.15 about his own luma, in every
+  // the floor is the direction written down: a constant about his own luma, in every
   // hour, luma-neutral by the same argument as the term beside it.
-  const y = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2], k = 1.50 + recupC * forca;
+  // IT HAS BEEN RAISED THREE TIMES AND ALWAYS FOR THE SAME REASON — 1.32 in wave 13, 1.50 in
+  // wave 15, 1.70 here — and the reason is never that he got duller, it is that the street
+  // caught up. Wave 19 gave the proscenium its chroma back and took the frame from C* 18.3
+  // to 19.5, which is the board; his ratio against it fell 1.52 -> 1.43 in the same breath.
+  // At 1.70 it is 1.50 at MANHÃ and 1.19 at NOITE, his MANHÃ croma rank is 70 of 485 against
+  // the 103 the wave opened on, and his NOITE ranks are 40 / 4 / 1 against 40 / 8 / 3.
+  // Above this the expansion starts to CLIP: 1.78 measured C* 31.3 where the pure ratio
+  // wants 32.7, and clipping is what breaks the luma-neutrality the whole move rests on —
+  // the poncho reads 123.3 at NOITE instead of 123.4, and his NOITE luma rank goes 40 -> 43.
+  // One tenth of a luma and three ranks is the price of this floor and it is written here
+  // rather than left for someone to find.
+  const y = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2], k = 1.70 + recupC * forca;
   return [cl255(y + (m[0] - y) * k), cl255(y + (m[1] - y) * k), cl255(y + (m[2] - y) * k)];
 }
 let heroPasso = -1, heroCor = {}, cetroCor = {}, HERO_HORA = HERO_COLORS, CETRO_H = null;
