@@ -2484,97 +2484,122 @@ function pessoa(nome, x, gy) {
 // chairs. All of them wood, terracotta and FOLHAS — nothing new enters the palette. They are
 // placed the way the board composes them, which is dense but never a uniform row: each one
 // sits at its own offset inside the segment, and no segment gets more than one.
+// Every colour here goes through the hour, on the same 24 steps the hero and the neighbours
+// use. It is not decoration on the decoration: the first night screenshot had a bench glowing
+// warm brown out of a dark street, because a hard-coded hex does not know what time it is.
+// Only what is actually a light source — the lamp's glass and its spill — is left alone.
+const DECO_C = {
+  K: "#22190d", mad: "#6d4620", madL: "#96682f", madE: "#4a3524", madA: "#5c421f",
+  barro: "#9d561c", barroL: "#b9732c", barroE: "#7d4a1e",
+  pK: "#22190d", pD: "#3e4721", pB: "#525d2a", pH: "#767f34",
+  fo: "#3e4721", foM: "#525d2a", foL: "#767f34", flor: "#f3a03d", apag: "#3f4d4a",
+  r0: "#dad8c0", R0: "#f0e6c8", r1: "#54827d", R1: "#71a39c", r2: "#9d561c", R2: "#b9732c",
+  r3: "#525d2a", R3: "#767f34", r4: "#87a7ab", R4: "#b6cbcd",
+  pe: "#4a4535", peM: "#6d6754", peL: "#918a70", peR: "#b3a47f"   // stone, warm and not slate
+};
+let decoPasso = -1, DECO_H = DECO_C;
+function dc() {
+  const k = horaKey() >> 2;
+  if (k !== decoPasso) {
+    decoPasso = k; DECO_H = {};
+    for (const c in DECO_C) DECO_H[c] = rgbS(luzPersonagem(hexA(DECO_C[c]), 0.06, 1));
+    plantaPal = { K: DECO_H.pK, D: DECO_H.pD, B: DECO_H.pB, H: DECO_H.pH };
+  }
+  return DECO_H;
+}
 const PLANTA_MAP = [
   "...KK.KK..", "..KDDKDDK.", ".KDDBDDBK.", "KDBBBBBBHK", "KDBBBBBHHK", ".KBBBBBHK.",
   "..KKBBKK..", "....KK...."];
-const PLANTA_PAL = { K: "#22190d", D: "#3e4721", B: "#525d2a", H: "#767f34" };
-function vasoDe(x, gy, cor) {                              // terracotta pot, lit on the right
-  cx.fillStyle = "#22190d"; cx.fillRect(x, gy - 7, 10, 7);
-  cx.fillStyle = cor[0]; cx.fillRect(x + 1, gy - 6, 8, 6);
-  cx.fillStyle = cor[1]; cx.fillRect(x + 7, gy - 6, 2, 6);
-  cx.fillStyle = cor[2]; cx.fillRect(x + 1, gy - 6, 8, 1);
-}
+let plantaPal = { K: "#22190d", D: "#3e4721", B: "#525d2a", H: "#767f34" };
 function vaso(x, gy) {
+  const D = dc();
   sombra(x + 5, gy, 10, 0.16);
-  drawMap("deco:planta", PLANTA_MAP, PLANTA_PAL, x, gy - 14);
-  vasoDe(x, gy, ["#9d561c", "#b9732c", "#7d4a1e"]);
+  drawMap("deco:planta:" + decoPasso, PLANTA_MAP, plantaPal, x, gy - 14);
+  cx.fillStyle = D.K; cx.fillRect(x, gy - 7, 10, 7);       // terracotta pot, lit on the right
+  cx.fillStyle = D.barro; cx.fillRect(x + 1, gy - 6, 8, 6);
+  cx.fillStyle = D.barroL; cx.fillRect(x + 7, gy - 6, 2, 6);
+  cx.fillStyle = D.barroE; cx.fillRect(x + 1, gy - 6, 8, 1);
 }
 function banco(x, gy) {                                    // slatted wood on dark iron
+  const D = dc();
   sombra(x + 11, gy, 19, 0.16);
-  cx.fillStyle = "#22190d";
+  cx.fillStyle = D.K;
   cx.fillRect(x + 1, gy - 14, 20, 5); cx.fillRect(x, gy - 8, 22, 4);
   cx.fillRect(x + 2, gy - 6, 2, 6); cx.fillRect(x + 18, gy - 6, 2, 6);
   cx.fillRect(x + 2, gy - 14, 2, 8); cx.fillRect(x + 18, gy - 14, 2, 8);
-  cx.fillStyle = "#6d4620"; cx.fillRect(x + 1, gy - 7, 20, 2);
-  cx.fillStyle = "#96682f"; cx.fillRect(x + 1, gy - 7, 20, 1);
-  cx.fillStyle = "#6d4620"; cx.fillRect(x + 4, gy - 13, 14, 3);
-  cx.fillStyle = "#96682f"; cx.fillRect(x + 4, gy - 13, 14, 1);
+  cx.fillStyle = D.mad; cx.fillRect(x + 1, gy - 7, 20, 2);
+  cx.fillStyle = D.madL; cx.fillRect(x + 1, gy - 7, 20, 1);
+  cx.fillStyle = D.mad; cx.fillRect(x + 4, gy - 13, 14, 3);
+  cx.fillStyle = D.madL; cx.fillRect(x + 4, gy - 13, 14, 1);
 }
 function cadeira(x, gy) {                                  // one chair somebody left outside
+  const D = dc();
   sombra(x + 4, gy, 8, 0.14);
-  cx.fillStyle = "#22190d";
+  cx.fillStyle = D.K;
   cx.fillRect(x, gy - 7, 9, 3); cx.fillRect(x, gy - 15, 3, 9);
   cx.fillRect(x + 1, gy - 4, 2, 4); cx.fillRect(x + 6, gy - 4, 2, 4);
-  cx.fillStyle = "#96682f"; cx.fillRect(x + 1, gy - 6, 7, 1);
-  cx.fillStyle = "#6d4620"; cx.fillRect(x + 1, gy - 14, 1, 8);
-  cx.fillStyle = "#96682f"; cx.fillRect(x + 2, gy - 14, 1, 8);
+  cx.fillStyle = D.madL; cx.fillRect(x + 1, gy - 6, 7, 1);
+  cx.fillStyle = D.mad; cx.fillRect(x + 1, gy - 14, 1, 8);
+  cx.fillStyle = D.madL; cx.fillRect(x + 2, gy - 14, 1, 8);
 }
 function jardineira(x, gy) {                               // a wooden planter box with beds
+  const D = dc();
   sombra(x + 9, gy, 17, 0.16);
-  cx.fillStyle = "#22190d"; cx.fillRect(x, gy - 9, 19, 9);
-  cx.fillStyle = "#6d4620"; cx.fillRect(x + 1, gy - 8, 17, 8);
-  cx.fillStyle = "#96682f"; cx.fillRect(x + 15, gy - 8, 3, 8);
-  cx.fillStyle = "#5c421f"; cx.fillRect(x + 1, gy - 8, 17, 1);
-  cx.fillStyle = "#3e4721"; cx.fillRect(x + 2, gy - 11, 15, 3);
-  cx.fillStyle = "#525d2a"; cx.fillRect(x + 2, gy - 12, 15, 2);
-  cx.fillStyle = "#767f34";
+  cx.fillStyle = D.K; cx.fillRect(x, gy - 9, 19, 9);
+  cx.fillStyle = D.mad; cx.fillRect(x + 1, gy - 8, 17, 8);
+  cx.fillStyle = D.madL; cx.fillRect(x + 15, gy - 8, 3, 8);
+  cx.fillStyle = D.madA; cx.fillRect(x + 1, gy - 8, 17, 1);
+  cx.fillStyle = D.fo; cx.fillRect(x + 2, gy - 11, 15, 3);
+  cx.fillStyle = D.foM; cx.fillRect(x + 2, gy - 12, 15, 2);
+  cx.fillStyle = D.foL;
   cx.fillRect(x + 3, gy - 14, 2, 3); cx.fillRect(x + 8, gy - 15, 2, 4); cx.fillRect(x + 13, gy - 14, 2, 3);
-  cx.fillStyle = "#f3a03d"; cx.fillRect(x + 8, gy - 16, 2, 2);
+  cx.fillStyle = D.flor; cx.fillRect(x + 8, gy - 16, 2, 2);
 }
 // A washing line is the one prop on that strip that says *somebody lives here today*, so it
 // gets the animation budget: the cord sags between its two ends and each garment swings on
 // its own phase, a pixel at a time, never smoothly.
-const ROUPA = [["#dad8c0", "#f0e6c8"], ["#54827d", "#71a39c"], ["#9d561c", "#b9732c"],
-  ["#525d2a", "#767f34"], ["#87a7ab", "#b6cbcd"]];
 function varal(x, gy, larg, alto, k) {
-  cx.fillStyle = "#22190d";
+  const D = dc();
+  cx.fillStyle = D.K;
   cx.fillRect(x, gy - alto, 2, alto); cx.fillRect(x + larg, gy - alto - 3, 2, alto + 3);
   const cordaY = function (t) { return gy - alto - 1 + Math.round(Math.sin(t * Math.PI) * 3); };
-  for (let i = 0; i <= larg; i++) {
-    cx.fillStyle = "#5c421f"; cx.fillRect(x + i, cordaY(i / larg), 1, 1);
-  }
+  cx.fillStyle = D.madA;
+  for (let i = 0; i <= larg; i++) cx.fillRect(x + i, cordaY(i / larg), 1, 1);
   const n = Math.max(3, Math.floor(larg / 9));
   for (let i = 0; i < n; i++) {
     const t = (i + 0.75) / (n + 0.5), rx = x + Math.round(t * larg), ry = cordaY(t) + 1;
-    const c = ROUPA[Math.floor(hash01(k * 31 + i * 7) * ROUPA.length) % ROUPA.length];
+    const ci = Math.floor(hash01(k * 31 + i * 7) * 5) % 5;
     const w = 4 + Math.floor(hash01(k * 17 + i) * 3), hh = 6 + Math.floor(hash01(k * 23 + i) * 4);
     const bal = Math.round(Math.sin(tick * 0.06 + i * 1.7 + k) * 0.8);   // a pixel of wind
-    cx.fillStyle = "#22190d"; cx.fillRect(rx - 1, ry, w + 2, hh + 1);
-    cx.fillStyle = c[0]; cx.fillRect(rx + bal, ry + 1, w, hh - 1);
-    cx.fillStyle = c[1]; cx.fillRect(rx + bal + w - 1, ry + 1, 1, hh - 1);
+    cx.fillStyle = D.K; cx.fillRect(rx - 1, ry, w + 2, hh + 1);
+    cx.fillStyle = D["r" + ci]; cx.fillRect(rx + bal, ry + 1, w, hh - 1);
+    cx.fillStyle = D["R" + ci]; cx.fillRect(rx + bal + w - 1, ry + 1, 1, hh - 1);
   }
 }
 // The board's street lamp: a dark iron post with a swelling at the base, a small cross-arm,
 // and a lantern head with warm glass in it. What was here was a slate-blue solar mast — the
-// one object left in the street speaking the pre-board vocabulary.
+// one object left in the street speaking the pre-board vocabulary. The glass and its spill do
+// NOT take the hour: a lamp is a light source, and the darker the street gets around it the
+// more of the frame's light it is meant to own.
 function posteLuz(x, gy, aceso) {
+  const D = dc();
   sombra(x + 3, gy, 9, 0.16);
-  cx.fillStyle = "#22190d";
+  cx.fillStyle = D.K;
   cx.fillRect(x + 1, gy - 30, 5, 30); cx.fillRect(x, gy - 4, 7, 4);
   cx.fillRect(x - 2, gy - 34, 11, 5); cx.fillRect(x - 1, gy - 29, 9, 2);
-  cx.fillStyle = "#4a3524"; cx.fillRect(x + 2, gy - 29, 3, 29);
-  cx.fillStyle = "#6d4620"; cx.fillRect(x + 4, gy - 29, 1, 29);         // the lit edge
-  cx.fillStyle = "#4a3524"; cx.fillRect(x - 1, gy - 33, 9, 3);
-  cx.fillStyle = "#6d4620"; cx.fillRect(x - 1, gy - 33, 9, 1);
-  cx.fillStyle = "#22190d"; cx.fillRect(x + 2, gy - 37, 3, 4);          // the finial
-  cx.fillStyle = "#5c421f"; cx.fillRect(x + 3, gy - 36, 1, 3);
+  cx.fillStyle = D.madE; cx.fillRect(x + 2, gy - 29, 3, 29);
+  cx.fillStyle = D.mad; cx.fillRect(x + 4, gy - 29, 1, 29);              // the lit edge
+  cx.fillStyle = D.madE; cx.fillRect(x - 1, gy - 33, 9, 3);
+  cx.fillStyle = D.mad; cx.fillRect(x - 1, gy - 33, 9, 1);
+  cx.fillStyle = D.K; cx.fillRect(x + 2, gy - 37, 3, 4);                 // the finial
+  cx.fillStyle = D.madA; cx.fillRect(x + 3, gy - 36, 1, 3);
   if (aceso) {
     cx.globalAlpha = 0.20; cx.fillStyle = "#fde79d";
     cx.fillRect(x - 6, gy - 38, 19, 18); cx.globalAlpha = 1;
     cx.fillStyle = "#fde79d"; cx.fillRect(x, gy - 32, 7, 2);
     cx.fillStyle = "#fffbe8"; cx.fillRect(x + 1, gy - 32, 5, 1);
   } else {
-    cx.fillStyle = "#3f4d4a"; cx.fillRect(x, gy - 32, 7, 2);
+    cx.fillStyle = D.apag; cx.fillRect(x, gy - 32, 7, 2);
   }
 }
 
@@ -3641,6 +3666,25 @@ function drawScene() {
     const r = hash01(k);
     const alive = r < h * 0.95 + 0.02;
     const kind = Math.floor(hash01(k * 7 + 3) * 10);
+    // TILES & TERRENOS: a house does not stand in the road. The board's tile sheet has a
+    // tiled floor next to its cobbles, and the transition between the two is a pavement —
+    // so the strip nearest the buildings is laid in tiles wherever a building stands on it,
+    // and everywhere else the cobbles run right up to the wall as they always did. It is
+    // glued to the segment (it scrolls with the house, not with the paving courses) because
+    // it belongs to the house and not to the road.
+    if ((kind >= 5 && kind < 7) || (h > 0.45 && hash01(k * 61 + 7) > 0.78)) {
+      const D = dc(), px0 = sx - 2, pw = 50;
+      cx.fillStyle = D.madA; cx.fillRect(px0, GROUND, pw, 6);
+      for (let r2 = 0; r2 < 2; r2++) {
+        for (let t2 = 0; t2 < 11; t2++) {
+          const tx = px0 + t2 * 5 + (r2 ? 2 : 0);
+          if (tx + 4 > px0 + pw) continue;
+          cx.fillStyle = ((t2 + r2 + k) & 1) ? D.barro : D.barroE;
+          cx.fillRect(tx, GROUND + r2 * 3, 4, 2);
+          cx.fillStyle = D.barroL; cx.fillRect(tx, GROUND + r2 * 3, 4, 1);
+        }
+      }
+    }
     if (kind < 5) { // trees: baked canopies with volume, on a trunk that flares into roots
       const ipe = hash01(k * 53 + 4) > 0.62;
       const pine = !ipe && hash01(k * 29 + 1) > 0.55;
@@ -3765,22 +3809,26 @@ function drawScene() {
           }
         });
       }
-    } else if (kind === 9) { // mossy rocks, faceted and lit from the upper right
+    } else if (kind === 9) { // mossy rocks, faceted and lit from the upper right.
+      // They were the last slate-blue thing standing on the ground — a colour the board does
+      // not have — and being hard-coded they stayed lit at midnight. Warm stone now, on the
+      // hour, with the moss out of FOLHAS instead of the old poster green.
+      const D = dc();
       sombra(sx + 20, GROUND, 20, 0.20);
-      cx.fillStyle = "#12242e";
+      cx.fillStyle = D.K;
       cx.fillRect(sx + 12, GROUND - 9, 16, 9); cx.fillRect(sx + 16, GROUND - 10, 11, 3);
       cx.fillRect(sx + 24, GROUND - 6, 9, 6);
-      cx.fillStyle = "#3b3944"; cx.fillRect(sx + 13, GROUND - 8, 14, 8);
-      cx.fillStyle = "#6d6a72"; cx.fillRect(sx + 14, GROUND - 7, 12, 7);
-      cx.fillStyle = "#8b8794"; cx.fillRect(sx + 17, GROUND - 9, 9, 5);
-      cx.fillStyle = "#aeaab8"; cx.fillRect(sx + 21, GROUND - 9, 5, 2);
+      cx.fillStyle = D.pe; cx.fillRect(sx + 13, GROUND - 8, 14, 8);
+      cx.fillStyle = D.peM; cx.fillRect(sx + 14, GROUND - 7, 12, 7);
+      cx.fillStyle = D.peL; cx.fillRect(sx + 17, GROUND - 9, 9, 5);
+      cx.fillStyle = D.peR; cx.fillRect(sx + 21, GROUND - 9, 5, 2);
       if (h > 0.4) {
-        cx.fillStyle = "#2e9b54"; cx.fillRect(sx + 14, GROUND - 8, 5, 3);
-        cx.fillStyle = "#6fdd94"; cx.fillRect(sx + 14, GROUND - 8, 5, 1);
+        cx.fillStyle = D.fo; cx.fillRect(sx + 14, GROUND - 8, 5, 3);
+        cx.fillStyle = D.foL; cx.fillRect(sx + 14, GROUND - 8, 5, 1);
       }
-      cx.fillStyle = "#3b3944"; cx.fillRect(sx + 25, GROUND - 5, 7, 5);
-      cx.fillStyle = "#5f5c66"; cx.fillRect(sx + 26, GROUND - 4, 6, 4);
-      cx.fillStyle = "#7d7a86"; cx.fillRect(sx + 28, GROUND - 4, 4, 1);
+      cx.fillStyle = D.pe; cx.fillRect(sx + 25, GROUND - 5, 7, 5);
+      cx.fillStyle = D.peM; cx.fillRect(sx + 26, GROUND - 4, 6, 4);
+      cx.fillStyle = D.peL; cx.fillRect(sx + 28, GROUND - 4, 4, 1);
     }
     // community kitchen: a little stand where everyone eats (appears as the world heals)
     if (h > 0.45 && hash01(k * 61 + 7) > 0.78) {
