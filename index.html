@@ -4329,7 +4329,21 @@ function drawScene() {
     // the whole sky behind it, so it grades from the column greens in the deep corners to
     // the near-mata greens across the thin middle, where a leaf that shallow is holding
     // daylight on the other side of it.
-    const dTopo = W * 0.46, dMeio = W * 0.16, alcance = W * 0.46;
+    // WAVE 14: THE FRINGE CAME OUT OF THE MIDDLE AND WENT INTO THE CORNERS. Wave 13 measured
+    // the top fifth at 125 against the board's 141 and attributed it exactly: up there only
+    // 22% of our frame is sky and the other 78% is fringe at L 115. The board does the
+    // OPPOSITE of a fringe — foliage piled in the two top corners and the top-centre left
+    // open to the sky, which is why its top fifth is the BRIGHTEST band of the picture and
+    // ours was the second darkest. So: `dMeio` collapses from 0.16·W (20.8 px, i.e. a
+    // ragged leaf edge hanging into the visible band right across the middle) to 0.045·W,
+    // which is 6 px and lives entirely BEHIND the top HUD bar — the middle of the top edge
+    // stops existing as picture. The mass is not deleted, it is moved: `alcance` tightens
+    // from 0.46·W to 0.34·W so the grade is a corner and not a lid, `dTopo` goes from 0.46·W
+    // to 0.72·W, and the exponent steepens so the fall from corner to middle is fast.
+    // The scallop follows the mass: at full amplitude across an open middle it would put
+    // ±12 px of leaf back exactly where the middle was just cleared, so it is scaled by the
+    // corner weight and only ripples where there is something to ripple.
+    const dTopo = W * 0.72, dMeio = W * 0.045, alcance = W * 0.34;
     // twelve steps of that grade, built once for the pass, so it is still two cached colour
     // strings per column and not two string builds per column
     const rampaK = [], rampaM = [];
@@ -4340,12 +4354,14 @@ function drawScene() {
     }
     for (let x = 0; x < W; x++) {
       const borda2 = Math.max(0, 1 - Math.min(x, W - 1 - x) / alcance);
-      const d = Math.round(dMeio + dTopo * Math.pow(borda2, 1.45)
-        + Math.sin(x * 0.27 + 0.7) * (W * 0.030)
+      const peso = Math.pow(borda2, 1.7);
+      const ond = 0.22 + 0.78 * borda2;                    // the scallop lives where the mass is
+      const d = Math.round(dMeio + dTopo * peso
+        + ond * (Math.sin(x * 0.27 + 0.7) * (W * 0.030)
         + Math.sin(x * 0.081 + 2.3) * (W * 0.048)
-        + Math.sin(x * 0.63 + 4.9) * (W * 0.018));   // the same leaf scallop, along x
+        + Math.sin(x * 0.63 + 4.9) * (W * 0.018)));   // the same leaf scallop, along x
       if (d <= 0) continue;
-      const s = Math.round(Math.pow(borda2, 1.45) * 11);   // 11 in the corners, 0 in the middle
+      const s = Math.round(peso * 11);   // 11 in the corners, 0 in the middle
       const escuro = rampaK[s], meio = rampaM[s];
       const banda = ((x >> 2) & 1);
       cx.fillStyle = banda ? escuro : meio;
