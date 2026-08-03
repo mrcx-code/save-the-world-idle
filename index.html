@@ -32,7 +32,7 @@
     --bad: #b8503c; --good: #7d9a3c; --blue: #71a39c; --purple: #a08a4a;
     /* the board's own furniture measurements — softened a step for a cleaner, more current
        feel (the buttons stopped reading as chunky pixel panels) */
-    --raio: 13px; --raioSm: 10px;
+    --raio: 0px; --raioSm: 0px;   /* pixel art has no soft corners */
     --barra: #363c21; --barraOn: #eba748;
     --navBg: #1c2010; --navOn: #313a1f;
     /* responsive type scale — grows with the screen */
@@ -71,11 +71,10 @@
     top: calc(6px + env(safe-area-inset-top));
     display: flex; gap: 6px; align-items: stretch; padding: 0 8px; pointer-events: none; }
   #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; align-items: stretch;
-    background: linear-gradient(180deg, #2b3320, #1b2010);
-    border: 2px solid var(--contorno); border-radius: var(--raio); padding: 4px;
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.10); }
+    background: rgba(20, 24, 13, .78); border: 2px solid var(--ink); border-radius: 0;
+    padding: 4px; box-shadow: 0 3px 0 var(--ink); }
   .chip { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px;
-    background: #1b1c0f; border-radius: var(--raioSm); padding: 4px 6px; color: var(--chromeT); }
+    background: transparent; border-radius: 0; padding: 4px 6px; color: var(--chromeT); }
   .cInfo { min-width: 0; flex: 1; }
   .chip .rotulo { font-size: var(--fs-xs); color: var(--chromeS); white-space: nowrap; overflow: hidden;
     letter-spacing: .06em; font-weight: 700; }
@@ -194,52 +193,49 @@
   /* the four cards — icon over name over value, exactly the board's card */
   #cartoes { display: flex; gap: 6px; margin-bottom: 6px; }
   .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 3px; padding: 9px 3px 8px; border-radius: var(--raio);
-    background: linear-gradient(180deg, #46512c, #333c22); }
+    justify-content: center; gap: 3px; padding: 9px 3px 8px; border-radius: 0;
+    background: rgba(43, 51, 28, .82); }
   .cartao .cn { font-size: 8px; letter-spacing: .04em; color: var(--creme); white-space: nowrap;
     overflow: hidden; max-width: 100%; }
   .cartao .cv { font-size: var(--fs-xs); font-weight: 800; color: var(--gold); white-space: nowrap;
     font-variant-numeric: tabular-nums; }
-  .cartao.pronto { box-shadow: 0 2px 6px rgba(0,0,0,.28), 0 0 14px rgba(235,167,72,.6),
-    inset 0 0 0 1px rgba(235,167,72,.5); }
+  .cartao.pronto { box-shadow: 0 3px 0 var(--ink), inset 0 0 0 2px var(--gold); }
 
   /* ---- buttons: clean and current, not retro-clunky ----
      The old chrome was a heavy pixel panel — a 2px ink border and a hard 3px offset block
      shadow. That reads dated. The construction now is softer: a hairline border, a subtle
      drop shadow with a little blur, and a 1px lit top edge for depth. The primary action
      keeps gold and a touch more lift; everything else stays quiet. */
-  button { font-family: inherit; font-weight: 700; border: 1px solid rgba(0,0,0,.28);
-    border-radius: var(--raioSm);
-    cursor: pointer; color: var(--chromeT); text-transform: uppercase;
-    background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
-    box-shadow: 0 2px 5px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.12);
+  button { font-family: inherit; font-weight: 700; border: 2px solid var(--ink);
+    border-radius: 0; cursor: pointer; color: var(--chromeT); text-transform: uppercase;
+    background: var(--chromeA);
+    box-shadow: 0 3px 0 var(--ink);          /* hard block, no blur — a pixel edge */
     touch-action: manipulation; user-select: none; -webkit-user-select: none; }
-  button:disabled { opacity: .5; cursor: default; }
-  button:not(:disabled):active { transform: translateY(1px);
-    box-shadow: 0 1px 3px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.12); }
+  button:disabled { opacity: .45; cursor: default; }
+  button:not(:disabled):active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
   /* the rhythm card: the one decision this prototype exists to measure, so it is the card
      that is allowed to change colour and to pulse */
-  #modeQuick.fast { background: linear-gradient(180deg, #8a4028, #4a2113) !important; }
+  #modeQuick.fast { background: rgba(122, 56, 35, .86) !important; }
   #modeQuick.fast .cn { color: #f2d3b0; }
-  #modeQuick.steady { background: linear-gradient(180deg, #5b7a2c, #2c3d16) !important; }
+  #modeQuick.steady { background: rgba(74, 100, 36, .86) !important; }
   #modeQuick.steady .cn { color: #dbe7b4; }
   /* it is costing you right now: say so without words */
   #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
-  @keyframes doendo { 0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 16px rgba(200,90,50,.9) } 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } }
+  @keyframes doendo { 0% { box-shadow: 0 3px 0 var(--ink) } 50% { box-shadow: 0 3px 0 var(--ink), inset 0 0 0 2px #c85a32 } 100% { box-shadow: 0 3px 0 var(--ink) } }
   /* the bottom rail, and the one thing standing in it */
-  #rail { background: var(--navBg); border: 1px solid rgba(0,0,0,.3); border-radius: var(--raio);
-    padding: 5px; display: flex; box-shadow: 0 2px 6px rgba(0,0,0,.32); }
+  #rail { background: rgba(20, 24, 13, .78); border: 2px solid var(--ink); border-radius: 0;
+    padding: 5px; display: flex; box-shadow: 0 3px 0 var(--ink); }
   /* THE primary action: gold, a soft inner sheen and a gentle lift so it reads as the one
      button that matters — no hard offset block under it anymore */
   #btnClique { flex: 1 1 auto; min-width: 0; min-height: 62px; padding: 9px 10px;
-    border-radius: var(--raioSm);
+    border-radius: 0;
     font-size: var(--fs-lg); font-weight: 800;
-    background: linear-gradient(180deg, #f8d98f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
-    color: #221806; border: 1px solid rgba(120,60,0,.35); letter-spacing: .02em;
+    background: var(--ouroA);
+    color: #221806; border: 2px solid var(--ink); letter-spacing: .02em;
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    text-shadow: 0 1px 0 rgba(255,255,255,.45);
-    box-shadow: 0 3px 10px rgba(120,60,0,.32), inset 0 1px 0 rgba(255,255,255,.6),
-      inset 0 -2px 0 rgba(120,60,0,.2); position: relative; }
+    text-shadow: none;
+    box-shadow: 0 3px 0 var(--ink), inset 0 3px 0 #f8d98f, inset 0 -3px 0 var(--ouroB);
+    position: relative; }
   #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
     color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
   #btnClique.segurando { transform: translateY(2px);
