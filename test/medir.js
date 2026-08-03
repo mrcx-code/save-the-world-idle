@@ -167,20 +167,31 @@ function legibilidade(p) {
   // The street scrolls and the props sway, so two runs of this harness never framed quite
   // the same picture and the before/after numbers were never quite comparable. Pinned:
   // one fixed stretch of street, one fixed phase of every sway, one seeded particle field.
-  await page.evaluate(() => { window.FIXO_X = 4000; window.FIXO_T = 100; });
+  await page.evaluate(() => {
+    window.FIXO_X = 4000; window.FIXO_T = 100;
+    // `desenhar()` is the HUD, not the picture: the canvas is painted by `drawScene()` +
+    // `desenharMundo()` from the rAF loop, so every earlier prep here was measuring
+    // whatever frame the loop happened to have left behind. And the loop advances worldX
+    // and animT on every tick, which is what un-pinned the pinning. Frozen and explicit.
+    window.QUADRO = function () { drawScene(); desenharMundo(); desenhar(); };
+    window.requestAnimationFrame = function () { return 0; };
+  });
+  // The game's own loop keeps running, so "set up the frame, wait, then read the canvas"
+  // was reading a different frame from the one that was set up — mobs respawned into the
+  // no-mob control and the street had scrolled. MEDE is installed IN the page so setup and
+  // read happen inside one evaluate and nothing can interleave.
+  await page.evaluate('window.MEDE = ' + MEDE.toString());
 
   const SAO = { geradores: 60, energia: 90000, energiaTotal: 90000, poluicao: 0, modo: 'limpo' };
 
   // ---- (1) the two hours, quiet street ----
   const horas = [['MANHA', 0], ['TARDE', 0.25], ['POSCHUVA', 0.5], ['NOITE', 0.75]];
   for (const [nome, frac] of horas) {
-    await page.evaluate(({ st, frac }) => {
+    const p = await page.evaluate(({ st, frac }) => {
       Object.assign(S, st); mobs.length = 0; drops.length = 0; parts.length = 0;
       chamada = null; cartaoT = 0; S.capVisto = 9; relogio = frac * DIA_SEG;
-      worldX = FIXO_X; animT = FIXO_T; desenhar();
+      worldX = FIXO_X; animT = FIXO_T; QUADRO(); return MEDE();
     }, { st: SAO, frac });
-    await page.waitForTimeout(250);
-    const p = await page.evaluate(MEDE);
     const e = estat(p, 0, p.ground + 20);
     console.log('LUZ  ' + nome.padEnd(9) + ' media ' + e.media.toFixed(1) +
       '  p99.5 ' + e.p995.toFixed(1) + '  >150 ' + e.claros.toFixed(2) + '%' +
@@ -192,13 +203,11 @@ function legibilidade(p) {
   for (const [nome, st] of [['DOENTE', { geradores: 2, energia: 40, energiaTotal: 40, poluicao: 900, modo: 'sujo' }],
                             ['SA', SAO]]) {
     for (const [h, frac] of [['MANHA', 0], ['NOITE', 0.75]]) {
-      await page.evaluate(({ st, frac }) => {
+      const p = await page.evaluate(({ st, frac }) => {
         Object.assign(S, st); mobs.length = 0; drops.length = 0; parts.length = 0;
         chamada = null; cartaoT = 0; S.capVisto = 9; relogio = frac * DIA_SEG;
-        worldX = FIXO_X; animT = FIXO_T; desenhar();
+        worldX = FIXO_X; animT = FIXO_T; QUADRO(); return MEDE();
       }, { st: st, frac: frac });
-      await page.waitForTimeout(200);
-      const p = await page.evaluate(MEDE);
       const e = estat(p, 0, p.ground + 20);
       console.log('ARCO ' + (nome + '/' + h).padEnd(14) + ' luma ' + e.media.toFixed(1) +
         '  C* ' + croma(p, 0, p.ground + 20).toFixed(1));
@@ -206,13 +215,15 @@ function legibilidade(p) {
   }
 
   // ---- (2) the worst-case frame ----
-  for (const [nome, frac] of [['MANHA', 0], ['NOITE', 0.75]]) {
-    await page.evaluate(({ st, frac }) => {
+  // the worst case as a page-side function, so the frame that is measured, the frame that
+  // is screenshotted and the no-mob control are all built by the same code from the same seed
+  await page.evaluate(({ st }) => {
+    window.PIOR = function (frac, comMobs) {
       Object.assign(S, st); relogio = frac * DIA_SEG;
       worldX = FIXO_X; animT = FIXO_T;
       mobs.length = 0; drops.length = 0; chamada = null; cartaoT = 0; S.capVisto = 9;
       // three monsters queued across the lane, one of each kind
-      ['smog', 'barrel', 'cash'].forEach(function (t, i) {
+      if (comMobs) ['smog', 'barrel', 'cash'].forEach(function (t, i) {
         mobs.push({ type: t, wx: worldX + W * (0.52 + i * 0.16), hp: 6, hpMax: 6, flash: 0, t: i * 9 });
       });
       // and the particle field at its cap
@@ -224,10 +235,12 @@ function legibilidade(p) {
           vx: -8, vy: 4, life: 5, amb: 1,
           c: i % 3 === 0 ? '#6fdd94' : i % 3 === 1 ? '#ff7d9c' : '#b0a08a', grav: 0 });
       }
-      desenhar();
-    }, { st: SAO, frac });
-    await page.waitForTimeout(120);
-    const p = await page.evaluate(MEDE);
+      QUADRO();
+    };
+  }, { st: SAO });
+  for (const [nome, frac] of [['MANHA', 0], ['NOITE', 0.75]]) {
+    const p = await page.evaluate(f => { PIOR(f, true); return MEDE(); }, frac);
+    await page.evaluate(f => PIOR(f, true), frac);
     await page.screenshot({ path: path.resolve(__dirname, '..', 'medida-pior-' + nome.toLowerCase() + '.png') });
     const r = legibilidade(p);
     const cq = croma(p, 0, p.ground + 20);
@@ -247,10 +260,7 @@ function legibilidade(p) {
     // the world band. Whatever the mobs add above luma 150/200 at NOITE is body + pips,
     // and at NOITE the bodies take the hour while the pips do not, so the top of that
     // difference IS the pips.
-    const semMobs = await page.evaluate(() => { mobs.length = 0; desenhar(); return true; });
-    void semMobs;
-    await page.waitForTimeout(80);
-    const p0 = await page.evaluate(MEDE);
+    const p0 = await page.evaluate(f => { PIOR(f, false); return MEDE(); }, frac);
     const conta = function (q, lim) {
       let n = 0; for (let y = 0; y < q.ground + 20; y++) for (let x = 0; x < q.w; x++) if (q.L[y * q.w + x] > lim) n++;
       return n;

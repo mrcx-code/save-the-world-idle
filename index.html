@@ -4365,17 +4365,45 @@ function drawScene() {
 // ESTÉTICA: this whole readout is one function on purpose. The state it needs is `m.hp`,
 // `m.hpMax`, `m.type`, `m.flash` and `m.dying`; restyle or replace the body freely.
 const VIDA_TOPO = { smog: 30, barrel: 27, cash: 21 };   // world px above ground per sprite
+// THE READOUT AND THE HOUR. This is game signal, not scenery, so it does NOT take the
+// hour's TINT — a pip that goes blue at midnight has joined the world it is supposed to
+// sit on top of. But it cannot ignore the frame's LEVEL either. Once the monsters were
+// floored at 0.26 for the night, the untouched #e8edf6 pips became the brightest thing in
+// the whole ground band: measured, 183 px over luma 200 against 78 px for everything else
+// in a NOITE frame, peaking at 237 — above the Cetro's resting hub (195.6) and above the
+// crystal (214.7), which inverts the one rule the lighting wave set.
+// So they dim in VALUE only, neutral, on a high floor. At NOITE the full pip goes 236 ->
+// 158: still ~90 luma over a night street whose 99.5th percentile is 124, still boxed in
+// its own dark keyline, and now below the light source instead of above it. The hit flash
+// keeps a higher floor because two frames of white is the confirmation that you connected.
+// Empty pips take the same factor as full ones, so the read "how much is left" is untouched.
+const PIP_PISO = 0.67, PIP_PISO_FLASH = 0.82;
+let pipPasso = -1, PIP_CHEIO = "#e8edf6", PIP_VAZIO = "#4a4458", PIP_FLASH = "#ffffff";
+function pipLuzPasso() {
+  const k = horaKey() >> 2;                        // same 24 steps a day as everything else
+  if (k === pipPasso) return;
+  pipPasso = k;
+  const e = escuridao();
+  const dim = function (hex, piso) {
+    const c = hexA(hex), f = 1 - (1 - piso) * e;
+    return rgbS([cl255(c[0] * f), cl255(c[1] * f), cl255(c[2] * f)]);
+  };
+  PIP_CHEIO = dim("#e8edf6", PIP_PISO);
+  PIP_VAZIO = dim("#4a4458", PIP_PISO);
+  PIP_FLASH = dim("#ffffff", PIP_PISO_FLASH);
+}
 function desenharVidaMob(m) {
   if (m.dying > 0 || !m.hpMax) return;
   const sx = Math.round(m.wx - worldX);
   if (sx < -20 || sx > W + 20) return;
+  pipLuzPasso();
   const n = m.hpMax, larg = n * 3 - 1;
   const x0 = sx + 5 - (larg >> 1), y = GROUND - (VIDA_TOPO[m.type] || 22);
   cx.fillStyle = "#10121c";                       // keyline: it has to read on any ground
   cx.fillRect(x0 - 1, y - 1, larg + 2, 5);
   for (let i = 0; i < n; i++) {
     const cheio = i < m.hp;
-    cx.fillStyle = cheio ? (m.flash > 0 ? "#ffffff" : "#e8edf6") : "#4a4458";
+    cx.fillStyle = cheio ? (m.flash > 0 ? PIP_FLASH : PIP_CHEIO) : PIP_VAZIO;
     cx.fillRect(x0 + i * 3, y, 2, 3);
   }
 }
