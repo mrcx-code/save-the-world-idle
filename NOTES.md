@@ -2592,6 +2592,64 @@ toda sessão começa lendo a última entrada.
   porque comprou o quadro E o menino ao mesmo tempo. Dúvida honesta: não sei se isso se
   repete uma segunda vez ou se a copa só pagou porque estava a 150 px acima dele.**
 
+- **2026-08-03 · fila (f), lente *Primeiros cinco minutos*: onboarding de primeira partida.**
+  O dono nomeou o problema: "usuário vê muita função sem entender o que faz o quê" — a
+  intro joga o jogador direto num HUD cheio de controles sem nada explicando nenhum. A
+  pesquisa do gênero é explícita: esses jogadores querem chegar ao loop rápido e dão a nota
+  mais baixa para fantasia/roleplay elaborado. Então **nada de parede de texto nem sequência
+  de modais**: um guia leve e progressivo que revela **uma coisa por vez**, presa ao estado,
+  e sai da frente. Um vizinho fala cada linha, na mesma voz da intro e dos capítulos (Odete,
+  Rui, Safi, Mara, Ben, Kojo) — não em linguagem de tooltip.
+  **A sequência, na ordem em que o jogador precisa (`GUIA` no `index.html`), e a copy exata:**
+  (1) `tap` → **ODETE — "Tap the button — or the street itself. That is you helping."**
+  (aponta o HOLD, aparece com `geradores === 0`); (2) `projects` → **RUI — "Enough to start
+  a PROJECT. Open it — a project works on its own, forever."** (quando dá pra pagar o
+  primeiro, `geradores === 0 && energia >= custoGerador()`); (3) `rhythm` → **SAFI — "Now the
+  one that matters: GO FAST tires the team, GO STEADY lasts. Tap the rhythm to weigh it."**
+  (com `geradores >= 2` — a decisão que o protótipo inteiro existe para medir, e a folha faz
+  o ensino com os números antes/depois que já existem); (4) `upgrades` → **MARA** quando o
+  primeiro upgrade fica pagável; (5) `torch` → **BEN** quando a tocha fica pronta; (6)
+  `skills` → **KOJO** na run 2. Upgrades/tocha/skills são um empurrão de uma linha só, na
+  primeira vez que ficam alcançáveis — nada front-loaded.
+  **Como persisti o "visto":** `S.guiaVistos` (array de ids) no mesmo save. A escolha
+  importa: o `transicionar()` **não** mexe nesse campo, então **passar a tocha não repete o
+  tutorial** — ao contrário do `capVisto`, que é zerado de propósito para os capítulos
+  tocarem de novo. Save antigo sem o campo lê como `[]` (default no literal do `S`); campo
+  corrompido é blindado (`Array.isArray` em `jaViuGuia`/`marcarGuia`). Abrir a coisa apontada
+  também marca vista (mão nos `onclick` de PROJECTS/UPGRADES/TORCH/SKILLS e nos três botões
+  de modo), então o guia responde ao jogador em vez de repetir.
+  **Como provei que o input NUNCA é bloqueado** (o dono é explícito nisso): a bolha é
+  `pointer-events: none` inteira, como o cartão de capítulo — só os dois botõezinhos (GOT IT
+  / SKIP) capturam. O "dispensa ao tocar em qualquer lugar" é um ouvinte de `pointerdown` em
+  **fase de captura** que só muda estado (esconde + marca visto) e **não** chama
+  `preventDefault`/`stopPropagation`, então o mesmo toque segue até o jogo embaixo. Medido no
+  smoke: com a dica de `tap` no ar, um toque na cena rende **+1.00 de impacto** (o golpe
+  aconteceu) **e** some com a dica no mesmo toque; a bolha reporta `pointer-events: none`.
+  **Medido, no `test/smoke.js` (cresceu com um bloco de onboarding e a checagem de dígitos
+  virou 111 strings, 0 com dígito):** **6 passos**; a primeira dica aparece num save zerado
+  (`id === 'tap'`, visível, apontando o HOLD); **o jogador lê 12 palavras antes do primeiro
+  toque** (a linha da Odete, sem o nome); "got it" avança para o passo seguinte que o estado
+  permite (`tap` visto + 2 projetos → `rhythm`, apontando o controle de modo) e o marca
+  visto; uma dica já vista **não** volta; e depois do `transicionar()` os ids continuam em
+  `S.guiaVistos` **e** no `localStorage`, com `tap`/`projects` **não** reaparecendo (o que
+  volta é `skills`, que é exatamente a revelação da run 2). **`node test/sim.js` byte a byte
+  idêntico** ao antes (comparei a tabela inteira). **FPS 61**, verde.
+  **Quebrou no caminho:** a bolha some ao primeiro toque, então o print inicial pegava o
+  cartão de capítulo (que continua animando por CSS por 5,4s mesmo com `cartaoT = 0`) e não a
+  dica — o `shot-guia.png` agora congela um quadro limpo suprimindo o capítulo, e aí a bolha
+  aparece bem posicionada acima da barra de controles, com o caret mirando o HOLD. Nada da
+  economia, do `CFG`, do alvo de prestígio ou da curva foi tocado. **Território respeitado:**
+  não encostei em `drawScene`/`drawHero`/`drawMobs`/cenário/sprites — o guia é 100% overlay de
+  DOM (a dica aponta controles do HUD, que são DOM, então nem precisei de overlay sobre o
+  canvas).
+  **Dúvida nova:** a primeira dica de `tap` só aparece **depois** que o cartão do Capítulo I
+  some (~5,4s), porque `verificarGuia()` espera `cartaoT <= 0` para não empilhar dois painéis.
+  A intro já diz "Tap anywhere to help", então é reforço, não a primeira instrução — mas é uma
+  suposição de que 5,4s de reforço tardio é aceitável, não uma medição de retenção.
+  **Próximo passo: medir num navegador de verdade (mobile 375×812) o funil do minuto 1 — quantos
+  segundos até o primeiro projeto, se a dica de `rhythm` é lida antes ou depois da primeira troca
+  de modo.**
+
 
 ## Would cut with one more day
 
