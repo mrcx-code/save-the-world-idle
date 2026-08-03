@@ -1960,14 +1960,23 @@ function pal(h) {
   // untouched in the digit, and the hour is already part of the palette cache key.
   {
     const esc = escuridao();
+    const puxaL = function (k, k2) {
+      const c = P[k + "A"], y = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], y2 = y * k2;
+      const c2 = [cl255(y2 + c[0] - y), cl255(y2 + c[1] - y), cl255(y2 + c[2] - y)];
+      P[k + "A"] = c2; P[k] = rgbS(c2);
+    };
     if (esc > 0.001) {
       const k2 = 1 + esc * (1 / 0.85 - 1);
-      for (const k of ["serraNear", "serraNearL"]) {
-        const c = P[k + "A"], y = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], y2 = y * k2;
-        const c2 = [cl255(y2 + c[0] - y), cl255(y2 + c[1] - y), cl255(y2 + c[2] - y)];
-        P[k + "A"] = c2; P[k] = rgbS(c2);
-      }
+      puxaL("serraNear", k2); puxaL("serraNearL", k2);
     }
+    // TRIED AND BACKED OUT, WAVE 17: the same 15% daylight pull on `serraFar`, which has the
+    // same defect on paper — by day it resolves to L 165 while the sky at its own rows
+    // measures ~135. It bought NOTHING: the MANHÃ profile stayed 136 125 111 112 85 in the
+    // digit, the painted mean of the fourth fifth went 108 to 107, and the boy's MANHÃ luma
+    // rank went 18 to 19 of 485. The far ridge is mostly occluded by the near one and by the
+    // canopy, and what is left of it is the light band the whole value architecture stands
+    // on — "everything in front of it reads as a silhouette against light". A defect on
+    // paper that the bench cannot measure is not a defect worth paying a rank for.
   }
   // thick air eats the bright strip on the horizon: the band is the value architecture, so
   // it is dimmed rather than moved, and it comes straight back when you go steady
