@@ -1021,6 +1021,96 @@ toda sessão começa lendo a última entrada.
   I dispara em toda abertura de corrida, inclusive quando a pessoa só recarregou a página —
   não sei ainda se isso vira ritual ou ruído.**
 
+- **2026-08-02 · o ritmo virou clima, o tambor entrou na família e a barra de baixo virou
+  uma coluna só.** Quatro pedidos do dono, nesta ordem de valor.
+
+  **(1) O cenário não mudava nada entre GO FAST e GO STEADY.** Palavras dele: *"a troca de
+  plantinha pro fogo tem que ser mais impactante… o cenário não muda nada. Um é melhor e
+  outro é ruim."* Ele estava certo do jeito mais forte possível: os dois ritmos desenhavam
+  quadros **pixel a pixel idênticos**, então a única decisão que este protótipo existe para
+  medir não tinha consequência visível. Agora é **clima, não correção de cor** — o ar na
+  frente de um mundo forçado é grosso, quente e cheio de brasa; o ar na frente de um mundo
+  cuidado é limpo e cheio de bicho vivo. Sai tudo de um `ritmoV` amortecido (0 = steady,
+  1 = fast, ~1,1s para atravessar, **quantizado em oitavos antes de tocar qualquer chave de
+  cache**): o céu assa com névoa quente empoçando no horizonte (8% no zênite, 42% na linha
+  do céu) e o sol embaça atrás de uma coroa laranja inchada; **cada entrada da paleta recebe
+  névoa na proporção da distância que ela já carrega** — 6% no chão dos pés até ~38% na
+  serra —, que é engrossamento de perspectiva aérea e é por isso que a separação por valor
+  entre os planos vizinhos (a arquitetura inteira) sobrevive em todo t; o chão quase não se
+  move (12% → 3%), porque ele é a âncora; a faixa separadora **apaga em vez de deslocar**;
+  a fumaça deixou de esperar o time cansar (o `smog` antigo só respondia ao cansaço, que
+  atrasa a decisão em minutos) e ganhou uma parcela própria do ritmo, mais um banco baixo
+  deslizando ao contrário rente ao horizonte; o GO FAST levanta brasa da estrada e derruba
+  cinza quente, o GO STEADY dobra folhas e motes, põe cinco pássaros no ar em vez de dois e
+  baixa o limiar em que eles aparecem, e guarda as borboletas (que não saem por cima de uma
+  estrada que você está queimando); e **a virada em si** joga uma rajada atravessando o
+  quadro na cor do que você escolheu, pelo campo de partículas — ou seja, acontece *dentro*
+  do mundo e atrás do herói, não no vidro na frente dele.
+  **Medido, e é a medida que importa aqui: o arco doente→curado continua dominante.** Cor
+  média do quadro a 76% de saúde: steady `(102,9 · 140,8 · 132,5)` contra fast
+  `(119,8 · 142,9 · 123,7)` — **19,2 de distância RGB**, enquanto o arco doente→curado move
+  o mesmo quadro muito mais que isso. Conferido nos prints: os dois ritmos a 6% ainda leem
+  doente, os dois a 95% ainda leem curado. As brasas são **ocre apagado de propósito, não
+  laranja de fogo**: a regra mais dura da direção é que num quadro doente a varinha é a
+  única coisa quente e saturada da tela, e uma estrada de brasa acesa tirava isso dela.
+  **Custo medido:** `drawScene` **1,14 ms/quadro** (orçamento 16,7); reassar paleta + céu +
+  chão num passo de ritmo custa **0,70 ms** e há no máximo oito passos por troca; **FPS 61**.
+  Pior quadro trocando de modo a cada 320 ms: **20,5 ms — contra 20,6 ms no commit anterior
+  à camada de clima**, ou seja, o pico é o manipulador de troca que já existia e não as
+  reassadas.
+  **Quebrou no caminho, e foi feio:** enfiar o ritmo na chave de cache do `pal()` quebrou o
+  `hv = key / 96`, que estava **recuperando a saúde do mundo de dentro da chave** — o mundo
+  saiu ciano e magenta com canais acima de 255. Passo de saúde e passo de ritmo são termos
+  separados agora. Só o print pegou; nenhum teste falhou.
+
+  **(2) O tambor tóxico não era da mesma família.** Renderizei os três lado a lado
+  ampliados e a resposta ficou óbvia: fumaça e saco de dinheiro são sólidos arredondados
+  cuja **face inteira** é uma rampa de seis tons de uma borda esquerda escura até uma
+  direita iluminada, e o tambor era um **retângulo de 90°** com UM verde chapado dentro —
+  um pixel escuro à esquerda, um claro à direita, e uma parede entre eles. E era o **menor**
+  dos três (16×20 contra 18×16 e 18×13) sendo a coisa mais pesada da rua, com 5 golpes.
+  Mesma construção agora: silhueta chanfrada, contorno escuro sem interrupção, a mesma rampa
+  lateral no corpo, olhos 2×2 e barra escura de boca recortados dela. A identidade fica onde
+  nomeia o objeto — dois arcos de aço (agora sombreados na mesma rampa, com aresta superior
+  iluminada, em vez de duas lajes chapadas), tampa iluminada, galão de risco. E **maior**:
+  20×22, mais alto que qualquer irmão. **hp, spawn e hitbox intocados** — o teste de acerto
+  lê `m.wx + 5`, nunca o sprite; só andaram o offset de desenho, a largura da sombra de
+  contato e a fileira de pips (`VIDA_TOPO` 23 → 27).
+
+  **(3) Os dois botões de cima em padrão quadrado — e metade disso era um bug shipado.**
+  Palavras dele: *"os dois botões tão estranhos com essa planta e o botão do lado… podem
+  ficar de forma vertical, na lateral, empilhado em cima do outro, e não nesse padrão
+  quadrado."* Duas linhas abaixo da regra base de `button` havia um **rabo de comentário sem
+  `/*` de abertura**, então o parser de CSS comia o seletor seguinte e derrubava
+  `#modeQuick { flex: 1 1 auto; … }` inteiro — o leitor de ritmo, desenhado para ser a coisa
+  **larga** do bloco justamente porque é a decisão que o protótipo mede, estava colapsando
+  no conteúdo e virando um quadradinho com vão morto do lado. Corrigido, mas a forma que ele
+  expôs era a reclamação de verdade. Então: os quatro controles secundários viraram **uma
+  coluna vertical só** na lateral — guardar, ritmo, construir, construir — e a ação única
+  ocupa a coluna inteira em altura cheia. **Sem tocar no markup**: os dois envelopes de
+  linha e o par empilhado são `display: contents`, então os botões caem direto no grid do
+  `#controls`. **Medido, 390×844:** bloco 122px → **135px**, e o `--hControles` acompanhou
+  sozinho para 151 (folha de projetos em 729 contra o topo do bloco em 699); a ação foi de
+  74px de altura para **219×135**.
+
+  **(4) Botões mais bonitos, arredondados, com gradiente leve.** A armadilha é que raio +
+  gradiente também é a receita do botão de app genérico; o que segura a linguagem de pôster
+  é tudo o que ficou **duro**: contorno de tinta de 2px, sombra de deslocamento com **zero
+  blur** (é sombra impressa, não fotográfica), o toque afunda em pixels inteiros e nada é
+  translúcido. O que é novo é a modelagem **dentro** da forma: rampa vertical de três paradas
+  com a quebra acima do meio no lugar de duas chapadas, e um brilho diagonal a 158° morrendo
+  aos 62% — **a mesma direção de sol (em cima e à direita) que ilumina os sprites**, então o
+  chrome e o mundo passaram a concordar sobre onde está a luz. Raios: botões 9, a ação 12,
+  folhas 12, chips e cards 7–8, intro 14 — a coisa mais redonda da tela é a coisa que se
+  aperta. **O ouro continua só na ação única.**
+
+  **Dúvida nova, e é de calibragem:** a névoa do GO FAST está amarrada só ao `S.modo`, não a
+  quanto o GO FAST está *custando*. O `eficiencia()` já entra pela fumaça antiga, mas a
+  parcela do ritmo é constante — um GO FAST de dez segundos com o time inteiro parece igual
+  a um GO FAST de dez minutos com o time a 5%. Provavelmente devia escalar, e isso é medível.
+  **Próximo passo: a curva do dia 2 continua pendente desde três sessões, e o CLAUDE.md diz
+  que três sessões sem mover a pergunta dos três dias obrigam a voltar para a lente *Medir*.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
