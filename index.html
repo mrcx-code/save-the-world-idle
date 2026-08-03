@@ -1843,10 +1843,7 @@ const PALETA_BASE = {
   muroL: [[70, 50, 25], 0],
   muroS: [[35, 27, 16], 0]
 };
-const PALETA = {};
-for (const k in PALETA_BASE) {
-  PALETA[k] = [desbotar(PALETA_BASE[k][0]), PALETA_BASE[k][0], PALETA_BASE[k][1]];
-}
+// (the resolved table lives per scenario now — see `paletaCen()` down with the CENÁRIOS)
 // the hillside is authored as families, so it keeps its own loop.
 // Board walls: ochre, cream, terracotta, sage, pale ÁGUA, dusty rose — the painted
 // neighbourhood of the CENÁRIOS strip, not the saturated favela of the old poster pass.
@@ -1960,7 +1957,7 @@ function hazeLuz() {
 let palCache = null, palKey = -1;
 function pal(h) {
   const rq = ritmoQ();
-  const key = (Math.round(h * 96) * 128 + horaKey()) * 16 + Math.round(rq * 8);
+  const key = ((Math.round(h * 96) * 128 + horaKey()) * 16 + Math.round(rq * 8)) + "|" + cenAtivo;
   if (palCache && palKey === key) return palCache;
   palKey = key;
   const hv = Math.round(h * 96) / 96, tc = Math.pow(hv, 0.78);   // chroma leads value a little
@@ -1971,7 +1968,8 @@ function pal(h) {
   // It goes in BEFORE luzDoDia(), so the hour lights the smoke like it lights everything.
   const puxa = function (c, dist) { return rq ? mixA(c, HAZE_FAST, rq * (0.06 + 0.66 * dist)) : c; };
   const resolva = function (e) { return luzDoDia(puxa(mixA(palMix(e[0], e[1], hv, tc), horizonC(hv), e[2]), e[2])); };
-  for (const k in PALETA) { const c = resolva(PALETA[k]); P[k + "A"] = c; P[k] = rgbS(c); }
+  const PAL = paletaCen();   // the place you are in decides which colours these are
+  for (const k in PAL) { const c = resolva(PAL[k]); P[k + "A"] = c; P[k] = rgbS(c); }
   // THE RIDGE'S 15% PULL IS A DAYLIGHT CORRECTION AND IT WAS BEING CHARGED AT NIGHT.
   // The wave that darkened `serraNear` did it for a stated defect: the near ridge resolved
   // to L 141 while the sky at the same rows measured 136-137, and a silhouette brighter than
@@ -2126,7 +2124,7 @@ function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the 
 let skyCv = null, skyKey = "";
 function skyCanvas(h) {
   const rq = ritmoQ();
-  const key = W + "," + GROUND + "," + Math.round(h * 48) + "," + horaKey() + "," + rq;
+  const key = W + "," + GROUND + "," + Math.round(h * 48) + "," + horaKey() + "," + rq + "," + cenAtivo;
   if (skyCv && skyKey === key) return skyCv;
   if (!skyCv) skyCv = document.createElement("canvas");
   skyCv.width = W; skyCv.height = GROUND + 2;
@@ -2185,7 +2183,7 @@ let chaoCv = null, chaoKey = "";
 function chaoCanvas(h) {
   const alt = H - GROUND;
   const rq = ritmoQ();
-  const key = W + "," + alt + "," + Math.round(h * 48) + "," + horaKey() + "," + rq;
+  const key = W + "," + alt + "," + Math.round(h * 48) + "," + horaKey() + "," + rq + "," + cenAtivo;
   if (chaoCv && chaoKey === key) return chaoCv;
   if (!chaoCv) chaoCv = document.createElement("canvas");
   chaoCv.width = W; chaoCv.height = alt;
@@ -2196,8 +2194,11 @@ function chaoCanvas(h) {
   // a value lighter and a touch greener where the plants crowd in at the path's edge.
   // and it goes into shade as it comes toward you: the far edge of the slab loses four
   // steps of the ramp, the near edge loses six, so the gradient itself deepens downward
-  const perto = palMix(desbotar([98, 76, 46]), [98, 76, 46], h, tc);   // at your feet
-  const longeC = palMix(desbotar([142, 118, 80]), [142, 118, 80], h, tc); // where it meets the path
+  // ...and the two ends of that ramp are the scenario's, because a paved street and a
+  // packed-earth square are the same slab under different ground
+  const cc = CEN().chaoCor || [[98, 76, 46], [142, 118, 80]];
+  const perto = palMix(desbotar(cc[0]), cc[0], h, tc);       // at your feet
+  const longeC = palMix(desbotar(cc[1]), cc[1], h, tc);      // where it meets the path
   for (let y = 0; y < alt; y++) {
     const t = Math.pow(y / alt, 0.62);
     let c = mixA(longeC, perto, t);
@@ -3572,114 +3573,64 @@ function drawHero() {
   lastFi = fi;
 }
 
-function drawScene() {
-  const h = worldHealth();
-  const R = ritmoPasso();           // 0 = GO STEADY, 1 = GO FAST, eased across ~1.1s
-  const RQ = ritmoQ();              // the same choice, weighted by what it is costing
-  const P = pal(h);                 // the whole world's colour, resolved once per health step
-  const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
-  // The air in front of a world being pushed thickens BEFORE the team is worn: the old
-  // `smog` only ever answered to tiredness, which lags the decision by minutes. Rhythm gets
-  // its own share of it so the switch is felt now, and tiredness still stacks on top.
-  const smogV = Math.min(0.92, smog + R * 0.26 + R * smog * 0.4);
-  // sky, sun and glow: dithered gradient baked once per health step
-  cx.drawImage(skyCanvas(h), 0, 0);
-  // Clouds. They were three flat rectangles of one grey — the crudest thing in the sky and
-  // the sky is most of the frame. Now lobes with a sunlit crown and a shaded belly, and the
-  // lower they hang the smaller and hazier they get, which puts distance in the sky too.
-  const nubB = P.nuvB, nubT = P.nuvT, nubD = P.nuvD;
-  // A HIGH STRATUM, above the cumulus. The cumulus sit one every 34 px of screen and there
-  // are only four of them across a 130 px frame, all of them in one bank low in the sky, so
-  // everything above that bank was bare gradient — and that is 38% of the picture. Every one
-  // of the board's four LUZ & ATMOSFERA panels has a full sky: banded cirrus over the
-  // cumulus, densest at TARDE. These are streaks, not lobes — long, two or three pixels
-  // thick, a lit upper edge, and the slowest parallax in the frame (0.05, half the cumulus)
-  // because they are the furthest thing there is. They cannot crowd anything: they live
-  // between y8 and y=0.34*GROUND, which is 100 px above the hero's head.
-  {
-    const passo = 30, vel = 0.05, teto = GROUND * 0.44;
-    const k0 = Math.floor(worldX * vel / passo) - 1;
-    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
-      const s1 = hash01(k * 11 + 3);
-      if (s1 > 0.88) continue;                              // gaps of open sky
-      const sx = Math.round(k * passo - worldX * vel) - Math.round(hash01(k * 19 + 7) * 14);
-      const cy = 8 + Math.round(hash01(k * 23 + 2) * (teto - 12));
-      const linhas = 2 + Math.floor(hash01(k * 31 + 5) * 3);
-      for (let l = 0; l < linhas; l++) {
-        const s2 = hash01(k * 47 + l * 9 + 1);
-        const lw = 16 + Math.round(s2 * 34), ly = cy + l * 4 + Math.round(s2 * 2);
-        const lx = sx + Math.round((s2 - 0.5) * 18);
-        // thinner and fainter the lower they hang: the same air that eats the ridges
-        const prof = Math.min(1, ly / teto);
-        cx.globalAlpha = (0.30 + s2 * 0.24) * (1 - prof * 0.45);
-        cx.fillStyle = nubB; cx.fillRect(lx, ly, lw, 2);
-        cx.fillStyle = nubD; cx.fillRect(lx + 3, ly + 2, lw - 8, 1);   // the shaded underside
-        cx.globalAlpha = (0.34 + s2 * 0.26) * (1 - prof * 0.45);
-        cx.fillStyle = nubT; cx.fillRect(lx + 2, ly, lw - 5, 1);       // sun on top: it is above
-      }
-      cx.globalAlpha = 1;
-    }
-  }
-  // ONE SIZE CLASS IN ONE BANK IS NOT WHAT THE BOARD HAS. Measured, on the RUA DO BAIRRO
-  // panel: cloud is 26% of its sky and 4.9% of the picture at a value separation of 49 over
-  // the sky behind it, and the widest tenth of its cloud rows is **3.5% of the frame's
-  // width** — a loose chain of small crisp puffs at several heights, with one bigger cluster.
-  // Ours measured 19% of the sky and 7.1% of the picture at a separation of 45: LESS cloud
-  // than the board, in far FEWER and far BIGGER pieces, the widest tenth at **36.9%** of the
-  // width. So the separation was never the problem, which is why two waves of pushing the
-  // cloud's VALUE around got refused by the screenshot. The size distribution was.
-  // Three classes off their own hash — roughly two thirds small, a quarter medium, a tenth
-  // the big cluster — on a tighter spacing, so the same painted area arrives as eight or ten
-  // pieces instead of four. No new object and no new draw call: same loop, same lobes.
-  const passoN = 12;
-  const ck0 = Math.floor(worldX * 0.12 / passoN) - 1;
-  for (let k = ck0; k < ck0 + Math.ceil(W / passoN) + 2; k++) {
-    const sx = Math.round(k * passoN - worldX * 0.12) + Math.round((hash01(k * 37 + 2) - 0.5) * 11);
-    const prof = hash01(k * 3 + 1);                       // 0 = high overhead, 1 = near the horizon
-    const cy = Math.round(H * 0.09 + prof * GROUND * 0.58);
-    const cls = hash01(k * 53 + 8);
-    const classe = cls > 0.90 ? 52 : cls > 0.66 ? 31 : 17;
-    const cs = (1.15 - prof * 0.55) * (0.8 + hash01(k * 9 + 6) * 0.5);
-    // A cumulus is the union of a few discs sitting on one flat base, not a stack of
-    // rectangles. The top is found per column as the highest disc over that column, which
-    // is what gives the bulging crown and the notches between lobes that read as cloud.
-    const w0 = Math.max(9, Math.round(classe * cs));
-    // ...and one silhouette stamped ten times is a row of polka dots, which is the thing the
-    // board's sky is least like. Two lobe sets — one that towers over a narrow shoulder, one
-    // that spreads flat — and a vertical stretch on the bulge, so the chain carries tall and
-    // flat pieces at the same width instead of one shape at ten sizes.
-    const lobos = hash01(k * 61 + 4) > 0.5
-      ? [[0.16, 0.10, 0.19], [0.37, -0.10, 0.25], [0.58, 0.03, 0.22],
-         [0.78, 0.13, 0.17], [0.47, 0.06, 0.20]]
-      : [[0.20, 0.12, 0.17], [0.44, -0.18, 0.21], [0.62, -0.02, 0.24],
-         [0.82, 0.14, 0.15], [0.33, 0.05, 0.18]];
-    const alt = 0.80 + hash01(k * 71 + 6) * 0.65;
-    const topo = new Array(w0 + 1);
-    for (let x = 0; x <= w0; x++) {
-      let t2 = cy;
-      for (let l = 0; l < lobos.length; l++) {
-        const lx = lobos[l][0] * w0, lr = lobos[l][2] * w0, d = Math.abs(x - lx);
-        if (d < lr) t2 = Math.min(t2, cy + (lobos[l][1] * w0 - Math.sqrt(lr * lr - d * d)) * alt);
-      }
-      topo[x] = Math.round(t2);
-    }
-    cx.globalAlpha = 0.88 - prof * 0.36;                  // haze eats the far ones
-    let ini = 0;
-    for (let x = 1; x <= w0; x++) {                       // the mass, runs of equal height
-      if (x === w0 || topo[x] !== topo[ini]) {
-        if (topo[ini] < cy) {
-          cx.fillStyle = nubB; cx.fillRect(sx + ini, topo[ini], x - ini, cy - topo[ini] + 1);
-          cx.fillStyle = nubT; cx.fillRect(sx + ini, topo[ini], x - ini, 2);   // sunlit crown
-        }
-        ini = x;
-      }
-    }
-    cx.fillStyle = nubD;                                  // the belly it sits on
-    cx.fillRect(sx + Math.round(w0 * 0.06), cy - 1, Math.round(w0 * 0.88), 2);
-    cx.fillStyle = nubB;                                  // a wisp trailing off downwind
-    cx.fillRect(sx + w0, cy - 3, Math.round(w0 * 0.22), 2);
-    cx.globalAlpha = 1;
-  }
+// ---------- CENÁRIOS: THE PLACE YOU ARE IN ----------
+// The board's CENÁRIOS strip shows SEVEN places — RUA DO BAIRRO, PRAÇA COMUNITÁRIA, ORLA,
+// MATA ATLÂNTICA, CERRADO, CENTRO HISTÓRICO, VILA DA SERRA — and this game had exactly one
+// street, hardcoded across `drawScene()` and the palette. A place is now a named thing with
+// seven parameters, which are the seven decisions that make one thumbnail on that strip
+// different from the next one:
+//
+//   paleta   — the colour families, as overrides on top of `PALETA_BASE`
+//   chaoCor  — the two ends of the ground slab's own gradient
+//   fundo    — the skyline: ridges, separator band, town, landmarks
+//   meio     — the mid-distance content that fills the wedge between the framing mass
+//   veg      — the vegetation planes, separated by value
+//   chao     — the ground surface
+//   segmentos— the props standing on it, one draw per 48px world segment
+//   moldura  — the framing mass that closes the edges and the top corners
+//   fios     — what crosses the sky overhead
+//
+// Everything ELSE is deliberately shared and stays in `drawScene()`: the sky ramp and its
+// four hours, the clouds and the cirrus, the weather that carries the rhythm, the particle
+// field, the hero, the monsters and the HUD. A scenario is a place, not a renderer — the
+// light, the arc and the boy read the same wherever you are, which is the only reason a
+// second one costs a few hundred lines instead of a second game.
+//
+// RUA DO BAIRRO is scenario #1 and its hooks are the nineteen waves of measured drawing that
+// used to sit inline in `drawScene()`, moved without a character changed. `test/igual.js`
+// hashes twelve frames (three health levels x four hours) and is the proof of that.
+const CENARIOS = {};
+let cenAtivo = "rua";
+function CEN() { return CENARIOS[cenAtivo] || CENARIOS.rua; }
+// The debug hook, and it is only that: how a player MEETS a scenario is a design question
+// the owner has not answered yet, so nothing in the game calls this. It exists so the
+// harnesses can stand in the second place and measure it beside the first.
+function setCenario(id) {
+  if (!CENARIOS[id]) return false;
+  cenAtivo = id;
+  palKey = -1; skyKey = ""; chaoKey = "";     // every bake is keyed on the palette it used
+  return true;
+}
+// The palette is per scenario: the board's six families are the shared vocabulary and a
+// place says which words of it are on its walls. Built once per scenario, off the same
+// `desbotar()` rule, so the sick end of every place is derived and never authored twice.
+const PALETA_CEN = {};
+function paletaCen() {
+  const c = CEN();
+  if (PALETA_CEN[c.id]) return PALETA_CEN[c.id];
+  const base = c.paleta ? Object.assign({}, PALETA_BASE, c.paleta) : PALETA_BASE;
+  const out = {};
+  for (const k in base) out[k] = [desbotar(base[k][0]), base[k][0], base[k][1]];
+  return (PALETA_CEN[c.id] = out);
+}
+
+CENARIOS.rua = {
+  id: "rua", nome: "RUA DO BAIRRO",
+  paleta: null, chaoCor: null,
+  // the skyline: two ridges, the separator band, the town, one landmark per stretch
+  // and the painted hillside — everything between the sky and the tree line
+  fundo: function (A) {
+  const h = A.h, P = A.P;
   // The ridge was five stacked rectangles per tile — a staircase pyramid, repeating on a
   // fixed spacing, and washed so far toward the horizon that the separator band ate it.
   // Now it is a real skyline: a height per column from three sines at different periods,
@@ -3935,6 +3886,10 @@ function drawScene() {
       }
     }
   }
+  },
+  // the mid-distance content: what fills the wedge between the framing mass
+  meio: function (A) {
+  const h = A.h, P = A.P;
   // ---- THE STREET'S OWN FAÇADES, RECEDING BETWEEN THE COLUMNS ----
   // WAVE 18, and it is the move waves 11 to 17 were circling. Measured: our PAINT in the
   // second and third fifths is already at or below the board's — PAINTED 81 and 77 against
@@ -4022,6 +3977,10 @@ function drawScene() {
       }
     }
   }
+  },
+  // the vegetation, three planes separated by VALUE
+  veg: function (A) {
+  const h = A.h, P = A.P;
   // ---- the middle distance, in three planes separated by VALUE ----
   // The old tree line and the old bushes sat within a few percent of each other in both
   // hue and brightness, so they merged into one undifferentiated green mass across the
@@ -4060,6 +4019,10 @@ function drawScene() {
   // the bushes sit down onto the ground instead of floating on it
   cx.fillStyle = P.rodape;
   cx.fillRect(0, GROUND - 2, W, 2);
+  },
+  // the ground surface, from the horizon line down to the bottom of the frame
+  chao: function (A) {
+  const h = A.h, P = A.P;
   // ground: dithered gradient, lit at the horizon and falling into shadow toward the viewer
   cx.drawImage(chaoCanvas(h), 0, GROUND);
   // The dirt path he runs on: it used to be one flat 5px band straight across the widest
@@ -4159,6 +4122,10 @@ function drawScene() {
     }
   }
 
+  },
+  // the props: what stands on the ground, one draw per 48px world segment
+  segmentos: function (A) {
+  const h = A.h, P = A.P;
   // world features per 48px segment (trees, houses, ponds, project buildings)
   const seg = 48;
   const k0 = Math.floor(worldX / seg) - 1;
@@ -4507,6 +4474,10 @@ function drawScene() {
     }
   }
 
+  },
+  // the framing mass that closes the two edges and the top corners
+  moldura: function (A) {
+  const h = A.h, P = A.P;
   // ---- THE FRAME ----
   // Every CENÁRIOS thumbnail on the board is composed the same way: dark foliage and dark
   // masonry crowding both edges and the top corners, with the light kept in a slot down the
@@ -4713,7 +4684,10 @@ function drawScene() {
     lado(1, desl * 0.02);
     lado(-1, 4.1 + desl * 0.02);
   }
-
+  },
+  // the wires overhead
+  fios: function (A) {
+  const h = A.h, P = A.P;
   // ---- POWER LINES ----
   // Every single CENÁRIOS and LUZ & ATMOSFERA thumbnail on the board has them: leaning
   // concrete-and-timber poles with a crossarm, a fat knot of cable at the top and wires
@@ -4788,6 +4762,130 @@ function drawScene() {
       }
     }
   }
+  }
+};
+
+function drawScene() {
+  const h = worldHealth();
+  const R = ritmoPasso();           // 0 = GO STEADY, 1 = GO FAST, eased across ~1.1s
+  const RQ = ritmoQ();              // the same choice, weighted by what it is costing
+  const P = pal(h);                 // the whole world's colour, resolved once per health step
+  const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
+  // The air in front of a world being pushed thickens BEFORE the team is worn: the old
+  // `smog` only ever answered to tiredness, which lags the decision by minutes. Rhythm gets
+  // its own share of it so the switch is felt now, and tiredness still stacks on top.
+  const smogV = Math.min(0.92, smog + R * 0.26 + R * smog * 0.4);
+  // sky, sun and glow: dithered gradient baked once per health step
+  cx.drawImage(skyCanvas(h), 0, 0);
+  // Clouds. They were three flat rectangles of one grey — the crudest thing in the sky and
+  // the sky is most of the frame. Now lobes with a sunlit crown and a shaded belly, and the
+  // lower they hang the smaller and hazier they get, which puts distance in the sky too.
+  const nubB = P.nuvB, nubT = P.nuvT, nubD = P.nuvD;
+  // A HIGH STRATUM, above the cumulus. The cumulus sit one every 34 px of screen and there
+  // are only four of them across a 130 px frame, all of them in one bank low in the sky, so
+  // everything above that bank was bare gradient — and that is 38% of the picture. Every one
+  // of the board's four LUZ & ATMOSFERA panels has a full sky: banded cirrus over the
+  // cumulus, densest at TARDE. These are streaks, not lobes — long, two or three pixels
+  // thick, a lit upper edge, and the slowest parallax in the frame (0.05, half the cumulus)
+  // because they are the furthest thing there is. They cannot crowd anything: they live
+  // between y8 and y=0.34*GROUND, which is 100 px above the hero's head.
+  {
+    const passo = 30, vel = 0.05, teto = GROUND * 0.44;
+    const k0 = Math.floor(worldX * vel / passo) - 1;
+    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+      const s1 = hash01(k * 11 + 3);
+      if (s1 > 0.88) continue;                              // gaps of open sky
+      const sx = Math.round(k * passo - worldX * vel) - Math.round(hash01(k * 19 + 7) * 14);
+      const cy = 8 + Math.round(hash01(k * 23 + 2) * (teto - 12));
+      const linhas = 2 + Math.floor(hash01(k * 31 + 5) * 3);
+      for (let l = 0; l < linhas; l++) {
+        const s2 = hash01(k * 47 + l * 9 + 1);
+        const lw = 16 + Math.round(s2 * 34), ly = cy + l * 4 + Math.round(s2 * 2);
+        const lx = sx + Math.round((s2 - 0.5) * 18);
+        // thinner and fainter the lower they hang: the same air that eats the ridges
+        const prof = Math.min(1, ly / teto);
+        cx.globalAlpha = (0.30 + s2 * 0.24) * (1 - prof * 0.45);
+        cx.fillStyle = nubB; cx.fillRect(lx, ly, lw, 2);
+        cx.fillStyle = nubD; cx.fillRect(lx + 3, ly + 2, lw - 8, 1);   // the shaded underside
+        cx.globalAlpha = (0.34 + s2 * 0.26) * (1 - prof * 0.45);
+        cx.fillStyle = nubT; cx.fillRect(lx + 2, ly, lw - 5, 1);       // sun on top: it is above
+      }
+      cx.globalAlpha = 1;
+    }
+  }
+  // ONE SIZE CLASS IN ONE BANK IS NOT WHAT THE BOARD HAS. Measured, on the RUA DO BAIRRO
+  // panel: cloud is 26% of its sky and 4.9% of the picture at a value separation of 49 over
+  // the sky behind it, and the widest tenth of its cloud rows is **3.5% of the frame's
+  // width** — a loose chain of small crisp puffs at several heights, with one bigger cluster.
+  // Ours measured 19% of the sky and 7.1% of the picture at a separation of 45: LESS cloud
+  // than the board, in far FEWER and far BIGGER pieces, the widest tenth at **36.9%** of the
+  // width. So the separation was never the problem, which is why two waves of pushing the
+  // cloud's VALUE around got refused by the screenshot. The size distribution was.
+  // Three classes off their own hash — roughly two thirds small, a quarter medium, a tenth
+  // the big cluster — on a tighter spacing, so the same painted area arrives as eight or ten
+  // pieces instead of four. No new object and no new draw call: same loop, same lobes.
+  const passoN = 12;
+  const ck0 = Math.floor(worldX * 0.12 / passoN) - 1;
+  for (let k = ck0; k < ck0 + Math.ceil(W / passoN) + 2; k++) {
+    const sx = Math.round(k * passoN - worldX * 0.12) + Math.round((hash01(k * 37 + 2) - 0.5) * 11);
+    const prof = hash01(k * 3 + 1);                       // 0 = high overhead, 1 = near the horizon
+    const cy = Math.round(H * 0.09 + prof * GROUND * 0.58);
+    const cls = hash01(k * 53 + 8);
+    const classe = cls > 0.90 ? 52 : cls > 0.66 ? 31 : 17;
+    const cs = (1.15 - prof * 0.55) * (0.8 + hash01(k * 9 + 6) * 0.5);
+    // A cumulus is the union of a few discs sitting on one flat base, not a stack of
+    // rectangles. The top is found per column as the highest disc over that column, which
+    // is what gives the bulging crown and the notches between lobes that read as cloud.
+    const w0 = Math.max(9, Math.round(classe * cs));
+    // ...and one silhouette stamped ten times is a row of polka dots, which is the thing the
+    // board's sky is least like. Two lobe sets — one that towers over a narrow shoulder, one
+    // that spreads flat — and a vertical stretch on the bulge, so the chain carries tall and
+    // flat pieces at the same width instead of one shape at ten sizes.
+    const lobos = hash01(k * 61 + 4) > 0.5
+      ? [[0.16, 0.10, 0.19], [0.37, -0.10, 0.25], [0.58, 0.03, 0.22],
+         [0.78, 0.13, 0.17], [0.47, 0.06, 0.20]]
+      : [[0.20, 0.12, 0.17], [0.44, -0.18, 0.21], [0.62, -0.02, 0.24],
+         [0.82, 0.14, 0.15], [0.33, 0.05, 0.18]];
+    const alt = 0.80 + hash01(k * 71 + 6) * 0.65;
+    const topo = new Array(w0 + 1);
+    for (let x = 0; x <= w0; x++) {
+      let t2 = cy;
+      for (let l = 0; l < lobos.length; l++) {
+        const lx = lobos[l][0] * w0, lr = lobos[l][2] * w0, d = Math.abs(x - lx);
+        if (d < lr) t2 = Math.min(t2, cy + (lobos[l][1] * w0 - Math.sqrt(lr * lr - d * d)) * alt);
+      }
+      topo[x] = Math.round(t2);
+    }
+    cx.globalAlpha = 0.88 - prof * 0.36;                  // haze eats the far ones
+    let ini = 0;
+    for (let x = 1; x <= w0; x++) {                       // the mass, runs of equal height
+      if (x === w0 || topo[x] !== topo[ini]) {
+        if (topo[ini] < cy) {
+          cx.fillStyle = nubB; cx.fillRect(sx + ini, topo[ini], x - ini, cy - topo[ini] + 1);
+          cx.fillStyle = nubT; cx.fillRect(sx + ini, topo[ini], x - ini, 2);   // sunlit crown
+        }
+        ini = x;
+      }
+    }
+    cx.fillStyle = nubD;                                  // the belly it sits on
+    cx.fillRect(sx + Math.round(w0 * 0.06), cy - 1, Math.round(w0 * 0.88), 2);
+    cx.fillStyle = nubB;                                  // a wisp trailing off downwind
+    cx.fillRect(sx + w0, cy - 3, Math.round(w0 * 0.22), 2);
+    cx.globalAlpha = 1;
+  }
+  // THE PLACE, DRAWN. Everything from here to the wires is the scenario's, not the
+  // street's: `A` is the frame's resolved state (health, palette, rhythm, smoke) and each
+  // hook is one layer of the picture. RUA DO BAIRRO is scenario #1 and its hooks hold the
+  // nineteen waves of measured drawing that used to live inline here.
+  const A = { h: h, P: P, R: R, RQ: RQ, smog: smog, smogV: smogV };
+  const C = CEN();
+  C.fundo(A);
+  C.meio(A);
+  C.veg(A);
+  C.chao(A);
+  C.segmentos(A);
+  C.moldura(A);
+  C.fios(A);
 
   // sprouts planted by taps in steady mode — what the wand is actually for, so a fresh one
   // still carries the light it was planted with for a second before settling into a plant
