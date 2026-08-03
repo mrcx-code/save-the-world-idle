@@ -2787,6 +2787,32 @@ toda sessão começa lendo a última entrada.
   por cima conta como moldura e ela é o lugar, então o 20,3% da rua não se compara direto com o
   número delas.**
 
+- **2026-08-03 · HUD: STREET vira barra vertical na direita + botões mais clean.** Dois
+  pedidos do dono. (1) A saúde da rua saiu do painel horizontal acima dos controles e virou
+  uma **barra vertical fina na lateral direita** (`#barraRua`, `right: 7px`, `width` da trilha
+  12px), enche de baixo pra cima. **Continua lendo o mesmo estado** — `worldHealth()` via
+  `ruaPct`; só troquei `#barRua` de `style.width` para `style.height`. Fica **acima** do
+  ticker REAL DATA e do bloco de controles, e **abaixo das sheets** (`z-index: 8` contra 20),
+  então uma sheet aberta cobre a barra em vez de brigar com ela — só o número do topo aparece
+  acima da sheet. Tirei a linha de flavour (`#ruaSub`), sem espaço na barra fina, e removi a
+  referência dela no `desenhar()`. (2) Botões saíram do visual de painel pixel grosso (borda
+  de tinta 2px + sombra dura de 3–6px em bloco) para uma linguagem **limpa**: borda de 1px,
+  sombra suave com blur e um brilho de 1px no topo; raio maior (`--raio 10→13`, `--raioSm
+  7→10`) e mais respiro nos quatro cards. Hierarquia: ação principal e botões de compra em
+  ouro com leve elevação; cards, modos e seletor de quantidade quietos. De brinde apaguei um
+  bloco de CSS **morto/duplicado** de `#btnClique`/`#dicaHold` (linhas órfãs sem seletor).
+  **Medido:** `smoke.js` verde nos dois commits, **FPS 61**, `sim.js` **byte-idêntico** ao
+  baseline (não toquei em CFG/economia/`clicar`/`simular`), `--hControles` ainda medido do
+  `#controls` real (o teste do bloco de controle passa). Prints lidos em progresso baixo (8%),
+  médio (40%) e quase cheio (73% — o teto de `worldHealth()` sem sabedoria é 76%) e com a sheet
+  de projetos aberta (a barra fica coberta, sem overlap). **Dúvida honesta:** o dono falou
+  "porcentagem de street" mas `worldHealth()` já é `energiaTotal/metaPrestigio` mapeado — ou
+  seja, a barra sobe conforme o impacto total se aproxima do alvo da tocha, que é justamente o
+  que ele descreveu; mantive a fonte de dados intacta. **Próximo passo:** os painéis (sheets,
+  ticker, chips do topo) ainda usam a sombra dura em bloco; se o dono quiser coerência total
+  com os botões novos, suavizar essas também — deixei fora deste passe por serem "painéis",
+  não "botões".
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
