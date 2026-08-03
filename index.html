@@ -67,12 +67,12 @@
      sitting apart at its right end, not in three separate floating slabs. That is the
      grammar copied here: a single pill, chips inside it, rounded corners, cream on deep
      olive, and the gear as its own square at the end of the row. */
-  #hudTop { position: fixed; z-index: 10; left: 0; right: 0;
-    top: calc(6px + env(safe-area-inset-top));
-    display: flex; gap: 6px; align-items: stretch; padding: 0 8px; pointer-events: none; }
+  #hudTop { position: fixed; z-index: 10; left: 0; right: 0; top: 0;
+    padding-top: env(safe-area-inset-top);
+    display: flex; gap: 0; align-items: stretch; pointer-events: none;
+    background: #14180d; }   /* owner: the top strip fills the width of the screen */
   #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; align-items: stretch;
-    background: rgba(20, 24, 13, .78); border: 2px solid var(--ink); border-radius: 0;
-    padding: 4px; box-shadow: 0 3px 0 var(--ink); }
+    background: #14180d; border: 0; border-radius: 0; padding: 8px 10px; box-shadow: none; }
   .chip { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px;
     background: transparent; border-radius: 0; padding: 4px 6px; color: var(--chromeT); }
   .cInfo { min-width: 0; flex: 1; }
@@ -192,56 +192,51 @@
 
   /* the four cards — icon over name over value, exactly the board's card */
   #cartoes { display: flex; gap: 6px; margin-bottom: 6px; }
-  .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 3px; padding: 9px 3px 8px; border-radius: 0;
-    background: rgba(43, 51, 28, .82); }
-  .cartao .cn { font-size: 8px; letter-spacing: .04em; color: var(--creme); white-space: nowrap;
-    overflow: hidden; max-width: 100%; }
+  .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: row; align-items: center;
+    justify-content: center; gap: 7px; padding: 12px 6px; border-radius: 0;
+    background: #2b331c; }
+  .cartao .cn { font-size: var(--fs-xs); letter-spacing: .06em; color: var(--creme);
+    white-space: nowrap; overflow: hidden; }
   .cartao .cv { font-size: var(--fs-xs); font-weight: 800; color: var(--gold); white-space: nowrap;
     font-variant-numeric: tabular-nums; }
-  .cartao.pronto { box-shadow: 0 3px 0 var(--ink), inset 0 0 0 2px var(--gold); }
+  .cartao.pronto { background: #3d4a25; }
 
   /* ---- buttons: clean and current, not retro-clunky ----
      The old chrome was a heavy pixel panel — a 2px ink border and a hard 3px offset block
      shadow. That reads dated. The construction now is softer: a hairline border, a subtle
      drop shadow with a little blur, and a 1px lit top edge for depth. The primary action
      keeps gold and a touch more lift; everything else stays quiet. */
-  button { font-family: inherit; font-weight: 700; border: 2px solid var(--ink);
-    border-radius: 0; cursor: pointer; color: var(--chromeT); text-transform: uppercase;
-    background: var(--chromeA);
-    box-shadow: 0 3px 0 var(--ink);          /* hard block, no blur — a pixel edge */
+  button { font-family: inherit; font-weight: 700; border: 0; border-radius: 0;
+    cursor: pointer; color: var(--chromeT); text-transform: uppercase;
+    background: var(--chromeA); box-shadow: none;
     touch-action: manipulation; user-select: none; -webkit-user-select: none; }
-  button:disabled { opacity: .45; cursor: default; }
-  button:not(:disabled):active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+  button:disabled { color: #7d8168; cursor: default; }
+  button:not(:disabled):active { filter: brightness(1.15); }
   /* the rhythm card: the one decision this prototype exists to measure, so it is the card
      that is allowed to change colour and to pulse */
-  #modeQuick.fast { background: rgba(122, 56, 35, .86) !important; }
+  #modeQuick.fast { background: #7a3823 !important; }
   #modeQuick.fast .cn { color: #f2d3b0; }
-  #modeQuick.steady { background: rgba(74, 100, 36, .86) !important; }
+  #modeQuick.steady { background: #4a6424 !important; }
   #modeQuick.steady .cn { color: #dbe7b4; }
   /* it is costing you right now: say so without words */
-  #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
-  @keyframes doendo { 0% { box-shadow: 0 3px 0 var(--ink) } 50% { box-shadow: 0 3px 0 var(--ink), inset 0 0 0 2px #c85a32 } 100% { box-shadow: 0 3px 0 var(--ink) } }
+  /* owner: the rhythm card no longer pulses when it is costing you. */
   /* the bottom rail, and the one thing standing in it */
-  #rail { background: rgba(20, 24, 13, .78); border: 2px solid var(--ink); border-radius: 0;
-    padding: 5px; display: flex; box-shadow: 0 3px 0 var(--ink); }
+  #rail { background: transparent; border: 0; border-radius: 0;
+    padding: 0; display: flex; box-shadow: none; }
   /* THE primary action: gold, a soft inner sheen and a gentle lift so it reads as the one
      button that matters — no hard offset block under it anymore */
   #btnClique { flex: 1 1 auto; min-width: 0; min-height: 62px; padding: 9px 10px;
     border-radius: 0;
     font-size: var(--fs-lg); font-weight: 800;
     background: var(--ouroA);
-    color: #221806; border: 2px solid var(--ink); letter-spacing: .02em;
+    color: #221806; border: 0; letter-spacing: .02em;
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    text-shadow: none;
-    box-shadow: 0 3px 0 var(--ink), inset 0 3px 0 #f8d98f, inset 0 -3px 0 var(--ouroB);
-    position: relative; }
-  #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
-    color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
+    text-shadow: none; box-shadow: none; position: relative; }
+  /* owner: the HOLD hint is gone from the button — holding still works. */
+  #dicaHold { display: none; }
   #btnClique.segurando { transform: translateY(2px);
     background: linear-gradient(180deg, #fdeec2 0%, #f6cf7e 34%, #e8a244 100%);
     box-shadow: 0 1px 5px rgba(120,60,0,.3), inset 0 1px 0 rgba(255,255,255,.65); }
-  #btnClique.segurando #dicaHold { color: rgba(42,26,6,.85); }
   /* the super's charge, on the button that swings it: one square per completed combo */
 
   /* ---- floating sheets above the character ---- */
@@ -429,7 +424,7 @@
       <span class="cn">UPGRADES</span></button>
   </div>
   <div id="rail">
-    <button id="btnClique"><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
+    <button id="btnClique"><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span></button>
   </div>
 </div>
 
@@ -577,7 +572,7 @@ let S = {
 };
 
 // ---------- formulas ----------
-const eficiencia = () => 100 / (100 + S.poluicao);
+const eficiencia = () => 1;   // owner: tiredness ended with the projects that emitted it
 const bonusInovacao = () => 1 + 0.1 * S.inovacao;
 const custoGerador = () => Math.ceil(CFG.custoGeradorBase * Math.pow(CFG.custoGeradorFator, S.geradores));
 const bonusJusto = () => 1;                        // owner: kept at 1 so the formulas read the same
@@ -710,6 +705,7 @@ function simular(dt) {
 
 // ---------- actions ----------
 let heroPulse = 0, floats = [], sprouts = [], parts = [], lastFi = 0;
+let modoIconeAtual = null;   // so the rhythm icon is only re-rendered when it actually changes
 let worldX = 0;
 function burst(x, y, n, cores) {
   for (let i = 0; i < n; i++) {
@@ -728,6 +724,7 @@ function burst(x, y, n, cores) {
 }
 let combo = 0, attackT = 0, attackType = 0;
 const JUMPF = 20;                 // frames of the leap
+const PASSO_PX = 5;               // ground covered per walk frame — six of these is one stride
 const ATKF = 16;                  // frames a cast animation is shown — long enough to READ the
                                   // 4 sprite frames (was 9 ≈ 0.15s, a flash the owner couldn't follow)
 let jumpT = 0, shocks = [];       // owner: both stay at rest — the leap was removed
@@ -964,6 +961,7 @@ function clicar(auto, naoConta) {
   if (!auto) {
     attackType = passo;
     attackT = passo === 2 ? JUMPF : ATKF;
+    if (passo === 2 && jumpT <= 0) jumpT = JUMPF;   // third beat: he leaps. No shockwave.
   }
   // reach covers the whole queue (three troubles, one body-width apart) — otherwise the
   // one at the back is unhittable from the button and the road never clears
@@ -1147,6 +1145,10 @@ function carregar() {
   try { bruto = localStorage.getItem("proto_savetheworld"); } catch (e) {}
   if (!bruto) return;
   try { Object.assign(S, JSON.parse(bruto)); } catch (e) { return; }
+  // A save from before the cleanup still carries a project count and the tiredness those
+  // projects had built up. Neither exists now, so they are dropped on load rather than left
+  // to quietly divide the tap gain with no readout to explain it.
+  S.geradores = 0; S.poluicao = 0;
   // old saves predate the resource layer; missing objects read back as their empty shape
   if (!S.recursos || typeof S.recursos !== "object") S.recursos = { flor: 0, agua: 0, refeicao: 0 };
   if (!S.especiais || typeof S.especiais !== "object") S.especiais = {};
@@ -3007,18 +3009,11 @@ function desenharMagias() {
     const p = m.t / m.vida, a = Math.pow(1 - p, 0.5);
     const x = Math.round(m.wx - worldX), y = Math.round(m.y);
     if (x < -20 || x > W + 20) { magias.splice(i, 1); continue; }
-    cx.globalAlpha = a * 0.30; cx.fillStyle = LUZ_FORA;         // the tail it drags
-    for (let s = 1; s <= 4; s++) {
-      const w2 = 6 - s;
-      cx.fillRect(x - Math.round(m.vx / 60 * s * 0.7) - (w2 >> 1), y - Math.round(m.vy / 60 * s * 0.7) - (w2 >> 1), w2, w2);
-    }
+    // owner: no glow, no tail, no sparks — the bolt is a plain pixel shot now.
+    cx.globalAlpha = a; cx.fillStyle = LUZ_QUENTE;
+    cx.fillRect(x - 2, y - 2, 4, 4);
+    cx.fillStyle = LUZ_CORE; cx.fillRect(x - 1, y - 1, 2, 2);
     cx.globalAlpha = 1;
-    luz(x, y, m.f * (1 - p * 0.35), a);
-    if (Math.random() < 0.6) {                                   // sparks shed along the way
-      parts.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: -6 - Math.random() * 22,
-        life: 0.35 + Math.random() * 0.3, c: MOTES[Math.floor(Math.random() * MOTES.length)],
-        aura: LUZ_MEIO, grav: -14 });
-    }
   }
 }
 // The wand is an ordinary thing: a branch someone worked a little and bound at one end.
@@ -3127,7 +3122,11 @@ function drawHero() {
     fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / ATKF) * 4)));
   } else {
     frames = HERO_SPR.walk;                               // he is always running through the world
-    fi = ((Math.floor(animT * 13) % 6) + 6) % 6;           // ~9 fps, 6-frame cycle
+    // The cycle is driven by DISTANCE, not by time. Timed frames only look right at one
+    // speed: with projects gone the world slid at 22 px/s while the legs cycled at 13 fps,
+    // so the feet skated. One frame per PASSO_PX of ground means the stride always matches
+    // the ground under it, whatever the scroll speed is.
+    fi = ((Math.floor(worldX / PASSO_PX) % 6) + 6) % 6;
   }
   const img = frames[fi];
 
@@ -3154,6 +3153,7 @@ function drawHero() {
   }
 
   // ---- state advance: identical side effects to the old procedural path ----
+  if (air) jumpT--;                 // the arc runs down; landing no longer spawns anything
   if (attackT > 0) attackT--;
 
   // dust puffs at the feet on each running step (kept for the run feel)
@@ -5677,114 +5677,10 @@ function drawScene() {
     }
     cx.globalAlpha = 1;
   }
-  // birds when healing — GO STEADY puts more of them up, and earlier
-  if (h > (R > 0.5 ? 0.62 : 0.44)) {
-    cx.fillStyle = "#0e0f1a";
-    for (let b = 0; b < (R < 0.5 ? 5 : 2); b++) {
-      const bx = (tick * (1.4 + b * 0.3) + b * 100) % (W + 20) - 10;
-      const by = 22 + b * 10 + Math.sin((tick + b * 7) / 6) * 2;
-      cx.fillRect(bx, by, 3, 1); cx.fillRect(bx + 3, by - 1, 2, 1); cx.fillRect(bx - 2, by - 1, 2, 1);
-    }
-  }
+  // owner: birds, ash, cinders, leaves, motes, the rhythm gust and the butterflies are
+  // all gone — the owner wanted the extra particles off the screen.
 
-  // AMBIENT WEATHER, AND IT IS WHERE THE RHYTHM LIVES CLOSEST TO YOUR EYE.
-  // Two opposite airs, cross-faded with R rather than switched:
-  //   GO FAST  — ash falling, and CINDERS lifting off the road. Things going up off hot
-  //              ground is the single clearest read of "this is being burned to run".
-  //   GO STEADY — leaves and petals drifting in, motes rising off worked ground.
-  if (smogV > 0.2 && Math.random() < smogV * 0.25) {
-    parts.push({ x: Math.random() * W, y: -2, vx: -6 - Math.random() * 6, vy: 10 + Math.random() * 8,
-      life: 4, amb: 1, c: R > 0.4 ? "#b0a08a" : "#8f8f8f", grav: 0 });
-  }
-  // Cinders are deliberately DULLED ochre, not fire orange: the direction's hardest rule is
-  // that in a sick frame the Cetro is the only warm saturated thing on screen, and a road
-  // full of bright embers would take that away from it. They lift in proportion to the
-  // COST — a rested team pushed hard barely smokes; a spent one throws sparks off the road.
-  if (RQ > 0.15 && Math.random() < RQ * 0.26) {
-    const cs = ["#d98f4c", "#c47a3a", "#e0a75e", "#b06a35"];
-    parts.push({ x: Math.random() * W, y: GROUND + Math.random() * 6,
-      vx: (Math.random() - 0.35) * 14, vy: -14 - Math.random() * 16,
-      life: 0.7 + Math.random() * 0.8, amb: 1, c: cs[Math.floor(Math.random() * cs.length)], grav: -8 });
-  }
-  // leaves blow in on a healthy world; going steady doubles the traffic
-  if (h > 0.65 && Math.random() < 0.05 + (1 - R) * 0.06) {
-    parts.push({ x: W + 4, y: Math.random() * GROUND * 0.7, vx: -14 - Math.random() * 10, vy: 6 + Math.random() * 6,
-      life: 6, amb: 1, c: Math.random() < 0.7 ? "#6fdd94" : "#ff7d9c", grav: 0 });
-  }
-  // the mending leaves a residue: motes lifting off ground that has been worked on
-  if (h > 0.45 && Math.random() < 0.035 + (1 - R) * 0.05) {
-    parts.push({ x: Math.random() * W, y: GROUND + Math.random() * 10,
-      vx: (Math.random() - 0.5) * 10, vy: -7 - Math.random() * 10,
-      life: 1.6 + Math.random(), c: MOTES[Math.floor(Math.random() * MOTES.length)],
-      aura: LUZ_MEIO, grav: -6 });
-  }
-  // THE TURN ITSELF: a gust that crosses the frame once, in the colour of what you chose.
-  // It reuses the particle field rather than being a wash over the screen, so it happens
-  // IN the world and BEHIND the hero, not on the glass in front of him.
-  if (ritmoVirou > 0.02) {
-    const paraFogo = R > 0.5;
-    for (let i = 0; i < 3; i++) {
-      const cs = paraFogo ? ["#ff9d5c", "#ffbe63", "#c8b49a"] : ["#6fdd94", "#b5e08c", "#ffcd75"];
-      parts.push({
-        x: paraFogo ? W + 6 : -6,
-        y: GROUND - Math.random() * GROUND * 0.55,
-        vx: paraFogo ? -70 - Math.random() * 70 : 60 + Math.random() * 70,
-        vy: paraFogo ? -6 - Math.random() * 18 : 4 - Math.random() * 26,
-        life: 1.1 + Math.random() * 0.7, c: cs[Math.floor(Math.random() * cs.length)],
-        aura: paraFogo ? null : LUZ_MEIO, grav: paraFogo ? -8 : 10 });
-    }
-  }
-  // butterflies flutter near the ground when the world is thriving — and they will not come
-  // out over a road you are burning
-  if (h > (R > 0.5 ? 0.88 : 0.66)) {
-    for (let b = 0; b < 2; b++) {
-      const bx = (tick * (0.8 + b * 0.5) + b * 140) % (W + 30) - 15;
-      const by = GROUND - 14 - b * 9 + Math.round(Math.sin((tick + b * 11) / 5) * 3);
-      cx.fillStyle = b ? "#ff7d9c" : "#ffcd75";
-      const open = Math.floor(tick / 5) % 2;
-      cx.fillRect(bx, by, 2, 2); cx.fillRect(bx + (open ? 2 : 1), by - 1, 2, 2);
-    }
-  }
-
-  // shockwaves rolling out from a landed slam
-  shocks.forEach(function (s) {
-    const sx = Math.round(s.wx - worldX), p = s.t / 26, a = Math.pow(1 - p, 0.55);
-    const r = Math.round(4 + p * 74);
-    if (s.t < 6) {                                  // the flash where the magic went in
-      cx.globalAlpha = (1 - s.t / 6) * 0.9; cx.fillStyle = LUZ_CORE;
-      cx.fillRect(sx - 18 - s.t * 5, GROUND - 12 - s.t, 36 + s.t * 10, 14 + s.t);
-      cx.fillStyle = LUZ_QUENTE;
-      cx.fillRect(sx - 24 - s.t * 6, GROUND - 4, 48 + s.t * 12, 5);
-      cx.globalAlpha = (1 - s.t / 6) * 0.5; cx.fillStyle = LUZ_MEIO;
-      cx.fillRect(sx - 30 - s.t * 7, GROUND - 6, 60 + s.t * 14, 9);
-    }
-    cx.globalAlpha = a * 0.55; cx.fillStyle = LUZ_CORE;
-    cx.fillRect(sx - r, GROUND - 1, r * 2, 3);      // bright line racing outward
-    cx.globalAlpha = a;
-    const lift = 4 + Math.round(a * 14);
-    [LUZ_CORE, LUZ_MEIO, LUZ_FORA].forEach(function (col, ci) {
-      const rr = r - ci * 6;
-      if (rr < 2) return;
-      cx.fillStyle = col;
-      cx.fillRect(sx - rr, GROUND - 4, 7, 6); cx.fillRect(sx + rr - 7, GROUND - 4, 7, 6);
-      cx.fillRect(sx - rr + 2, GROUND - lift, 4, lift); cx.fillRect(sx + rr - 6, GROUND - lift, 4, lift);
-    });
-    cx.globalAlpha = a * 0.85;                       // and something green comes up where he hit
-    cx.fillStyle = "#2e9b54";
-    const br = Math.min(1, s.t / 8);
-    [-14, -6, 3, 11].forEach(function (o, oi) {
-      const bh = Math.round(br * (4 + oi % 3 * 3));
-      cx.fillRect(sx + o, GROUND - bh, 2, bh);
-      cx.fillStyle = "#6fdd94"; cx.fillRect(sx + o - 1, GROUND - bh - 2, 4, 2); cx.fillStyle = "#2e9b54";
-    });
-    cx.globalAlpha = a * 0.5;                        // cracked dirt left where he hit
-    cx.fillStyle = "#3a2a1c";
-    cx.fillRect(sx - 12, GROUND + 1, 9, 2); cx.fillRect(sx + 4, GROUND + 1, 9, 2);
-    cx.fillRect(sx - 4, GROUND + 3, 10, 2);
-    cx.globalAlpha = 1;
-    s.t++;
-  });
-  shocks = shocks.filter(function (s) { return s.t <= 26 && s.wx - worldX > -140; });
+  // owner: the shockwave field is gone with the slam that made it.
 
   // monsters of pollution and greed roam ahead
   drawMobs(smog);
@@ -6071,6 +5967,16 @@ function desenhar() {
   $("taxa").textContent = prodPorSegundo().toFixed(1);
   $("ganhoClique").textContent = ganhoClique().toFixed(1);
 
+  // the rhythm card: icon, name and colour follow S.modo. This used to live in
+  // desenharRitmo(), inside the projects panel that is gone.
+  const rapido = S.modo === "carvao";
+  $("modeNome").textContent = rapido ? "FAST" : "STEADY";
+  $("modeQuick").className = "cartao " + (rapido ? "fast" : "steady");
+  if (modoIconeAtual !== S.modo) {
+    modoIconeAtual = S.modo;
+    renderIcon($("modeIcon"), rapido ? "flame" : "leaf");
+  }
+
   // the one card left that carries a number of its own
   // owner: no note under the card — the button glows when something is affordable, that is all
   const podeComprar = [1, 2, 3].filter(function (n) {
@@ -6170,7 +6076,6 @@ function medirControles() {
 document.addEventListener("DOMContentLoaded", () => {
   fitCanvas();
   document.querySelectorAll("canvas.pi[data-i]").forEach(function (c) { renderIcon(c, c.dataset.i); });
-  renderIcon($("modeIcon"), "flame");
   // Main attack: tap once, or HOLD to keep swinging — on the button *or* on the world.
   // Both surfaces share ONE repeat timer, so two thumbs cannot double the hit rate: the
   // set of surfaces being held decides whether the timer runs, never how fast it runs.
@@ -6286,7 +6191,8 @@ document.addEventListener("DOMContentLoaded", () => {
       autoAcc -= Math.floor(autoAcc);
       while (n-- > 0) clicar(false, true);
     }
-    worldX += dt * (22 + Math.min(60, prodPorSegundo() * 0.9));
+    // 60 px/s over a 5 px stride frame lands the run at 12 fps, which reads as a run.
+    worldX += dt * (60 + Math.min(60, prodPorSegundo() * 0.9));
     // rAF stops in a background tab and dt is clamped, so this counts time actually
     // spent playing rather than time the tab sat open
     R.segundos += dt; retAcc += dt;
