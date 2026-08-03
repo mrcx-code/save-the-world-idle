@@ -3328,6 +3328,38 @@ function drawScene() {
   // the sky is most of the frame. Now lobes with a sunlit crown and a shaded belly, and the
   // lower they hang the smaller and hazier they get, which puts distance in the sky too.
   const nubB = P.nuvB, nubT = P.nuvT, nubD = P.nuvD;
+  // A HIGH STRATUM, above the cumulus. The cumulus sit one every 34 px of screen and there
+  // are only four of them across a 130 px frame, all of them in one bank low in the sky, so
+  // everything above that bank was bare gradient — and that is 38% of the picture. Every one
+  // of the board's four LUZ & ATMOSFERA panels has a full sky: banded cirrus over the
+  // cumulus, densest at TARDE. These are streaks, not lobes — long, two or three pixels
+  // thick, a lit upper edge, and the slowest parallax in the frame (0.05, half the cumulus)
+  // because they are the furthest thing there is. They cannot crowd anything: they live
+  // between y8 and y=0.34*GROUND, which is 100 px above the hero's head.
+  {
+    const passo = 30, vel = 0.05, teto = GROUND * 0.44;
+    const k0 = Math.floor(worldX * vel / passo) - 1;
+    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+      const s1 = hash01(k * 11 + 3);
+      if (s1 > 0.88) continue;                              // gaps of open sky
+      const sx = Math.round(k * passo - worldX * vel) - Math.round(hash01(k * 19 + 7) * 14);
+      const cy = 8 + Math.round(hash01(k * 23 + 2) * (teto - 12));
+      const linhas = 2 + Math.floor(hash01(k * 31 + 5) * 3);
+      for (let l = 0; l < linhas; l++) {
+        const s2 = hash01(k * 47 + l * 9 + 1);
+        const lw = 16 + Math.round(s2 * 34), ly = cy + l * 4 + Math.round(s2 * 2);
+        const lx = sx + Math.round((s2 - 0.5) * 18);
+        // thinner and fainter the lower they hang: the same air that eats the ridges
+        const prof = Math.min(1, ly / teto);
+        cx.globalAlpha = (0.30 + s2 * 0.24) * (1 - prof * 0.45);
+        cx.fillStyle = nubB; cx.fillRect(lx, ly, lw, 2);
+        cx.fillStyle = nubD; cx.fillRect(lx + 3, ly + 2, lw - 8, 1);   // the shaded underside
+        cx.globalAlpha = (0.34 + s2 * 0.26) * (1 - prof * 0.45);
+        cx.fillStyle = nubT; cx.fillRect(lx + 2, ly, lw - 5, 1);       // sun on top: it is above
+      }
+      cx.globalAlpha = 1;
+    }
+  }
   const ck0 = Math.floor(worldX * 0.12 / 34) - 1;
   for (let k = ck0; k < ck0 + Math.ceil(W / 34) + 2; k++) {
     const sx = Math.round(k * 34 - worldX * 0.12);
