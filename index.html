@@ -1350,15 +1350,11 @@ function quantosCabem(limite) {
   return { n: n, gasto: gasto };
 }
 function comprarGerador(qtd) {
-  const alvo = qtd === "max" ? Infinity : (qtd || 1);
-  const compra = quantosCabem(alvo);
-  if (compra.n <= 0) return 0;
-  S.energia -= compra.gasto; S.geradores += compra.n;
-  floats.push({ x: Math.max(4, Math.round(W / 2) - 44), y: GROUND - 52, life: 50,
-    txt: compra.n > 1 ? "+" + compra.n + " PROJECTS!" : "NEW PROJECT!" });
-  burst(Math.round(W / 2), GROUND - 30, Math.min(40, 14 + compra.n * 3), ["#38b764", "#6fdd94", "#ffcd75"]);
-  desenhar();
-  return compra.n;
+  // owner: cut projects. Neutered: never spends energy, never raises S.geradores, so the
+  // per-second income stays at zero and tapping is the only source. Both buy buttons stay
+  // exactly where they are and still take a click — the click just buys nothing.
+  // DOM, CSS, the projects sheet and every label on it are untouched.
+  return 0;
 }
 // Changing rhythm is THE decision this prototype exists to measure, and it used to be one
 // floating word. Now the switch reports what it just cost and what it just bought, with
