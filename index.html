@@ -1763,12 +1763,20 @@ const PALETA_BASE = {
   // fill (89 in the second fifth, 82 in the third). They carry a small `dist` because they
   // are middle distance, not proscenium: they must sit BEHIND the columns in air as well as
   // in draw order.
-  ruaPar:  [[118, 88, 52], 0.16],
-  ruaParB: [[96, 74, 48], 0.16],
-  ruaSom:  [[62, 48, 32], 0.13],
-  ruaTel:  [[112, 58, 34], 0.15],
-  ruaTelL: [[146, 82, 46], 0.13],
-  ruaVao:  [[38, 30, 20], 0.10],
+  // AND THEY ARE MIDDLE DISTANCE, WHICH IS A STATEMENT ABOUT CHROMA AND NOT ONLY ABOUT
+  // VALUE. The first cut gave them full terracotta over full ochre with a lit sill on every
+  // storey, and the harness booked the price on the boy — his MANHÃ chroma rank went 90 to
+  // 116 of 485 with the top rivals unchanged, which is the signature of the FIELD rising:
+  // `medir.js` scores a block by its own internal chroma spread, and a roof, a dark opening
+  // and a lit sill inside one 22x34 block is a lot of spread. Air between you and a roof eats
+  // its saturation before it eats its value, so the roofs come toward the walls in hue and
+  // all six carry more `dist`. Same value architecture, less confetti.
+  ruaPar:  [[118, 88, 52], 0.20],
+  ruaParB: [[98, 78, 54], 0.20],
+  ruaSom:  [[64, 52, 38], 0.16],
+  ruaTel:  [[104, 68, 44], 0.24],
+  ruaTelL: [[132, 96, 62], 0.22],
+  ruaVao:  [[44, 36, 26], 0.14],
   // the three green planes, still separated by value at every t
   mataFar:  [[118, 143, 66], 0.42],
   mataFarL: [[158, 172, 90], 0.36],
@@ -3899,7 +3907,11 @@ function drawScene() {
       const t = x < vx ? (vx - x) / Math.max(1, vx) : (x - vx) / Math.max(1, W - vx);
       return (x < vx ? altE : altD) * Math.min(1, Math.max(0, t));
     };
-    const aceso = h > 0.5 || escuridao() > 0.4;
+    // a window is lit when it is DARK, not when the street is healthy: the proscenium's own
+    // panes may take `h` because they are near enough to be an interior you can see into,
+    // but a lamp burning at midday two hundred metres down the road is a yellow dot with no
+    // reason to be there, and forty of them are what put the boy's chroma rank down 26
+    const aceso = escuridao() > 0.4;
     const k0 = Math.floor(worldX * vel / passo) - 1;
     for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
       const sx = Math.round(k * passo - worldX * vel);
@@ -3930,6 +3942,11 @@ function drawScene() {
             cx.fillStyle = P.ruaVao; cx.fillRect(jx, y - 6, 3, 5);
             cx.fillStyle = aceso ? "rgba(253,231,157,.5)" : P.ruaVao;
             cx.fillRect(jx, y - 5, 3, 3);
+            // TRIED AND BACKED OUT: the sill in `ruaPar` (a limewashed lintel, which is what
+            // the board draws) instead of the roof's own light. It moved NOTHING — chroma
+            // rank 103, luma 20, dE 15, all inside the noise of the rank — so it is not the
+            // sill that the field is made of, and a change the bench cannot see is a change
+            // nobody approved.
             cx.fillStyle = P.ruaTelL; cx.fillRect(jx - 1, y - 1, 5, 1);   // the sill
           }
         }
