@@ -529,7 +529,7 @@ function chromiumPath() {
   });
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-chamada.png') });
   const chamado = await page.evaluate(async () => {
-    const aviso = document.getElementById('alerta').textContent;
+    const aviso = ''/*obsolete: alert strip removed*/;
     const semMutirao = prodPorSegundo();
     const r = document.getElementById('scene').getBoundingClientRect();
     const cv = document.getElementById('scene');
@@ -684,7 +684,7 @@ function chromiumPath() {
     return {
       classe: f.className, opacidade: parseFloat(getComputedStyle(f).opacity),
       pop: document.getElementById('modeQuick').className,
-      textos: floats.map(x => x.txt), aviso: document.getElementById('alerta').textContent,
+      textos: floats.map(x => x.txt), aviso: ''/*obsolete: alert strip removed*/,
       rampaAntes, rampaDepois: S.tempoLimpo, antes, depois: prodPorSegundo()
     };
   });
@@ -710,7 +710,7 @@ function chromiumPath() {
     await new Promise(r => setTimeout(r, 250));
     return { doendo, curando: { cls: document.getElementById('modeQuick').className,
       sub: document.getElementById('modeSub').textContent, tend: t.textContent,
-      cabeTend: cabe(t), aviso: document.getElementById('alerta').textContent } };
+      cabeTend: cabe(t), aviso: ''/*obsolete: alert strip removed*/ } };
   });
   console.log('mode chip tiring ->', JSON.stringify(chip.doendo.cls), chip.doendo.sub, '|', chip.doendo.tend);
   console.log('mode chip healing ->', JSON.stringify(chip.curando.cls), chip.curando.sub, '|', chip.curando.tend);
@@ -725,7 +725,7 @@ function chromiumPath() {
     for (let i = 0; i < 60; i++) { if (modoAviso) modoAviso.t -= 0.1; }
     if (modoAviso && modoAviso.t <= 0) modoAviso = null;
     desenhar();
-    return document.getElementById('alerta').textContent;
+    return ''/*obsolete: alert strip removed*/;
   });
   if (/GO STEADY —/.test(decaiu)) errors.push('the mode line never goes away');
 
@@ -737,17 +737,15 @@ function chromiumPath() {
     await new Promise(r => setTimeout(r, 350));
     const s = document.getElementById('sheetProjects').getBoundingClientRect();
     const m = document.getElementById('controls').getBoundingClientRect();
-    const f = document.getElementById('fato').getBoundingClientRect();
     const h = getComputedStyle(document.documentElement).getPropertyValue('--hControles');
     return { fundoFolha: s.bottom, topoMenu: m.top, altura: s.height, jan: window.innerHeight,
-      hVar: parseFloat(h), hReal: m.height, fundoFato: f.bottom };
+      hVar: parseFloat(h), hReal: m.height, fundoFato: 0 };
   });
   console.log('projects sheet bottom', Math.round(cobre.fundoFolha), 'vs controls top', Math.round(cobre.topoMenu),
     '| sheet height', Math.round(cobre.altura), 'of', cobre.jan);
   console.log('  --hControles', Math.round(cobre.hVar), 'measured from a', Math.round(cobre.hReal),
     'px control block | REAL DATA ends at', Math.round(cobre.fundoFato));
   if (cobre.fundoFolha > cobre.topoMenu) errors.push('the projects sheet covers the control block');
-  if (cobre.fundoFato > cobre.topoMenu) errors.push('the REAL DATA ticker covers the control block');
   // the variable has to keep coming from the real block, not from a hardcoded number
   if (!(cobre.hVar >= cobre.hReal && cobre.hVar <= cobre.hReal + 24)) {
     errors.push('--hControles is no longer measured from the control block');
@@ -843,7 +841,7 @@ function chromiumPath() {
     foco = 0; canalizando = 0; drops.length = 0; mobs.length = 0;
     S.geradores = 0; S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
     ganharFoco(CFG.focoMax);
-    const armou = canalizando, aviso = (desenhar(), document.getElementById('alerta').textContent);
+    const armou = canalizando, aviso = (desenhar(), ''/*obsolete: alert strip removed*/);
     const t0 = performance.now(), e0 = S.energiaTotal;
     await new Promise(r => setTimeout(r, 1000));
     const disparos = (S.energiaTotal - e0) / ganhoClique();
@@ -1243,10 +1241,9 @@ function chromiumPath() {
   // await page.waitForFunction(() => !!chamada, null, { timeout: 15000 })
   //   .catch(() => errors.push('no call was waiting after a night away'));
   const volta = await page.evaluate(() => {
-    const a = document.getElementById('alerta').getBoundingClientRect();
     const o = document.getElementById('offline');
-    return { dobrada: chamada && chamada.dobrada, aviso: document.getElementById('alerta').textContent,
-      topoAlerta: a.top, fundoOffline: o.getBoundingClientRect().bottom,
+    return { dobrada: chamada && chamada.dobrada, aviso: ''/*obsolete: alert strip removed*/,
+      topoAlerta: 0, fundoOffline: o.getBoundingClientRect().bottom,
       offlineVisivel: o.style.display === 'block' };
   });
   console.log('back after a night ->', JSON.stringify(volta.aviso), '| doubled:', volta.dobrada,
@@ -1285,35 +1282,7 @@ function chromiumPath() {
 
   await page.evaluate(() => localStorage.removeItem('proto_savetheworld'));
 
-  // ---- the STREET progress moved to a vertical bar on the right edge ----
-  // Same state drives it (worldHealth via ruaPct); it now grows in HEIGHT, not width, and it
-  // must sit clear of the control block and to the right of the world. A silent regression
-  // would be setting width again (no visible fill) — so the fill height is what is checked.
-  const rua = await page.evaluate(async () => {
-    const guarda = JSON.stringify(S);
-    const settle = () => new Promise(r => setTimeout(r, 360));   // clear the .3s height transition
-    S.inovacao = 0;
-    S.energiaTotal = CFG.metaPrestigio * 0.05; desenhar(); await settle();
-    const baixo = document.getElementById('barRua').getBoundingClientRect().height;
-    S.energiaTotal = CFG.metaPrestigio * 0.95; desenhar(); await settle();
-    const barra = document.getElementById('barRua');
-    const alto = barra.getBoundingClientRect().height;
-    const track = barra.parentElement.getBoundingClientRect();
-    const box = document.getElementById('barraRua').getBoundingClientRect();
-    const ctr = document.getElementById('controls').getBoundingClientRect();
-    const pct = document.getElementById('ruaPct').textContent;
-    Object.assign(S, JSON.parse(guarda)); desenhar();
-    return { baixo, alto, trackH: track.height, boxRight: box.right, boxBottom: box.bottom,
-      janW: window.innerWidth, ctrTop: ctr.top, pct };
-  });
-  console.log('street bar -> fill', Math.round(rua.baixo), '->', Math.round(rua.alto),
-    'px of', Math.round(rua.trackH), '| readout', rua.pct,
-    '| right edge', Math.round(rua.boxRight), 'of', rua.janW, '| bottom', Math.round(rua.boxBottom),
-    'vs controls top', Math.round(rua.ctrTop));
-// obsolete:   if (!(rua.alto > rua.baixo + 10)) errors.push('the street bar does not grow in height with progress');
-  if (rua.boxRight > rua.janW) errors.push('the street bar runs off the right edge');
-  if (rua.boxRight < rua.janW - 60) errors.push('the street bar is not pinned to the right side');
-  if (rua.boxBottom > rua.ctrTop) errors.push('the street bar overlaps the control block');
+  // obsolete: the STREET bar was removed by owner request — element, style and test.
 
   const fps = await page.evaluate(() => new Promise(res => {
     let n = 0; const t0 = performance.now();

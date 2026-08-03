@@ -81,9 +81,7 @@
     letter-spacing: .06em; font-weight: 700; }
   .chip .valor { font-size: var(--fs-md); font-weight: 800; line-height: 1.15; color: var(--chromeT);
     font-variant-numeric: tabular-nums; }
-  #openConfig { pointer-events: auto; flex: 0 0 auto; width: 44px; border-radius: var(--raio);
-    background: linear-gradient(180deg, #3c4627, #262d18); padding: 0;
-    display: flex; align-items: center; justify-content: center; }
+  /* removed by owner: the gear button (#openConfig) opened the metrics panel — both gone. */
   .pi { image-rendering: pixelated; width: 20px; height: 20px; flex: 0 0 auto; }
   .pi.big { width: 30px; height: 30px; }
   #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: #b7d16a; }
@@ -182,52 +180,9 @@
   #btnEpilogo { width: 100%; padding: 14px 8px; font-size: var(--fs-sm); margin-top: 10px;
     color: #f6ecd5; background: linear-gradient(180deg, #b98a30, #6d4d15); }
 
-  /* one line that says what the world wants from you right now */
-  #alerta { display: none; position: fixed; z-index: 11; border-radius: var(--raio); left: 50%; transform: translateX(-50%);
-    top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
-    border: 3px solid var(--ink); padding: 7px 9px; font-size: var(--fs-xs); line-height: 1.7;
-    text-align: center; background: rgba(14,15,26,.9); }
-  #alerta.mostra { display: block; }
-  #alerta.perigo { background: #43241a; box-shadow: inset 0 0 0 2px var(--bad); color: #eeae90; }
-  #alerta.chama { background: #43391a; box-shadow: inset 0 0 0 2px var(--gold); color: #fbe7ae;
-    animation: pulsa .9s steps(2, end) infinite; }
-  #alerta.festa { background: #2f3d1c; box-shadow: inset 0 0 0 2px var(--good); color: #d3e6a2; }
-  #alerta.magia { background: #3b3418; box-shadow: inset 0 0 0 2px var(--purple); color: #e0c47a; }
+  /* removed by owner: the top alert strip (#alerta), the centre-screen announcement
+     (#anuncio) and the REAL DATA ticker (#fato) are gone — element, style and all. */
   @keyframes pulsa { 0% { opacity: 1 } 50% { opacity: .62 } 100% { opacity: 1 } }
-
-  /* a momentary shout in the MIDDLE of the screen when a big thing CHANGES. The top strip
-     carries standing status; this fires only on transitions the owner kept missing. It never
-     eats a tap (pointer-events: none) and clears itself after the fade. Styled like the
-     sheets: dark rounded panel, cream/gold text. */
-  #anuncio { position: fixed; z-index: 30; left: 50%; top: 32%; transform: translate(-50%, -50%);
-    max-width: min(340px, 88vw); text-align: center; pointer-events: none;
-    padding: 13px 20px; border-radius: var(--raio); border: 3px solid var(--ink);
-    background: linear-gradient(180deg, #333c22 0%, #242a16 60%, #1e2312 100%);
-    box-shadow: 0 5px 0 var(--ink), inset 0 1px 0 rgba(255,255,255,.13);
-    color: #fbe7ae; text-shadow: 1px 1px 0 var(--ink); font-size: var(--fs-lg); line-height: 1.45;
-    opacity: 0; }
-  #anuncio.mostra { animation: anuncia 2s ease forwards; }
-  #anuncio.festa { color: #d3e6a2; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--good); }
-  #anuncio.chama { color: #fbe7ae; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--gold); }
-  #anuncio.perigo { color: #eeae90; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--bad); }
-  @keyframes anuncia {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(.86) }
-    14% { opacity: 1; transform: translate(-50%, -50%) scale(1) }
-    80% { opacity: 1; transform: translate(-50%, -50%) scale(1) }
-    100% { opacity: 0; transform: translate(-50%, -50%) scale(1) } }
-
-  /* REAL DATA became a thin ticker instead of a slab. It was eating a fifth of the screen
-     to say one sentence; this hands most of that height back to the world.
-     Keeps --hControles rather than a fixed 122px: that variable is measured from the real
-     control block on load and on resize, and it is what stops this covering the menu bar. */
-  #fato { position: fixed; z-index: 9; border-radius: var(--raioSm); left: 50%; transform: translateX(-50%);
-    bottom: calc(var(--hControles, 122px) + env(safe-area-inset-bottom)); width: min(520px, 94vw);
-    font-size: var(--fs-xs); color: #d9cfae; line-height: 1.45;
-    background: linear-gradient(180deg, #2b3320, #232817);
-    border: 2px solid var(--contorno); border-left: 5px solid var(--gold);
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.12); padding: 5px 8px;
-    max-height: 3.9em; overflow: hidden; }
-  #fato b { color: var(--gold); }
 
   /* ---- bottom controls: the board's UI CONCEITO, mapped onto this game's real functions ----
      The board stacks three things under the scene: a PROGRESS PANEL with a percentage and a
@@ -241,29 +196,7 @@
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
     bottom: calc(8px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
 
-  /* the street's health — a slim VERTICAL bar pinned to the right edge, out of the thumb's
-     way. It reads worldHealth() exactly as the old horizontal panel did (fills bottom-to-top
-     as total impact climbs toward the torch target). It stops above the REAL DATA ticker and
-     the control block, and it sits BELOW the sheets (z 20) so an open panel simply covers it
-     rather than fighting it. */
-  #barraRua { position: fixed; z-index: 8; right: 7px;
-    top: calc(60px + env(safe-area-inset-top));
-    bottom: calc(var(--hControles, 120px) + env(safe-area-inset-bottom) + 60px);
-    width: 34px; display: flex; flex-direction: column; align-items: center; gap: 6px;
-    pointer-events: none; }
-  #barraRua .rvNum { font-size: var(--fs-xs); font-weight: 800; color: var(--gold);
-    font-variant-numeric: tabular-nums; background: rgba(16,18,10,.72); border-radius: 7px;
-    padding: 2px 5px; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
-  #barraRua .rvTrack { flex: 1 1 auto; width: 12px; border-radius: 999px;
-    background: rgba(16,18,10,.6); box-shadow: inset 0 0 0 1px rgba(0,0,0,.45),
-      inset 0 1px 3px rgba(0,0,0,.5); overflow: hidden; position: relative; }
-  #barRua { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; border-radius: 999px;
-    transition: height .3s; background: linear-gradient(0deg, var(--gold2), #f6cf7e);
-    box-shadow: 0 0 8px rgba(235,167,72,.45); }
-  #barraRua .rvCap { writing-mode: vertical-rl; text-orientation: mixed; font-size: 8px;
-    font-weight: 700; letter-spacing: .22em; color: var(--creme); opacity: .82;
-    background: rgba(16,18,10,.6); border-radius: 6px; padding: 5px 2px;
-    text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  /* removed by owner: the STREET vertical bar (#barraRua) is gone — element and style. */
 
   /* the four cards — icon over name over value, exactly the board's card */
   #cartoes { display: flex; gap: 6px; margin-bottom: 6px; }
@@ -507,13 +440,9 @@
     <div class="chip"><canvas class="pi" data-i="sun" width="12" height="12"></canvas>
       <div class="cInfo"><div class="valor" id="worldPct">0%</div><div class="rotulo" id="wisChip"></div></div></div>
   </div>
-  <button id="openConfig" aria-label="stats"><canvas class="pi" data-i="gear" width="12" height="12"></canvas></button>
 </div>
 
 <div id="offline"></div>
-<div id="alerta"></div>
-<div id="anuncio"></div>
-<div id="fato"></div>
 <div id="cartao"><div class="cn" id="cartaoN"></div><div class="ct" id="cartaoT"></div>
   <div class="cv" id="cartaoV"></div></div>
 
@@ -533,14 +462,6 @@
      is the one decision this prototype exists to measure), the TORCH is a small keepsake
      button beside it, the two things you BUILD with are a stacked pair at the side, and
      the main action takes the whole rest of the block under your thumb. -->
-<!-- The street's health as a slim vertical bar on the right edge, out of the thumb's way.
-     Same ids the draw code writes (ruaPct, barRua); it just grows in height now, not width. -->
-<div id="barraRua" aria-hidden="true">
-  <div class="rvNum" id="ruaPct">0%</div>
-  <div class="rvTrack"><div id="barRua"></div></div>
-  <div class="rvCap">STREET</div>
-</div>
-
 <div id="controls">
   <div id="cartoes">
     <button id="modeQuick" class="cartao"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas>
@@ -6778,48 +6699,9 @@ function desenharRitmo() {
   }
 }
 
-// The one line that tells you why the rate just moved, and what your thumb can do about
-// it. Only one thing at a time: a call beats a party, a party beats a complaint.
-function alertaMundo() {
-  // owner: cut the top alert strip. Neutered: never picks a class, never gets .mostra,
-  // so the #alerta element stays in the DOM but never becomes visible.
-  return;
-  // ---- unreachable below (kept as history for the removal) ----
-  const el = $("alerta");
-  let classe = "", txt = "";
-  const parados = mobs.filter(function (m) { return m.parado && m.dying <= 0; }).length;
-  if (modoAviso) {                        // the rhythm you just chose owns the line first
-    classe = modoAviso.rapido ? "perigo" : "festa";
-    txt = modoAviso.txt;
-  } else if (chamada) {                   // a window that is closing beats anything else
-    classe = "chama";
-    txt = "THEY NEED HANDS — TAP THE POT · " + Math.ceil(chamada.janela - chamada.t) + "s";
-  } else if (superT > 0) {                // ...then the super, because it is the rarest
-    classe = "festa";
-    txt = "ALL TOGETHER! THE STREET IS WITH YOU · ×" + CFG.superMult + " · " + Math.ceil(superT) + "s";
-  } else if (superPronto()) {
-    classe = "chama";
-    txt = "SUPER READY — SWING IT";
-  } else if (canalizando > 0) {
-    classe = "magia";
-    txt = "THE WAND IS CHANNELLING · " + CFG.autoFogoTiros + "/s · " + Math.ceil(canalizando) + "s";
-  } else if (mutiraoT > 0) {
-    classe = "festa";
-    txt = "MUTIRAO! EVERYONE IS WORKING · ×" + CFG.mutiraoMult + " · " + Math.ceil(mutiraoT) + "s";
-  } else if (parados > 0) {
-    classe = "perigo";
-    txt = parados + (parados === 1 ? " TROUBLE" : " TROUBLES") + " IN THE WAY — TAP IT · −"
-      + Math.round((1 - bloqueioMundo()) * 100) + "%";
-  }
-  el.className = classe ? "mostra " + classe : "";
-  if (!classe) el.textContent = "";     // hidden *and* empty: no stale line left behind
-  if (classe) {
-    el.textContent = txt;
-    // the night's summary owns the top slot while it is up
-    el.style.top = $("offline").style.display === "block"
-      ? "calc(128px + env(safe-area-inset-top))" : "";
-  }
-}
+// owner: the top alert strip is gone (element, style and text). Kept as an empty function
+// because the frame loop and several state changes still call it.
+function alertaMundo() {}
 
 // A momentary shout in the MIDDLE of the screen when a big thing CHANGES. The strip above
 // carries standing status; this fires only on transitions, so the player always knows what
@@ -6861,11 +6743,7 @@ function verificarAnuncios() {
   anTocha = tocha;
 }
 
-let fatoIdx = 0;
-function girarFato() {
-  const f = dadosReais[fatoIdx % dadosReais.length]; fatoIdx++;
-  $("fato").innerHTML = "<b>REAL DATA</b> — " + f.texto + " <i>(" + f.fonte + ", " + f.data + ")</i>";
-}
+// owner: the REAL DATA ticker is gone (element, style and rotation).
 
 // ---------- sheets ----------
 const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch", "sheetStats", "sheetConfirm",
@@ -6960,7 +6838,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // still exist and still take a click, but neither opens sheetStats anymore. The gear now
   // does nothing (kept as a placeholder — later we'll wire real settings to it), and the
   // torch just opens its sheet with no long-press behavior.
-  $("openConfig").onclick = function () {};
   const bt = $("openTorch");
   bt.onclick = function () { marcarGuia("torch"); abrir("sheetTorch"); };
   document.querySelectorAll(".fechar").forEach(function (b) {
@@ -6997,7 +6874,6 @@ document.addEventListener("DOMContentLoaded", () => {
     chamadaDobrada = true;
     chamadaT = CFG.chamadaIntervalo - 6;
   }
-  girarFato();
   desenhar();
   semearAnuncios();      // adopt current state so the first frames do not shout on load
   medirControles();
@@ -7042,9 +6918,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   requestAnimationFrame(frame);
   setInterval(salvar, 10000);
-  // owner: cut the REAL DATA rotation. The first girarFato() at boot still populates the
-  // banner, so it stays visually identical to now — it just never rotates to the next fact.
-  // setInterval(girarFato, 25000);
   window.addEventListener("beforeunload", function () { salvar(); salvarRetencao(); });
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) { salvar(); salvarRetencao(); } else { marcarDia(); }
