@@ -2358,6 +2358,122 @@ const TREE_PAL2 = { K: "#26301a", D: "#3a4623", B: "#4d5a2c", H: "#6d7c38", W: "
 const PINE_PAL = { K: "#232c16", D: "#36401e", B: "#485327", H: "#667030", W: "#8a9040" };
 const PINE_PAL2 = { K: "#212c1c", D: "#334224", B: "#45572e", H: "#607238", W: "#849448" };
 
+// ---------- NPCS — PESSOAS DA RUA ----------
+// The board gives the street a cast, not a crowd: a wheelchair user, a woman in an apron, an
+// older man in a hat, a kid, a grandmother, a man in a cap, and a dog. The game had none of
+// them — it had one generic five-pixel figure in four arbitrary shirt colours, drawn in the
+// pre-board palette. These are built the way the hero and the monsters are: a dark keyline
+// all the way round, one light direction (the sun is up and to the right, so the right edge
+// of every garment is the lit one), and every colour out of the board's own families.
+//
+// THEY ARE SCENERY. They carry no state, no hitbox and no entity: they are a function of the
+// segment index and the world's health, exactly like a tree. Nothing here can be tapped,
+// damaged, or collected, and none of it is reachable from the economy. That is also why they
+// are drawn INSIDE the world pass, before the monsters and the drops — a neighbour must never
+// be mistaken for something you are meant to hit, so they never stand in the road, never
+// carry a health readout, and never wear the ticks that mean "this one is tappable".
+const NPC_C = {
+  K: "#1b1a0e",                                            // the keyline
+  1: "#c08a52", 2: "#a9743f", 4: "#5c3617",                // skin: rim / base / deep
+  5: "#231708", 6: "#4a3018",                              // dark hair: shade / lit
+  7: "#cfc6ad", 8: "#9a917c",                              // grey hair: lit / shade
+  A: "#f0e6c8", B: "#d8cba6", C: "#b3a47f",                // cream cloth: lit / base / shade
+  D: "#767f34", E: "#525d2a", F: "#3e4721",                // FOLHAS on cloth
+  G: "#71a39c", H: "#54827d",                              // ÁGUA on cloth
+  I: "#b9732c", P: "#da7a29",                              // TERRA / ACENTO on cloth
+  L: "#96682f", M: "#6d4620",                              // wood-brown cloth, and the dog
+  N: "#87a7ab", O: "#567c8f",                              // CÉU on cloth
+  Q: "#dad8c0", R: "#a9a184"                               // the chair's metal
+};
+// Six rows of head at most. The first cut gave everyone seven rows of hair and skull on a
+// sixteen-pixel body and they read as little creatures rather than as people — the crop
+// showed it immediately. A person at this size is a small head, a long torso and legs.
+const NPC_MAPS = {
+  avental: [                                               // the woman in an apron
+    "...KKKKK...", "..K55555K..", ".K5122215K.", ".K51K2K21K.", "..K12221K..", "...KK1KK...",
+    ".KKHHHHHKK.", ".KHAAAAHGK.", ".KHAAAAHGK.", ".K1AAAAA1K.", ".KHAAAAHGK.", ".KHHHHHHGK.",
+    ".KHHHHHHGK.", ".KHHHHHHGK.", "..KHHHHGK..", "..K4K.K4K.."],
+  chapeu: [                                                // the older man in a hat
+    "...........", "...KKKKK...", "..KLLLLLK..", ".KLLLLLLLK.", "KMMMMMMMMMK", ".K8122218K.",
+    ".K81K2K21K.", ".K7777771K.", ".KKEEEEEKK.", ".KEEEEEEDK.", ".K1EEEEED1.", ".KEEEEEEDK.",
+    ".KBBBBBBCK.", ".KBBBBBBCK.", "..KBB.BBK..", "..K4K.K4K.."],
+  crianca: [                                               // the kid
+    "...KKKK....", "..K5555K...", ".K512215K..", ".K5K2K21K..", "..K1221K...", "...KK1K....",
+    ".KKIIIIIKK.", ".KIIIIIIPK.", ".K1IIIIIP1.", ".KIIIIIIPK.", "..KEEEEEK..", "..K2K.K2K..",
+    "..K4K.K4K.."],
+  avo: [                                                   // the grandmother
+    "...KKKKK...", "..K88888K..", ".K7122217K.", ".K71K2K21K.", "..K12221K..", "...KK1KK...",
+    ".KKOOOOOKK.", ".KOOOOOONK.", ".K1OOOOON1.", ".KOOOOOONK.", ".KFFFFFFEK.", ".KFFFFFFEK.",
+    ".KFFFFFFEK.", ".KFFFFFFEK.", "..KFFFFEK..", "..K4KKK4K.."],
+  bone: [                                                  // the man in a cap
+    "...........", "...KKKKK...", "..KOOOOOK..", ".KOOOOOONK.", ".K5122215K.", ".K51K2K21K.",
+    "..K12221K..", "...KK1KK...", ".KKAAAAAKK.", ".KAAAAAABK.", ".K1AAAAAB1.", ".KAAAAAABK.",
+    ".KLLLLLLMK.", ".KLLLLLLMK.", "..KLL.LLK..", "..K4K.K4K.."],
+  cadeira: [                                               // the wheelchair user
+    "....KKKKK......", "...K55555K.....", "..K51222215K...", "..K51K2K21K....", "...K12221K.....",
+    "..KKOOOOOOKK...", "..KOOOOOOOOK...", "..KOOOOOOOOK...", "..K1OOOOOO1K...", "..KFFFFFFFFKKK.",
+    "..KFFFFFFFFFFK.", "...KKFFFFFFFFK.", ".....KKKK44KKK.", "..............."],
+  cao: [                                                   // the dog
+    ".K.........KK", ".KK.......KLK", "..KKKKKKKKLLK", "..KLLLLLLLLLK", ".KMLLLLLLLL5K",
+    ".KMMLLLLLLLLK", "..KMK..KMK...", "..K4K..K4K..."]
+};
+// The chair's wheel is stamped in as one authored 9x9 ring rather than drawn as part of the
+// map, because the near wheel has to pass IN FRONT of the lap — a wheel hidden behind a
+// seated figure is just somebody sitting on the floor. Above the elbow it goes behind him,
+// which is where a real one is. Then any background pixel touching the rim takes the
+// keyline, so the wheel is outlined against the sky the same way everything else is.
+(function () {
+  const m = NPC_MAPS.cadeira.map(function (r) { return r.split(""); });
+  const anel = [[5, [5, 6, 7]], [6, [3, 4, 8, 9]], [7, [2, 10]], [8, [2, 10]], [9, [2, 10]],
+    [10, [2, 10]], [11, [2, 10]], [12, [3, 4, 8, 9]], [13, [5, 6, 7]]];
+  // The rim obeys the same sun as everything else: its right side is the lit one.
+  anel.forEach(function (p) {
+    p[1].forEach(function (x) {
+      if (p[0] >= 7 || m[p[0]][x] === ".") m[p[0]][x] = x >= 7 ? "Q" : "R";
+    });
+  });
+  [[6, 7], [6, 11], [4, 9], [8, 9]].forEach(function (s) {
+    if (m[s[1]][s[0]] === "F" || m[s[1]][s[0]] === ".") m[s[1]][s[0]] = "R";
+  });
+  m[9][6] = "Q";
+  for (let y = 0; y < m.length; y++) for (let x = 0; x < 15; x++) {
+    if (m[y][x] !== ".") continue;
+    let toca = false;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const r = m[y + dy], ch = r && r[x + dx];
+      if (ch === "R" || ch === "Q") toca = true;
+    }
+    if (toca) m[y][x] = "K";
+  }
+  NPC_MAPS.cadeira = m.map(function (r) { return r.join(""); });
+})();
+// They take the hour the way the hero does, but at the world's dose and not his: he is the
+// read of the frame and is floored a third of the way back to full, while a neighbour is a
+// thing in the street and has to go down with the street around him. Resolved on the same 24
+// steps of the day, so a normal frame is one drawImage per person.
+const npcCv = {};
+let npcPasso = -1, NPC_PAL = null;
+function npcLuzPasso() {
+  const k = horaKey() >> 2;
+  if (k !== npcPasso) {
+    npcPasso = k; NPC_PAL = {};
+    for (const c in NPC_C) NPC_PAL[c] = rgbS(luzPersonagem(hexA(NPC_C[c]), 0.12, 1));
+    for (const id in npcCv) delete npcCv[id];
+  }
+  return npcPasso;
+}
+function npcSprite(nome) {
+  if (npcCv[nome]) return npcCv[nome];
+  return (npcCv[nome] = sprite('npc:' + nome + ':' + npcLuzPasso(), NPC_MAPS[nome], NPC_PAL));
+}
+// x is the left edge in screen space, gy the ground line they stand on.
+function pessoa(nome, x, gy) {
+  const m = NPC_MAPS[nome]; if (!m) return;
+  npcLuzPasso();
+  sombra(Math.round(x) + (m[0].length >> 1), gy, m[0].length - 3, 0.16);
+  cx.drawImage(npcSprite(nome), Math.round(x), Math.round(gy - m.length));
+}
+
 let mobs = [];
 function drawMobs(smog) {
   // spawning, walking in and dying are handled by atualizarMobs(dt) on the frame loop
@@ -3544,10 +3660,9 @@ function drawScene() {
       cx.fillStyle = "#2b2f45"; cx.fillRect(kx + 4, GROUND - 9, 6, 3);    // big shared pot
       cx.fillStyle = "#8b96ad"; cx.fillRect(kx + 4, GROUND - 9, 6, 1);
       if (tick % 24 < 12) { cx.fillStyle = "rgba(232,237,246,.6)"; cx.fillRect(kx + 6, GROUND - 12, 1, 2); cx.fillRect(kx + 8, GROUND - 13, 1, 2); } // steam
-      cx.fillStyle = "#f6cfa2"; cx.fillRect(kx + 17, GROUND - 9, 3, 3);   // neighbor waiting with a bowl
-      cx.fillStyle = "#38b764"; cx.fillRect(kx + 16, GROUND - 6, 5, 3);
-      cx.fillStyle = "#e8edf6"; cx.fillRect(kx + 15, GROUND - 4, 2, 1);
-      cx.fillStyle = "#2b2f45"; cx.fillRect(kx + 16, GROUND - 3, 2, 3); cx.fillRect(kx + 19, GROUND - 3, 2, 3);
+      // Whoever is serving stands at the end of the counter, turned back towards it. This is
+      // where the board puts its people — around the pot, not posed along the kerb.
+      pessoa("avental", kx + 16, GROUND);
       // Bandeirinhas strung from the awning out over the pavement, and a table under them.
       // This is the register the whole thing is aiming at: not a monument, a street that
       // somebody bothered to decorate.
@@ -3566,19 +3681,28 @@ function drawScene() {
       cx.fillStyle = "#c9a86a"; cx.fillRect(kx + 22, GROUND - 6, 11, 2);  // the table top
       cx.fillStyle = "#e0c48c"; cx.fillRect(kx + 22, GROUND - 6, 11, 1);
       cx.fillStyle = "#2b2f45"; cx.fillRect(kx + 20, GROUND - 3, 3, 3); cx.fillRect(kx + 34, GROUND - 3, 3, 3);
+      // and the people it is for: someone at the table, a kid, and a dog under the bunting.
+      // The wheelchair user is here by construction and not by dice — the board puts him
+      // first on its sheet, and a street where he only turns up on a lucky hash is a street
+      // that treats him as decoration.
+      pessoa("cadeira", kx + 19, GROUND);
+      pessoa("crianca", kx + 34, GROUND);
+      pessoa("cao", kx + 44, GROUND);
     }
-    // people come back outside when the world is healthy
-    if (h > 0.7 && hash01(k * 47 + 9) > 0.62) {
-      const pxx = sx + 38, pc = ["#c9455c", "#2f8be0", "#38b764", "#ffcd75"][((k % 4) + 4) % 4];
-      const pb = Math.floor((tick + k * 5) / 10) % 2;
-      cx.fillStyle = "rgba(0,0,0,.2)"; cx.fillRect(pxx - 1, GROUND, 5, 1);
-      cx.fillStyle = "#12242e";                       // a person needs a keyline more than
-      cx.fillRect(pxx - 1, GROUND - 11, 5, 5);        // anything else out there: they are
-      cx.fillRect(pxx - 2, GROUND - 8, 7, 6);         // small and they stand against grass
-      cx.fillStyle = "#f6cfa2"; cx.fillRect(pxx, GROUND - 10, 3, 3);
-      cx.fillStyle = pc; cx.fillRect(pxx - 1, GROUND - 7, 5, 4);
-      cx.fillStyle = "#2b2f45";
-      cx.fillRect(pxx - 1, GROUND - 3, 2, 3); cx.fillRect(pxx + 2, GROUND - 3 + (pb ? -1 : 0), 2, 3 + (pb ? 1 : 0));
+    // People come back outside as the world heals. One per segment at most, always off to
+    // the side of the road. Nobody is mirrored: flipping a sprite flips its shading too, and
+    // this world has one sun. They stand in the board's own poses, turned to the street.
+    if (h > 0.55 && hash01(k * 47 + 9) > 0.64) {
+      const elenco = ["avo", "bone", "chapeu", "crianca", "cadeira"];
+      const quem = elenco[Math.floor(hash01(k * 43 + 17) * elenco.length) % elenco.length];
+      const pxx = sx + 36;
+      pessoa(quem, pxx, GROUND);
+      if (hash01(k * 67 + 13) > 0.72) {               // sometimes they are not out alone
+        const dupla = hash01(k * 71 + 4) > 0.45 ? "avo" : "chapeu";
+        pessoa(dupla === quem ? "bone" : dupla, pxx - 15, GROUND);
+      } else if (hash01(k * 73 + 8) > 0.80) {
+        pessoa("cao", pxx - 16, GROUND);
+      }
     }
     if (kind === 8) { // modern street lamp (solar!): lights up when the world heals
       cx.fillStyle = "#12242e";                       // keyline first, one pixel proud
