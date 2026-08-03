@@ -2122,6 +2122,90 @@ toda sessão começa lendo a última entrada.
   a maior distância medida que resta não esteja no chão, e sim no meio do quadro, onde metade
   de tudo ainda é céu nu.**
 
+- **2026-08-03 · onda 17: os quintos 2 e 3 não têm tinta a pagar, e a dívida da onda 16 foi
+  paga.** A onda 16 fechou com a suspeita de que sobravam 50 e 42 pontos pagáveis no meio do
+  quadro. **A suspeita está errada, e a medida que a derruba é o outro lado da mesma
+  aritmética.** O `quinto.js` sabe exatamente quanto de cada quinto NOSSO ainda é céu nu,
+  porque compara pixel a pixel contra o `skyCanvas`. O board não tem `skyCanvas`, então toda
+  comparação de perfil até hoje pôs o NOSSO piso ao lado da MÉDIA CRUA do board e leu a
+  diferença como tinta.
+
+  **(0) O `board.js` agora roda a mesma heurística de céu nos dois lados** (azul claramente
+  acima do vermelho e claro, mais o quase-branco da nuvem — boa num painel de dia, sem
+  sentido à TARDE e à NOITE, então só é impressa onde significa algo), e tira o piso da
+  média para publicar o **PINTADO**, que é a única metade do perfil que um pincel move.
+  **Medido, MANHÃ:**
+
+  |  | quinto 1 | 2 | 3 | 4 | 5 |
+  |---|---|---|---|---|---|
+  | board luma | 141 | 101 | 83 | 60 | 66 |
+  | board céu% | 35,3 | **14,4** | **1,6** | 0,1 | 0,0 |
+  | board PINTADO | 128 | **89** | **82** | 60 | 66 |
+  | jogo luma | 136 | 125 | 111 | 112 | 85 |
+  | jogo céu% (heurística) | 45,7 | **59,8** | **53,6** | 14,9 | 0,0 |
+  | jogo PINTADO | 100 | **81** | **77** | 108 | 85 |
+
+  **A tinta dos quintos 2 e 3 já está IGUAL OU MAIS ESCURA que a do board (81 contra 89 e 77
+  contra 82).** Os 24 e 28 pontos inteiros são fração de céu: o board tem 14,4% e 1,6% de céu
+  nesses quintos, nós temos 51,0% e 49,8% pelo teste exato do `quinto.js`. Ou seja **os
+  quintos 2 e 3 são enquadramento, exatamente como o 4** — e o único alavanque de
+  enquadramento que existe (a largura das colunas) foi medido e **recusado pelo print** na
+  onda 14 a 0,115·W. Não há onda de tinta a fazer no meio do quadro; a próxima pessoa que
+  olhar o perfil e vir 125 contra 101 deve olhar esta linha antes de pegar o pincel.
+
+  **(1) A serra perto estava sendo cobrada de noite por uma correção de dia, e quem pagava
+  era o menino.** A onda 16 puxou `serraNear` para 85% da luma por um defeito declarado: ela
+  resolvia em L 141 contra um céu de L 136–137 nas mesmas linhas, e silhueta mais clara que o
+  próprio fundo é buraco. **Medido: à NOITE a serra resolve em L 57 contra um céu de L 85–86
+  nas mesmas linhas** — já está vinte e oito pontos à frente, o puxão não compra nada ali, e
+  a onda 16 registrou o que ele custava (menino à NOITE 52 → 57 de 485). O puxão agora é
+  devolvido em proporção a `escuridao()`, com a luma reescalada e os desvios de croma
+  carregados inteiros. `escuridao()` é **exatamente 0 à MANHÃ**, então o dia inteiro fica
+  parado no dígito. **Medido: MANHÃ 136 125 111 112 85 e menino 18/90/14 de 485, ambos
+  parados; NOITE menino luma 57 → 49 de 485** (croma 9 e dE 6 parados), quadro 57,8 → 58,3,
+  quinto 4 60 → 62; TARDE quinto 4 120 → 121 (`escuridao` 0,10). **A dívida da onda 16 está
+  paga e passou dos 52 de antes dela.**
+
+  **Tentei e desfiz, medido:** o mesmo puxão de 15% de dia em `serraFar`, que tem o defeito
+  no papel — resolve em L 165 com o céu das próprias linhas em ~135. **Não comprou nada: o
+  perfil da MANHÃ não moveu um dígito, o PINTADO do quinto 4 foi de 108 para 107 e o menino
+  foi de 18 para 19 de 485.** A serra longe está ocluída pela serra perto e pela copa, e o
+  que sobra dela é a faixa de luz sobre a qual toda a arquitetura de valor se apoia. Defeito
+  no papel que a bancada não mede não vale um posto do menino. O número ficou escrito ao lado
+  dela no arquivo.
+
+  **CONSOLIDAÇÃO — estado honesto, com todas as bancadas rodadas em sequência:**
+  - **perfil topo→chão, MANHÃ:** `136 125 111 112 85` contra `141 101 83 60 66` do board.
+    TARDE `132 130 125 121 91`; NOITE `59 62 63 62 45`.
+  - **PINTADO (perfil menos o piso de céu), MANHÃ:** `100 81 77 108 85` contra `128 89 82 60
+    66`. Só os quintos 1 e 4 têm tinta devendo, e o 4 tem 14,3% de céu e a cabeça do menino.
+  - **croma:** quadro MANHÃ **C\* 17,8** contra 19,5 do board (por quinto 15,5 17,4 15,6 18,9
+    21,5 contra 18,7 19,0 20,4 17,7 21,6). TARDE 23,5. NOITE 9,0.
+  - **céu aberto:** quadro inteiro 29,1%, **visível 30,4%** (alvo verdadeiro 23,6%) —
+    não se mexeu nesta onda. `CEU alto` 38,0%, `CEU baixo` 48,0%.
+  - **menino de 485, fora da moldura:** MANHÃ **18 / 90 / 14** (luma/croma/dE), razões contra
+    o rival 0,56 / 0,75 / 0,85, C\* dele / do quadro **1,49**. NOITE **49 / 9 / 6**, razões
+    0,77 / 0,84 / 0,93, razão de croma **1,06**.
+  - **fonte à NOITE:** poncho **123,4**, miolo 195,6, cristal 214,7, conjurando 250,5 — o
+    Cetro segue a coisa mais quente de um quadro noturno.
+  - **arco doente→são:** DOENTE/MANHÃ luma **136,0** a C\* 8,8 contra SÃ **112,3** a C\*
+    **18,9** — o doente segue mais CLARO e quase sem croma, o são mais escuro e saturado, que
+    é o arco rodando em saturação e não em brilho. À NOITE 82,5 / C\* 5,3 contra 57,3 / 9,7.
+  - **céu (`ceu.js`), MANHÃ:** céu 37,0% do quadro, nuvem 25,1% do céu, 11 peças de mediana
+    11 px, C\* do céu **17,1** contra 16,1 do board — a única medida em que passamos o board.
+  - **smoke verde, FPS 61, `sim.js` byte-idêntico** nos três commits; `cruz.js` sem erro de
+    console em três saúdes × quatro horas.
+
+  **O que ainda falta, sem maquiagem:** os 7 pontos de céu aberto (30,4% contra 23,6%) e os
+  quintos 2, 3 e 4 do perfil — e as três coisas são **a mesma coisa**, uma só: o board é uma
+  rua entre duas fachadas e o nosso é uma rua com um vão de céu no meio. A única alavanca
+  conhecida é a largura das colunas, e ela foi medida e recusada pelo print. **Próximo passo:
+  se alguém quiser esses pontos, o trabalho não é tinta nem é a moldura de novo — é pôr no
+  vão coisa que o board põe e nós não temos: fachadas de meia-distância descendo a rua entre
+  as colunas, na altura y62–138. Antes de tentar, medir o custo no menino a cada passo, e
+  lembrar da onda 16: escurecer atrás dele não o enterra, FABRICA uma quina de silhueta que
+  disputa com ele.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
