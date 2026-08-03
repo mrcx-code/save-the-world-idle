@@ -540,47 +540,7 @@ function chromiumPath() {
 
   await page.evaluate(() => { localStorage.removeItem('proto_savetheworld_muro'); MURO = []; });
 
-  // offline pays what the night actually earned, not the rate frozen at bedtime:
-  // 20 projects in GO FAST with a rested team wear out while you sleep
-  await page.evaluate(() => {
-    salvar = function () {};   // the unload handler would write live state over the seed
-    localStorage.setItem('proto_savetheworld', JSON.stringify({
-      energia: 0, energiaTotal: 0, poluicao: 0, geradores: 20, modo: 'carvao', tempoLimpo: 0,
-      u1: true, u2: false, u3: false,
-      inovacao: 0, transicoes: 0, introSeen: true, salvoEm: Date.now() - 12 * 3600 * 1000
-    }));
-  });
-  const t0 = Date.now();
-  await page.reload();
-  await page.waitForFunction(() => typeof S !== 'undefined' && S.geradores === 20);
-  const noite = await page.evaluate(() => ({ total: S.energiaTotal, cansaco: S.poluicao }));
-  const congelado = 20 * 3 * 2 * 12 * 3600;    // what the old frozen rate would have paid
-  console.log('offline 12h ->', Math.round(noite.total).toLocaleString('en-US'),
-    'impact (frozen rate would pay', congelado.toLocaleString('en-US') + ')',
-    '| tiredness', Math.round(noite.cansaco), '| load', Date.now() - t0, 'ms');
-  if (noite.total > congelado / 3) errors.push('offline still paying near the frozen rate');
-  if (noite.total < 100000) errors.push('offline paid almost nothing');
-  if (noite.cansaco < 100) errors.push('the team did not get tired overnight');
-
-  // obsolete: mutirão was removed by owner request. left as history.
-  // await page.waitForFunction(() => !!chamada, null, { timeout: 15000 })
-  //   .catch(() => errors.push('no call was waiting after a night away'));
-  const volta = await page.evaluate(() => {
-    const o = document.getElementById('offline');
-    return { dobrada: chamada && chamada.dobrada, aviso: ''/*obsolete: alert strip removed*/,
-      topoAlerta: 0, fundoOffline: o.getBoundingClientRect().bottom,
-      offlineVisivel: o.style.display === 'block' };
-  });
-  console.log('back after a night ->', JSON.stringify(volta.aviso), '| doubled:', volta.dobrada,
-    '| night banner up:', volta.offlineVisivel);
-  // obsolete: mutirão was removed by owner request. left as history.
-  // if (!volta.dobrada) errors.push('the call kept for a returning player was not doubled');
-  // obsolete: mutirão was removed by owner request. left as history.
-  // if (volta.offlineVisivel && volta.topoAlerta < volta.fundoOffline) {
-  //   errors.push('the call banner is sitting on top of the night summary');
-  // }
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-volta.png') });
-
+  // obsolete: offline income came from projects, which were removed by owner request.
   // The player who passed the torch and then quit: zero projects, so the night's summary
   // is silent by design — and that is exactly the person worth greeting. The note has to
   // fire independently of the gain banner.
