@@ -69,18 +69,20 @@
      olive, and the gear as its own square at the end of the row. */
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0; top: 0;
     padding-top: env(safe-area-inset-top);
-    display: flex; pointer-events: none; background: #14180d; }
-  #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; align-items: center;
-    justify-content: center; padding: 10px 12px 11px; }
-  /* one reading, centred, with the leaf beside it */
-  .chip { min-width: 0; display: flex; align-items: center; gap: 9px; color: var(--chromeT); }
-  .cInfo { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
-  .chip .rotulo { font-size: 9px; color: var(--chromeS); white-space: nowrap;
-    letter-spacing: .22em; font-weight: 700; margin-top: 1px; }
-  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1.05; color: var(--gold);
-    font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+    display: flex; pointer-events: none; background: #241d12;
+    border-bottom: 2px solid #17120a; }
+  #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline;
+    justify-content: center; gap: 10px; padding: 12px 14px 13px; }
+  /* one line, no stacking: the leaf, the number, then what the number is */
+  .chip { min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+  .cInfo { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
+  .chip .rotulo { font-size: 9px; color: #b9a77e; white-space: nowrap;
+    letter-spacing: .26em; font-weight: 700; }
+  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1; color: #f4e3bb;
+    font-variant-numeric: tabular-nums; }
   /* removed by owner: the gear button (#openConfig) opened the metrics panel — both gone. */
   .pi { image-rendering: pixelated; width: 20px; height: 20px; flex: 0 0 auto; }
+  #barraTopo .pi { align-self: center; transform: translateY(1px); }
   .pi.big { width: 30px; height: 30px; }
   #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: #b7d16a; }
   .minibar { height: 4px; background: #0f1208; border-radius: 2px; margin-top: 3px; overflow: hidden; }
@@ -711,14 +713,8 @@ function burst(x, y, n, cores) {
     parts.push({ x: x, y: y, vx: (Math.random() - 0.35) * 34, vy: -Math.random() * 44 - 8,
       life: 0.5 + Math.random() * 0.3, c: cores[Math.floor(Math.random() * cores.length)], grav: 110 });
   }
-  // half as many motes of the wand's own light, rising and lingering after the debris has
-  // fallen. The colours passed in stay: they say what was hit, these say what did it.
-  for (let i = 0; i <= n >> 1; i++) {
-    parts.push({ x: x + (Math.random() - 0.5) * 12, y: y + (Math.random() - 0.5) * 10,
-      vx: (Math.random() - 0.5) * 20, vy: -12 - Math.random() * 20,
-      life: 0.75 + Math.random() * 0.6, c: MOTES[Math.floor(Math.random() * MOTES.length)],
-      aura: LUZ_MEIO, grav: -12 });
-  }
+  // owner: the wand's own motes of light are gone — what is left is the debris, which says
+  // what was hit and nothing more.
   if (parts.length > 190) parts = parts.slice(-190);
 }
 let combo = 0, attackT = 0, attackType = 0;
@@ -3120,12 +3116,11 @@ function drawHero() {
     frames = HERO_SPR.atk2;
     fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / ATKF) * 4)));
   } else {
-    frames = HERO_SPR.walk;                               // he is always running through the world
-    // The cycle is driven by DISTANCE, not by time. Timed frames only look right at one
-    // speed: with projects gone the world slid at 22 px/s while the legs cycled at 13 fps,
-    // so the feet skated. One frame per PASSO_PX of ground means the stride always matches
-    // the ground under it, whatever the scroll speed is.
-    fi = ((Math.floor(worldX / PASSO_PX) % 6) + 6) % 6;
+    // He is standing, not running. The backdrop is a fixed painting, so a run cycle had
+    // him treadmilling — legs going, world still. The idle is four frames of breathing at
+    // 6 fps, which is what reads as alive without pretending to travel.
+    frames = HERO_SPR.idle;
+    fi = ((Math.floor(animT * 6) % 4) + 4) % 4;
   }
   const img = frames[fi];
 
@@ -5695,7 +5690,7 @@ function drawScene() {
     p.x += p.vx / 60; p.y += p.vy / 60; p.life -= 1 / 60;
     if (p.life <= 0 || p.y > H || p.x < -6) { parts.splice(i, 1); continue; }
     const pa = Math.min(1, p.life * 2), px2 = Math.round(p.x), py2 = Math.round(p.y);
-    if (p.aura) {                                  // motes of channelled light carry a halo
+    if (false) {                                   // owner: no halos left to draw
       cx.globalAlpha = pa * 0.26; cx.fillStyle = p.aura;
       cx.fillRect(px2 - 2, py2 - 1, 6, 4); cx.fillRect(px2 - 1, py2 - 2, 4, 6);
     }
@@ -6189,8 +6184,9 @@ document.addEventListener("DOMContentLoaded", () => {
       autoAcc -= Math.floor(autoAcc);
       while (n-- > 0) clicar(false, true);
     }
-    // 60 px/s over a 5 px stride frame lands the run at 12 fps, which reads as a run.
-    worldX += dt * (60 + Math.min(60, prodPorSegundo() * 0.9));
+    // The street still creeps, slowly — it is what brings the next trouble and the next
+    // drop within reach. It is no longer tied to a stride, because he is not walking it.
+    worldX += dt * 26;
     // rAF stops in a background tab and dt is clamped, so this counts time actually
     // spent playing rather than time the tab sat open
     R.segundos += dt; retAcc += dt;
