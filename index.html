@@ -69,17 +69,21 @@
      olive, and the gear as its own square at the end of the row. */
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0; top: 0;
     padding-top: env(safe-area-inset-top);
-    display: flex; pointer-events: none; background: #241d12;
-    border-bottom: 2px solid #17120a; }
+    display: flex; pointer-events: none;
+    /* a score plate, not a header bar: the street shows through it */
+    background: linear-gradient(180deg, rgba(24,18,10,.72), rgba(24,18,10,.34));
+    backdrop-filter: blur(1px); }
   #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline;
-    justify-content: center; gap: 10px; padding: 12px 14px 13px; }
+    justify-content: center; gap: 10px; padding: 10px 14px 12px; }
   /* one line, no stacking: the leaf, the number, then what the number is */
   .chip { min-width: 0; display: flex; align-items: baseline; gap: 10px; }
   .cInfo { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
-  .chip .rotulo { font-size: 9px; color: #b9a77e; white-space: nowrap;
-    letter-spacing: .26em; font-weight: 700; }
-  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1; color: #f4e3bb;
-    font-variant-numeric: tabular-nums; }
+  .chip .rotulo { font-size: 9px; color: #d8c398; white-space: nowrap;
+    letter-spacing: .26em; font-weight: 700; text-shadow: 0 2px 0 rgba(0,0,0,.7); }
+  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1; color: #ffeec4;
+    font-variant-numeric: tabular-nums;
+    /* a hard pixel drop shadow so the score reads over any part of the painting */
+    text-shadow: 0 2px 0 rgba(0,0,0,.75); }
   /* removed by owner: the gear button (#openConfig) opened the metrics panel — both gone. */
   .pi { image-rendering: pixelated; width: 20px; height: 20px; flex: 0 0 auto; }
   #barraTopo .pi { align-self: center; transform: translateY(1px); }
@@ -313,19 +317,13 @@
   #barRampa { background-color: var(--good); width: 0%; }
   #barPrestigio { background-color: var(--purple); width: 0%; }
 
-  .upgrade { display: flex; align-items: center; gap: 8px; border-radius: var(--raioSm); background: linear-gradient(180deg, #232817, #171b0d);
-    border: 2px solid #000; padding: 9px; margin-bottom: 7px; min-height: 54px; }
-  .upgrade .info { flex: 1; }
-  .upgrade .nome { font-size: var(--fs-sm); }
-  .upgrade .desc { font-size: var(--fs-xs); color: var(--sub); margin-top: 4px; line-height: 1.7; }
-  .upgrade button { padding: 12px 14px; font-size: var(--fs-sm); color: #221806;
-    border-color: rgba(120,60,0,.35);
-    background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
-    box-shadow: 0 2px 7px rgba(120,60,0,.28), inset 0 1px 0 rgba(255,255,255,.55); }
-  .upgrade.comprado { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
-  .upgrade.comprado button { display: none; }
-  .check { color: var(--good); font-size: 10px; display: none; }
-  .upgrade.comprado .check { display: block; }
+  .upgrade { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border-radius: 10px; background: #232817; padding: 12px 14px; margin-bottom: 8px; }
+  .upgrade .nome { font-size: var(--fs-sm); color: var(--creme); }
+  .upgrade button { padding: 9px 14px; font-size: var(--fs-sm); color: #221806;
+    background: var(--ouroA); border-radius: 8px; }
+  .upgrade.comprado .nome { color: var(--good); }
+  .upgrade.comprado button { background: transparent; color: var(--good); }
 
   #btnPrestigio, #btnConfirmaSim { width: 100%; padding: 14px 8px; font-size: var(--fs-sm); margin-top: 8px;
     color: #f6ecd5; background: linear-gradient(180deg, #b98a30, #6d4d15); }
@@ -423,21 +421,9 @@
 <div class="sheet" id="sheetUpgrades">
   <div class="sheetHead"><div class="t">UPGRADES</div>
     <button class="fechar" data-close="sheetUpgrades">✕</button></div>
-  <div class="upgrade" id="cardU1">
-    <div class="info"><div class="nome">Stronger hands</div>
-      <div class="desc">every hit counts three times</div></div>
-    <span class="check">✓</span><button id="btnU1"></button>
-  </div>
-  <div class="upgrade" id="cardU2">
-    <div class="info"><div class="nome">Fuller hands</div>
-      <div class="desc">what you pick up is worth double</div></div>
-    <span class="check">✓</span><button id="btnU2"></button>
-  </div>
-  <div class="upgrade" id="cardU3">
-    <div class="info"><div class="nome">Neighbours join in</div>
-      <div class="desc">they help by themselves, two hits a second</div></div>
-    <span class="check">✓</span><button id="btnU3"></button>
-  </div>
+  <div class="upgrade" id="cardU1"><span class="nome">×3 per hit</span><button id="btnU1"></button></div>
+  <div class="upgrade" id="cardU2"><span class="nome">×2 per pickup</span><button id="btnU2"></button></div>
+  <div class="upgrade" id="cardU3"><span class="nome">2 hits/s on their own</span><button id="btnU3"></button></div>
 </div>
 
 
@@ -3012,9 +2998,9 @@ function drawHero() {
     frames = HERO_SPR.atk2;
     fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / ATKF) * 4)));
   } else {
-    // Walking, and the backdrop scrolls under him now so it is a real walk. The frame is
-    // picked by DISTANCE covered, not by elapsed time, so the stride can never drift out of
-    // step with the ground however fast the street is moving.
+    // The frame is picked by DISTANCE covered, not by elapsed time, so the stride can never
+    // drift out of step with the ground however fast the street is moving. GO FAST moves the
+    // street more than twice as quickly, and the legs follow it without being told to.
     frames = HERO_SPR.walk;
     fi = ((Math.floor(worldX / PASSO_PX) % 6) + 6) % 6;
   }
@@ -5878,7 +5864,7 @@ function desenhar() {
   [1, 2, 3].forEach(function (n) {
     const custo = CFG["custoU" + n], comprado = S["u" + n];
     $("cardU" + n).classList.toggle("comprado", comprado);
-    $("btnU" + n).textContent = fmt(custo);
+    $("btnU" + n).textContent = comprado ? "✓" : fmt(custo);
     $("btnU" + n).disabled = comprado || S.energia < custo;
   });
 
@@ -6073,8 +6059,9 @@ document.addEventListener("DOMContentLoaded", () => {
       autoAcc -= Math.floor(autoAcc);
       while (n-- > 0) clicar(true, true);   // auto: it earns, it never moves the hero
     }
-    // 55 px/s over a 5 px stride frame puts the walk at 11 fps, which reads as a walk.
-    worldX += dt * 55;
+    // GO STEADY walks the street at 55 px/s (11 fps over a 5 px stride frame). GO FAST puts
+    // it at 130, which is a run — and it is the whole of what the rhythm does now.
+    worldX += dt * (S.modo === "carvao" ? 130 : 55);
     // rAF stops in a background tab and dt is clamped, so this counts time actually
     // spent playing rather than time the tab sat open
     R.segundos += dt; retAcc += dt;
