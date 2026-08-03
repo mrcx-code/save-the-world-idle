@@ -1646,7 +1646,10 @@ function rgbS(c) { return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "
 // its rooftops is L 144 at C* 16. So: a hazy warm green when healed, a bleached warm ochre
 // when sick, both a value BELOW the top of the sky and both carrying real chroma. Still
 // light relative to the near plane — that is the value architecture — just not white.
-function horizonC(h) { return mixA([182, 168, 138], [138, 160, 132], h); }
+// ...and it is the SCENARIO'S, for the same reason the sky ramp below is: what the distance
+// dissolves into is the bottom of that place's sky seen through that place's air. A street
+// dissolves into hazy warm green; a coast dissolves into salt light off water.
+function horizonC(h) { const z = ceuP("horizonte"); return mixA(z[0], z[1], h); }
 // aerial perspective: dist 0 = at your feet, 1 = dissolved into the horizon
 function longe(c, dist, h) { return rgbS(mixA(c, horizonC(h), dist)); }
 
@@ -1890,7 +1893,10 @@ function horaAgora() {
   const t = (relogio / DIA_SEG) % 1 * HORAS.length;
   const i = Math.floor(t), f = t - i;
   const s = f * f * (3 - 2 * f);            // smoothstep: the turn, not a cut
-  return { a: HORAS[i % HORAS.length], b: HORAS[(i + 1) % HORAS.length], f: s };
+  // the two indices come out too, because the sky ramp of an hour is the SCENARIO's and has
+  // to be looked up by hour rather than read off the hour object itself
+  const ia = i % HORAS.length, ib = (i + 1) % HORAS.length;
+  return { a: HORAS[ia], b: HORAS[ib], f: s, ia: ia, ib: ib };
 }
 // how dark it is right now, 0..1 — what makes windows and street lamps come on
 function escuridao() { const q = horaAgora(); return lerp(q.a.escuro, q.b.escuro, q.f); }
@@ -2106,18 +2112,61 @@ function sombra(cxp, y, w, a) {
 // to 231 at the horizon, and that single inversion was most of why our vertical profile was
 // an upside-down U against the board's 141 101 83 60 66. Brightest at the top; the light
 // separator over the rooftops is `P.faixa`, drawn as its own strip, not the whole sky.
-const CEU_SAO = [[158, 202, 228], [108, 156, 190], [98, 142, 172], [94, 134, 160], [100, 132, 134]];
-const CEU_DOENTE = CEU_SAO.map(desbotar);
+// ---------- THE SKY BELONGS TO THE PLACE, NOT TO THE GAME ----------
+// Wave 20 named this as the blocker for everything left on the board's CENÁRIOS strip:
+// `HORAS` and `skyCanvas` were global, so an ORLA or a CERRADO could only tint the street's
+// ramp, never author one. A coast, a forest and a cerrado are mostly sky, and the colour of
+// that sky is most of what tells you where you are standing.
+//
+// The split is the same one the scenario abstraction already makes everywhere else: the
+// CLOCK stays the game's and the PLACE becomes the scenario's. `HORAS` still owns the four
+// times of day, how dark each one is, and the light it puts on every solid in the world
+// (`escala`, `forca`, `tinta`) — one lighting regime, everywhere, which is a rule of the
+// direction and not a detail. What a scenario authors is the sky ITSELF: the healthy
+// five-stop ramp, the five-stop ramp each hour paints over that, how fast it falls to the
+// horizon, where the sun sits and how big it is, how many stars come out, and the colour
+// distance dissolves into.
+//
+// Defaults are RUA DO BAIRRO's numbers written as the same expressions they were inline, so
+// a scenario that declares no sky computes bit-for-bit what it computed before — `igual.js`
+// is the proof and it was run on both scenarios across this change.
+const CEU_PADRAO = {
+  // The board's CÉU, measured off the RUA DO BAIRRO panel: [149,186,201] at the top of the
+  // frame and [128,149,142] where it meets the rooftops — DARKER as it comes down, because
+  // the light is above and the street recedes into shade.
+  sao: [[158, 202, 228], [108, 156, 190], [98, 142, 172], [94, 134, 160], [100, 132, 134]],
+  horas: null,               // per hour, indexed like HORAS; null = that hour's own ramp
+  curva: 1.15,               // exponent on y: above 1 holds the zenith colour further down
+  mistura: [0.30, 0.55],     // how much of the hour's ramp is in: a + b·health
+  ganhoC: 0.25,              // the daylight-only chroma re-expansion, around the ramp's luma
+  sol: [0.70, 0.17, 0.045],  // x as a share of W, y and radius as shares of GROUND
+  estrelas: 26,
+  horizonte: [[182, 168, 138], [138, 160, 132]]   // sick, healed: what distance dissolves into
+};
+const CEU_CEN = {};
+function ceuCen() { const c = CEN(); return (c && c.ceu) || CEU_PADRAO; }
+function ceuP(k) { const v = ceuCen()[k]; return v === undefined || v === null ? CEU_PADRAO[k] : v; }
+// the bleached end of a scenario's ramp is derived by the same one rule as every palette in
+// the file, and cached per place so `desbotar` is not run five times a bake
+function ceuDoente() {
+  const c = CEN(), id = (c && c.id) || "rua";
+  return CEU_CEN[id] || (CEU_CEN[id] = ceuP("sao").map(desbotar));
+}
+// the ramp one hour paints over the health ramp — the scenario's if it wrote one
+function ceuHora(i) { const hs = ceuCen().horas; return (hs && hs[i]) || HORAS[i].ceu; }
 function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the horizon
-  const f = Math.min(0.999, Math.max(0, t)) * (CEU_SAO.length - 1);
+  const CS = ceuP("sao"), CD = ceuDoente();
+  const f = Math.min(0.999, Math.max(0, t)) * (CS.length - 1);
   const i = Math.floor(f), k = f - i, tc = Math.pow(h, 0.78);
-  const base = mixA(palMix(CEU_DOENTE[i], CEU_SAO[i], h, tc), palMix(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h, tc), k);
+  const base = mixA(palMix(CD[i], CS[i], h, tc), palMix(CD[i + 1], CS[i + 1], h, tc), k);
   // ...and then the hour. The sky is where the four light states are most of the picture,
   // so it takes its OWN ramp per hour rather than a tint over the midday one — a sunset is
   // not noon with orange on it. Health still decides how much colour survives the smoke.
   const q = horaAgora();
-  const hora = mixA(mixA(q.a.ceu[i], q.a.ceu[i + 1], k), mixA(q.b.ceu[i], q.b.ceu[i + 1], k), q.f);
-  const c = mixA(base, hora, 0.30 + 0.55 * h);
+  const ha = ceuHora(q.ia), hb = ceuHora(q.ib);
+  const hora = mixA(mixA(ha[i], ha[i + 1], k), mixA(hb[i], hb[i + 1], k), q.f);
+  const mi = ceuP("mistura");
+  const c = mixA(base, hora, mi[0] + mi[1] * h);
   // AND THEN THE ONE NUMBER THE SKY WAS STILL SHORT ON, WHICH IS NOT VALUE. Sampled off the
   // board: the blue of the RUA DO BAIRRO panel measures C* 16.1 and ours measured 13.3 — the
   // sky is the single largest region of the picture, so three points of chroma there is most
@@ -2133,7 +2182,7 @@ function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the 
   // thing wave 12 bought — the hero stops being more saturated than his own street at NOITE
   // (ratio 1.00 -> 0.90) and his NOITE croma goes 12 -> 17 of 485. Held at zero after dark.
   const yy = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-  const gc = 1 + 0.25 * (1 - lerp(q.a.escuro, q.b.escuro, q.f));
+  const gc = 1 + ceuP("ganhoC") * (1 - lerp(q.a.escuro, q.b.escuro, q.f));
   return [Math.max(0, Math.min(255, yy + (c[0] - yy) * gc)),
           Math.max(0, Math.min(255, yy + (c[1] - yy) * gc)),
           Math.max(0, Math.min(255, yy + (c[2] - yy) * gc))];
@@ -2150,8 +2199,9 @@ function skyCanvas(h) {
   skyKey = key;
   const g = skyCv.getContext("2d");
   const hz = hazeLuz();
+  const curva = ceuP("curva");
   for (let y = 0; y <= GROUND + 1; y++) {
-    const t = Math.pow(y / (GROUND + 1), 1.15);
+    const t = Math.pow(y / (GROUND + 1), curva);
     let c = rampaCeu(h, t);
     // the sky is most of the frame, so this is where the rhythm is actually felt. Haze
     // banks at the horizon and thins out overhead — 8% at the zenith, 42% at the skyline —
@@ -2163,7 +2213,10 @@ function skyCanvas(h) {
   // The sun as a real disc with a corona, not a plus sign. Sick, it is a flat pale wafer
   // showing through smoke — no glow at all, which is most of why the sick sky reads wrong
   // when it is dark instead of blinding.
-  const sunX = Math.round(W * 0.70), sunY = Math.round(GROUND * 0.17), r = Math.max(7, Math.round(GROUND * 0.045));
+  // ...and where it stands is the place's too: the street sees it over the rooftops on the
+  // right, a coast sees it low and out over the water.
+  const so = ceuP("sol");
+  const sunX = Math.round(W * so[0]), sunY = Math.round(GROUND * so[1]), r = Math.max(7, Math.round(GROUND * so[2]));
   const disco = function (cor, rr) {
     g.fillStyle = cor;
     for (let y = -rr; y <= rr; y++) {
@@ -2184,7 +2237,8 @@ function skyCanvas(h) {
   g.globalAlpha = 1;
   if (noite > 0.5) {          // and when it has gone, the stars the board hangs over NOITE
     const nn = (noite - 0.5) * 2;
-    for (let st = 0; st < 26; st++) {
+    const nEst = ceuP("estrelas");
+    for (let st = 0; st < nEst; st++) {
       const sxx = Math.round(hash01(st * 13 + 1) * W);
       const syy = Math.round(hash01(st * 29 + 5) * GROUND * 0.7);
       g.globalAlpha = nn * (0.30 + hash01(st * 7 + 3) * 0.6);
@@ -3650,6 +3704,8 @@ function faixaVerde(speed, passo, larg, hMin, hMax, corpo, topo, linha, sem) {
 // different from the next one:
 //
 //   paleta   — the colour families, as overrides on top of `PALETA_BASE`
+//   ceu      — the sky itself: the health ramp, a ramp per hour, the fall to the horizon,
+//              the sun, the stars, and the colour distance dissolves into (`CEU_PADRAO`)
 //   chaoCor  — the two ends of the ground slab's own gradient
 //   fundo    — the skyline: ridges, separator band, town, landmarks
 //   meio     — the mid-distance content that fills the wedge between the framing mass
@@ -3659,10 +3715,12 @@ function faixaVerde(speed, passo, larg, hMin, hMax, corpo, topo, linha, sem) {
 //   moldura  — the framing mass that closes the edges and the top corners
 //   fios     — what crosses the sky overhead
 //
-// Everything ELSE is deliberately shared and stays in `drawScene()`: the sky ramp and its
-// four hours, the clouds and the cirrus, the weather that carries the rhythm, the particle
-// field, the hero, the monsters and the HUD. A scenario is a place, not a renderer — the
-// light, the arc and the boy read the same wherever you are, which is the only reason a
+// Everything ELSE is deliberately shared and stays in `drawScene()`: the CLOCK and the light
+// it puts on every solid, the clouds and the cirrus, the weather that carries the rhythm, the
+// particle field, the hero, the monsters and the HUD. A scenario is a place, not a renderer —
+// one lighting regime everywhere is a rule of the direction, so an hour is the game's and
+// only the sky that hour is looking at belongs to the place. The
+// arc and the boy read the same wherever you are, which is the only reason a
 // second one costs a few hundred lines instead of a second game.
 //
 // RUA DO BAIRRO is scenario #1 and its hooks are the nineteen waves of measured drawing that
