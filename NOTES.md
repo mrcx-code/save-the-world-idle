@@ -2206,6 +2206,111 @@ toda sessão começa lendo a última entrada.
   lembrar da onda 16: escurecer atrás dele não o enterra, FABRICA uma quina de silhueta que
   disputa com ele.**
 
+- **2026-08-03 · onda 18: as fachadas desceram a rua, e o vão de céu virou uma cunha.**
+  Três incrementos que ficaram e três que foram desfeitos, cada um com `node test/smoke.js`
+  verde. **FPS 61 do começo ao fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado —
+  **medido: `node test/sim.js` byte a byte idêntico**.
+
+  **O placar, `test/board.js`, quadro inteiro, contra o painel RUA DO BAIRRO:**
+
+  |  | luma | C* | topo→chão | céu% por quinto | PINTADO |
+  |---|---|---|---|---|---|
+  | BOARD | 90,1 | 19,5 | 141 101 83 60 66 | 35,3 14,4 1,6 0,1 0,0 | 128 89 82 60 66 |
+  | JOGO MANHÃ antes | 113,7 | 17,8 | 136 125 111 112 85 | 45,7 59,8 53,6 15,0 0,0 | 100 81 77 108 85 |
+  | JOGO MANHÃ depois | **111,2** | **18,3** | **136 125 105 105 85** | 45,7 58,4 **34,5** **5,9** 0,0 | 100 82 87 103 85 |
+  | JOGO TARDE depois | 116,5 | 23,9 | 132 129 117 113 91 | — | — |
+  | JOGO NOITE depois | 56,0 | 8,5 | 59 61 58 56 45 | — | — |
+
+  **A onda 17 provou que os quintos 2 e 3 não tinham tinta a pagar — a nossa já estava em 81
+  e 77 contra 89 e 82 do board — e que a diferença inteira era FRAÇÃO DE CÉU. Esta onda foi
+  buscar a fração.** Pelo teste exato do `quinto.js` (identidade de pixel contra o
+  `skyCanvas`): quinto 3 **49,8% → 32,1%**, quinto 4 **14,3% → 5,3%**, quinto 2 51,0% → 49,6%.
+  **Céu aberto no visível 30,4% → 24,7%, contra o alvo verdadeiro de 23,6%** — a distância que
+  a onda 15 mediu em 6,8 pontos ficou em 1,1. E **o C\* do quadro subiu de 17,8 para 18,3**
+  (19,2 na janela do `medir.js`, contra 19,5 do board), isto é, fechar céu desta vez não
+  custou croma, comprou.
+
+  **(1) A única alavanca de enquadramento conhecida era a largura das colunas, e o print a
+  recusou na onda 14. Esta é a outra, e é a que o board de facto desenha.** As frentes dos
+  dois lados **recuam** para um ponto de fuga na linha do horizonte (`vy = GROUND-26`,
+  `vx = 0,60·W`), então as cumeeiras rasgam das quinas de cima para o fundo da rua e o céu que
+  sobra é uma **cunha**, não uma fresta. Fecha céu no MEIO do quadro sem tocar em nenhuma das
+  duas bordas — a fila de monstros não sabe que isto aconteceu. **O envelope é fixo à TELA e
+  só o tecido rola**, que é o que um corredor faz quando se anda por ele: ponto de fuga que
+  escorrega de lado não é ponto de fuga. Um laço, nenhum objeto novo. **Medido, primeiro corte
+  (0,38/0,30·H, expoente 1,2): quinto 3 111 → 107, quinto 4 112 → 105, céu aberto visível
+  30,4% → 26,2%, C\* 17,8 → 18,3.**
+
+  **(2) Perspetiva de uma fiada de casas iguais dá uma diagonal RETA, e a do board é uma só,
+  sem quebra, da quina do painel até ao fundo da estrada.** Expoente 1 e as duas fiadas
+  levantadas para 0,46/0,34·H (a da esquerda é a mais alta, como no board). **Medido: céu
+  aberto 26,2% → 24,7%, céu do quinto 3 40,8% → 34,5%.**
+
+  **(3) Meia-distância é uma afirmação sobre CROMA antes de ser sobre valor.** O primeiro
+  corte deu-lhes telha cheia sobre ocre cheio com um peitoril aceso em cada piso, e a bancada
+  cobrou no menino: **croma dele à MANHÃ 90 → 116 de 485 com os rivais de topo parados**, que
+  é a assinatura do CAMPO a subir e não dele a cair — o `medir.js` pontua um bloco pelo
+  espalhamento de croma dentro dele, e um telhado, um vão e um peitoril aceso dentro de um
+  bloco 22×34 é muito espalhamento. O ar come saturação antes de comer valor: os telhados
+  vieram ao encontro das paredes em matiz e as seis entradas carregam mais `dist`. E **uma
+  janela acende quando está ESCURO, não quando a rua está sã** — quarenta pontos amarelos a
+  arder ao meio-dia a duzentos metros. **Medido: croma 116 → 103 de 485, luma 17 → 19, dE 15
+  parado; à NOITE 45/8/6 → 40/8/3, à frente dos 49/9/6 com que a onda começou.**
+
+  **Tentei e desfiz, os três medidos:**
+  **(a) O envelope a 0,50/0,42·H.** Chega aos **24,0% de céu aberto** — o alvo — e **custa o
+  menino à NOITE, 43 → 58 de 485 na luma**. Dois terços de um ponto de céu por treze postos.
+  **(b) As seis entradas das frentes 12% mais escuras**, com o argumento de que o nosso
+  PINTADO do quinto 3 lê 87 contra 82 do board e um cânion de rua sombreia as próprias
+  fachadas. **Comprou DOIS pontos (PINTADO 87/103 → 85/101) e custou SETE postos ao menino à
+  NOITE (40 → 47, dE 3 → 6).** É o mecanismo da onda 16 pela terceira vez nesta série.
+  **(c) O ponto de fuga a 0,66·W**, para alongar a fiada da esquerda: **mexeu um décimo de
+  ponto no céu, pôs o quinto 3 de volta PARA CIMA (105 → 106) e levou a luma do menino à
+  MANHÃ de 19 para 33 de 485** — deslizar o ponto de fuga para a direita faz a cumeeira alta
+  da esquerda caminhar em direção à cabeça dele. Os três números estão escritos no arquivo ao
+  lado da coisa que mataram.
+
+  **CONSOLIDAÇÃO — estado honesto, com todas as bancadas rodadas em sequência:**
+  - **perfil topo→chão, MANHÃ:** `136 125 105 105 85` contra `141 101 83 60 66` do board.
+    TARDE `132 129 117 113 91`; NOITE `59 61 58 56 45`.
+  - **PINTADO (perfil menos o piso de céu), MANHÃ:** `100 82 87 103 85` contra `128 89 82 60
+    66`. O quinto 3 passou a ter 5 pontos de tinta A MAIS que o board (era 5 a menos) — é a
+    tinta nova; o quinto 4 desceu de 108 para 103.
+  - **céu por quinto (exato, `quinto.js`), MANHÃ:** 27,3 / **49,6** / **32,1** / **5,3** /
+    0,0% contra 35,3 / 14,4 / 1,6 / 0,1 / 0,0 do board.
+  - **croma:** quadro MANHÃ **C\* 18,3** contra 19,5 do board (por quinto 15,5 17,4 16,1 21,0
+    21,5 contra 18,7 19,0 20,4 17,7 21,6). TARDE 23,9. NOITE 8,5.
+  - **céu aberto:** quadro inteiro 24,1%, **visível 24,7%** (alvo verdadeiro 23,6%) — de
+    30,4% no início da onda. `CEU alto` 38,0%, `CEU baixo` 31,8%.
+  - **menino de 485, fora da moldura:** MANHÃ **19 / 103 / 15** (luma/croma/dE), razões contra
+    o rival 0,53 / 0,72 / 0,81, C\* dele / do quadro **1,52**. NOITE **40 / 8 / 3**, razões
+    0,77 / 0,89 / 0,98, razão de croma **1,11**. **À NOITE ele está melhor do que esteve em
+    toda a série; à MANHÃ a croma dele pagou 13 postos e está escrito.**
+  - **fonte à NOITE:** poncho **123,4**, miolo 195,6, cristal 214,7, conjurando 250,5 — o
+    Cetro segue a coisa mais quente de um quadro noturno, no dígito.
+  - **arco doente→são:** DOENTE/MANHÃ luma **135,3** a C\* 9,6 contra SÃ **110,1** a C\*
+    **18,9** — o doente segue mais CLARO e quase sem croma. À NOITE 78,0 / C\* 5,7 contra
+    55,3 / 9,1.
+  - **céu (`ceu.js`), MANHÃ:** céu 30,9% do quadro, nuvem 28,5% do céu, separação 52, C\* do
+    céu **17,7** contra 16,9 do board na nossa proporção.
+  - **smoke verde nos quatro commits, FPS 61, `sim.js` byte-idêntico**; `cruz.js` sem erro de
+    console em três saúdes × quatro horas, e à NOITE as janelas acesas das fachadas que recuam
+    viraram uma fiada de pontos quentes descendo a rua, que é o que o painel NOITE do board
+    tem e nós não tínhamos.
+
+  **O que ainda falta, sem maquiagem:** o quinto 2 (`124,9` contra 101) está praticamente
+  intocado e continua a ser **49,6% de céu** — a cumeeira só entra nele entre x33 e x45, uma
+  lasca de um quadro de 130 px de largura, e levantá-la mais é o experimento (a) que custou
+  treze postos do menino. O quinto 3 fechou mas o PINTADO dele passou o do board por 5
+  pontos, e baixá-lo é o experimento (b). **Próximo passo: esta série tem agora quatro
+  refusals medidos que apontam todos para o mesmo sítio — largura da coluna (onda 14), segundo
+  degrau da serra (onda 16), fachadas mais escuras e ponto de fuga deslocado (esta) — e o
+  mecanismo é sempre o mesmo: qualquer massa nova entre a barra do HUD e a cabeça do menino
+  compra perfil e vende o menino. O céu aberto está a 1,1 ponto do alvo verdadeiro e a croma
+  a 1,2 do board. A recomendação honesta é PARAR de comprar perfil e ir consolidar: o que
+  resta é do tamanho do ruído das próprias bancadas, e o único eixo que ainda anda sem custo
+  é a croma do quadro, que quatro ondas mostraram poder subir junto com o valor.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
