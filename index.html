@@ -253,9 +253,6 @@
     background: linear-gradient(180deg, #fdeec2 0%, #f6cf7e 34%, #e8a244 100%);
     box-shadow: 0 1px 5px rgba(120,60,0,.3), inset 0 1px 0 rgba(255,255,255,.65); }
   #btnClique.segurando #dicaHold { color: rgba(42,26,6,.85); }
-  /* the wand's charge, on the button that swings it */
-  #foco { position: absolute; left: 0; top: 0; height: 4px; width: 0%; background: var(--purple);
-    box-shadow: 0 0 6px rgba(141,91,214,.9); transition: width .2s; }
   /* the super's charge, on the button that swings it: one square per completed combo */
   .cs { position: absolute; left: 10px; bottom: 5px; display: flex; gap: 3px; }
   .cs i { display: block; width: 6px; height: 6px; background: rgba(18,36,46,.16);
@@ -372,12 +369,6 @@
      torch is where everything you keep lives */
   .btnSkills { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 8px;
     background: #3c3a1c; border-color: var(--ink); color: #e0c47a; }
-  .btnSkills.tem { box-shadow: 0 2px 6px rgba(0,0,0,.3), 0 0 16px rgba(141,91,214,.7); }
-  #skillsNota { color: var(--gold); }
-  .skillNota { font-size: var(--fs-xs); color: var(--sub); line-height: 1.8; margin-bottom: 9px; }
-  .skillNota.travada { color: #f0d4b8; background: #43241a; border: 2px solid var(--bad); padding: 7px 8px; }
-  #cardAuto { border-color: var(--purple); }
-  #cardAuto.comprado { border-color: var(--purple); box-shadow: inset 0 0 0 1px var(--purple); }
   /* SPECIAL PROJECTS: same card language as upgrades, but paid in resources not impact */
   #espNota { color: var(--gold); }
   .recursoLinha { display: flex; gap: 8px; margin-bottom: 9px; }
@@ -390,10 +381,6 @@
   .especialCard.feito { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
   .especialCard.feito button { display: none; }
   .especialCard button:disabled { filter: grayscale(.7) brightness(.7); }
-  #cardAuto .check { color: #e0c47a; }
-  .focoBar { height: 8px; margin-top: 7px; }
-  #barFoco { background-color: var(--purple); width: 0%; }
-  #cardAuto.canal { box-shadow: inset 0 0 0 2px var(--purple), 0 0 18px rgba(141,91,214,.6); }
   #linhaInovacao { display: none; color: #e0c47a; font-size: var(--fs-xs); margin-top: 8px; }
 
   /* ---- intro / lore ---- */
@@ -437,8 +424,7 @@
       <div class="cInfo"><div class="valor" id="eficiencia">100%</div>
         <div class="minibar"><div id="barPoluicao"></div></div>
         <div class="rotulo tend" id="tendencia"></div><span id="poluicao" style="display:none">0</span></div></div>
-    <div class="chip"><canvas class="pi" data-i="sun" width="12" height="12"></canvas>
-      <div class="cInfo"><div class="valor" id="worldPct">0%</div><div class="rotulo" id="wisChip"></div></div></div>
+    <!-- owner: the third chip (world %) is gone — the top row is impact and team only. -->
   </div>
 </div>
 
@@ -466,59 +452,15 @@
   <div id="cartoes">
     <button id="modeQuick" class="cartao"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas>
       <span class="cn" id="modeNome">FAST</span><span class="cv" id="modeSub"></span></button>
-    <button id="openProjects" class="cartao"><canvas class="pi" data-i="house" width="12" height="12"></canvas>
-      <span class="cn">PROJECTS</span><span class="cv" id="nGeradores">0</span></button>
     <button id="openUpgrades" class="cartao"><canvas class="pi" data-i="up" width="12" height="12"></canvas>
       <span class="cn">UPGRADES</span><span class="cv" id="upNota">—</span></button>
-    <button id="openTorch" class="cartao"><canvas class="pi" data-i="torch" width="12" height="12"></canvas>
-      <span class="cn">TORCH</span><span class="cv" id="torchNota">0%</span></button>
   </div>
   <div id="rail">
-    <button id="btnClique"><div id="foco"></div><span id="cargaSuper" class="cs"></span><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
+    <button id="btnClique"><span id="cargaSuper" class="cs"></span><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
   </div>
 </div>
 
-<div class="sheet" id="sheetProjects">
-  <div class="sheetHead"><div class="t">PROJECTS — <span id="nGeradores2">0</span> RUNNING</div>
-    <button class="fechar" data-close="sheetProjects">✕</button></div>
-  <div class="explica" id="oQueEh"></div>
-  <div class="compra">
-    <button class="btnCompra" id="btnGerador"></button>
-    <button class="btnMax" id="btnGeradorMax"></button>
-  </div>
-  <div class="explica sub" id="oQueDa"></div>
-  <div class="ritmo">
-    <div class="rCol" id="rColA">
-      <div class="rTit" id="rTitA">NOW</div>
-      <div class="rL"><span>now</span><b id="rTaxaA">0/s</b></div>
-      <div class="rL"><span>settles</span><b id="rFimA">0/s</b></div>
-      <div class="rL"><span>team</span><b id="rSaudeA">100%</b></div>
-    </div>
-    <div class="rCol troca" id="rColB">
-      <div class="rTit" id="rTitB">IF YOU SWITCH</div>
-      <div class="rL"><span>now</span><b id="rTaxaB">0/s</b></div>
-      <div class="rL"><span>settles</span><b id="rFimB">0/s</b></div>
-      <div class="rL"><span>team</span><b id="rSaudeB">100%</b></div>
-    </div>
-  </div>
-  <div class="avisoRampa" id="avisoRampa"></div>
-  <div class="modo">
-    <button id="modoCarvao">🔥 GO FAST</button>
-    <button id="modoLimpo">🌱 GO STEADY</button>
-  </div>
-  <div class="descModo" id="descModo"></div>
-  <div class="barra" id="boxRampa" style="display:none"><div id="barRampa"></div></div>
-  <button id="abrirEspeciais" class="btnSkills">✿ SPECIAL PROJECTS <span id="espNota"></span></button>
-</div>
 
-<div class="sheet" id="sheetEspeciais">
-  <div class="sheetHead"><div class="t">SPECIAL PROJECTS</div>
-    <button class="fechar" data-close="sheetEspeciais">✕</button></div>
-  <div class="recursoLinha" id="recursoLinha"></div>
-  <div id="listaEspeciais"></div>
-  <div class="avisoPrestigio">drops pile up into resources — spend a combo on a project the
-    whole street keeps for this run • one-time each • reset by the torch</div>
-</div>
 
 <div class="sheet" id="sheetUpgrades">
   <div class="sheetHead"><div class="t">UPGRADES</div>
@@ -560,71 +502,14 @@
   </div>
 </div>
 
-<div class="sheet" id="sheetTorch">
-  <div class="sheetHead"><div class="t">PASS THE TORCH</div>
-    <button class="fechar" data-close="sheetTorch">✕</button></div>
-  <div class="barra"><div id="barPrestigio"></div></div>
-  <button id="btnPrestigio"></button>
-  <div class="avisoPrestigio">+10% forever per WISDOM • rested team = more Wisdom</div>
-  <div id="linhaInovacao">★ WISDOM: <b id="inovacao">0</b> — bonus ×<span id="bonus">1.0</span></div>
-  <button id="abrirMuro" class="btnMuro">▚ THE WALL <span id="muroNota"></span></button>
-  <button id="abrirSkills" class="btnSkills">✦ SKILLS <span id="skillsNota"></span></button>
-</div>
 
 <!-- The wall is the only thing in the game that survives passing the torch, and the only
      thing that only ever grows. Its own key in localStorage, never part of S. -->
-<div class="sheet" id="sheetMuro">
-  <div class="sheetHead"><div class="t">THE WALL</div>
-    <button class="fechar" data-close="sheetMuro">✕</button></div>
-  <div id="muroCorpo"></div>
-  <div class="avisoPrestigio"><b>MARA</b> — "I painted the first name. Gran says that's vandalism."</div>
-</div>
 
-<div class="sheet" id="sheetEpilogo">
-  <div class="sheetHead"><div class="t">THE TORCH PASSES</div>
-    <button class="fechar" data-close="sheetEpilogo">✕</button></div>
-  <div id="epilogoCorpo"></div>
-  <div class="avisoPrestigio" id="epilogoWisdom"></div>
-  <div id="epilogoVoz"></div>
-  <button id="btnEpilogo"></button>
-  <button id="btnEpilogoMuro" class="btnMuro">▚ SEE THE WALL</button>
-</div>
 
-<div class="sheet" id="sheetSkills">
-  <div class="sheetHead"><div class="t">SKILLS</div>
-    <button class="fechar" data-close="sheetSkills">✕</button></div>
-  <div class="skillNota" id="skillTrava"></div>
-  <div class="upgrade" id="cardAuto">
-    <div class="info"><div class="nome">✦ Auto-fire</div>
-      <div class="desc" id="descAuto">the wand keeps watch and shoots on its own</div>
-      <div class="barra focoBar"><div id="barFoco"></div></div>
-      <div class="desc" id="focoTexto"></div></div>
-    <span class="check">✓</span><button id="btnSkillAuto"></button>
-  </div>
-  <div class="avisoPrestigio">skills are kept through every torch • focus only comes from
-    showing up: clear a trouble, pick a drop up, answer the call</div>
-</div>
+<!-- owner: the SKILLS sheet is gone with the skill it held. -->
 
-<div class="sheet" id="sheetConfirm">
-  <div class="sheetHead"><div class="t">PASS THE TORCH?</div>
-    <button class="fechar" data-close="sheetConfirm">✕</button></div>
-  <div class="placar">
-    <div class="ganha"><div class="v" id="confirmaGanha">+0 WISDOM</div>
-      <div class="r">kept forever &middot; +10% each</div></div>
-    <div class="perde"><div class="v" id="confirmaPerde">0 projects</div>
-      <div class="r">handed on &middot; upgrades too</div></div>
-  </div>
-  <div class="avisoPrestigio" id="confirmaNota"></div>
-  <button id="btnConfirmaSim">YES — PASS IT ON</button>
-  <button id="btnConfirmaNao">NOT YET</button>
-</div>
 
-<div class="sheet" id="sheetStats">
-  <div class="sheetHead"><div class="t">THREE-DAY TEST</div>
-    <button class="fechar" data-close="sheetStats">✕</button></div>
-  <div id="statsCorpo"></div>
-  <div class="avisoPrestigio">stays on this device • nothing is sent anywhere</div>
-</div>
 
 <script>
 "use strict";
@@ -733,7 +618,6 @@ let S = {
   recursos: { flor: 0, agua: 0, refeicao: 0 },
   especiais: {},             // ids of special projects completed this run
   qtdCompra: 1,              // vestigial: buying is now the 1-or-MAX pair, no remembered target
-  skillAuto: false,          // learned once, survives every torch — unlike u1..u7
   capVisto: 0,               // how many chapter cards this run has shown — reset by the torch
   introSeen: false,
   guiaVistos: [],            // ids of first-run hints already seen — NOT reset by the torch,
@@ -1018,43 +902,14 @@ function atualizarSuper(dt) {
 //
 // It also never touches tiredness: its shots pass `auto`, which suppresses U2's heal.
 // ============================================================
-let foco = 0, canalizando = 0, autoFogoAcc = 0;
-const skillLiberada = () => S.transicoes > 0 || S.skillAuto;
-function ganharFoco(n) {
-  if (!S.skillAuto || canalizando > 0) return;
-  const antes = foco;
-  foco = Math.min(CFG.focoMax, foco + n);
-  if (foco >= CFG.focoMax && antes < CFG.focoMax) armarWand();
-}
-function armarWand() {
-  canalizando = CFG.focoMax / CFG.autoFogoDreno;
-  floats.push({ x: HX - 14, y: GROUND - 62, txt: "THE WAND WAKES", life: 55 });
-  burst(HX + 6, GROUND - 26, 20, ["#8d5bd6", "#cfa9ff", "#e8edf6"]);
-  const f = $("flash");
-  if (f) { f.className = ""; void f.offsetWidth; f.className = "vai magia"; }
-}
+// owner: ganharFoco() removed with the AUTO-FIRE skill.
+// owner: armarWand() removed with the AUTO-FIRE skill.
 // while it is channelling the wand shoots on its own, through the same swing the player
 // makes — so whatever the hero is drawn holding, the shot looks like it
-function atualizarWand(dt) {
-  if (canalizando <= 0) { autoFogoAcc = 0; return; }
-  canalizando = Math.max(0, canalizando - dt);
-  foco = Math.max(0, foco - CFG.autoFogoDreno * dt);
-  autoFogoAcc += dt * CFG.autoFogoTiros;
-  let n = Math.min(4, Math.floor(autoFogoAcc));
-  autoFogoAcc -= Math.floor(autoFogoAcc);
-  while (n-- > 0) clicar(true);
-  if (canalizando <= 0) { foco = 0; desenhar(); }
-}
-function comprarSkill() {
-  if (S.skillAuto || !skillLiberada() || S.energia < CFG.custoSkillAuto) return;
-  S.energia -= CFG.custoSkillAuto; S.skillAuto = true;
-  floats.push({ x: HX - 16, y: GROUND - 66, txt: "AUTO-FIRE!", life: 70 });
-  burst(HX + 6, GROUND - 26, 30, ["#8d5bd6", "#cfa9ff", "#ffcd75"]);
-  salvar(); desenhar();
-}
+// owner: atualizarWand() removed with the AUTO-FIRE skill.
+// owner: comprarSkill() removed with the AUTO-FIRE skill.
 
 function soltarDrop(m, sx) {
-  ganharFoco(CFG.focoMob);          // every trouble you see off feeds the wand
   drops.push({
     wx: worldX + sx + 5, type: m.type, t: 0,
     valor: (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
@@ -1070,7 +925,6 @@ function coletarDrop(d, auto) {
   S.energia += v; S.energiaTotal += v;
   // ...and a resource of its kind piles up, no matter who picked it up
   const r = RECURSO_DE[d.type]; if (r) S.recursos[r] = (S.recursos[r] || 0) + 1;
-  if (!auto) ganharFoco(CFG.focoDrop);   // bending down for it yourself is what charges it
   const sx = Math.round(d.wx - worldX);
   floats.push({ x: sx - 10, y: GROUND - 30, txt: "+" + Math.round(v), life: 38 });
   if (!auto) floats.push({ x: sx - 18, y: GROUND - 46,
@@ -1142,7 +996,6 @@ function abrirChamada(dobrada) {
 function atenderChamada() {
   if (!chamada) return false;
   mutiraoT = CFG.mutiraoSeg * (chamada.dobrada ? 2 : 1);
-  ganharFoco(CFG.focoChamada);          // showing up is worth the most focus of all
   const sx = chamada.sx;
   chamada = null; chamadaT = 0;
   floats.push({ x: sx - 34, y: GROUND - 54, txt: "MUTIRAO!", life: 55 });
@@ -1370,49 +1223,8 @@ function completarEspecial(id) {
 const EMOJI_REC = { flor: "🌸", agua: "💧", refeicao: "🍲" };
 const NOME_REC = { flor: "flowers", agua: "water", refeicao: "meals" };
 // The panel is built once; desenharEspeciais() refreshes counts/affordability each frame.
-function montarEspeciais() {
-  const lista = $("listaEspeciais");
-  if (!lista || lista.dataset.pronto) return;
-  CFG.especiais.forEach(function (e) {
-    const card = document.createElement("div");
-    card.className = "upgrade especialCard";
-    card.id = "esp_" + e.id;
-    card.innerHTML = '<div class="info"><div class="nome">' + e.nome + '</div>'
-      + '<div class="desc">' + e.efeito + '</div>'
-      + '<div class="custo" id="custo_' + e.id + '"></div></div>'
-      + '<span class="check">✓</span>'
-      + '<button id="btnEsp_' + e.id + '">BUILD</button>';
-    lista.appendChild(card);
-    card.querySelector("button").onclick = function () { completarEspecial(e.id); };
-  });
-  lista.dataset.pronto = "1";
-}
-function desenharEspeciais() {
-  montarEspeciais();
-  const r = S.recursos || { flor: 0, agua: 0, refeicao: 0 };
-  $("recursoLinha").innerHTML = ["flor", "agua", "refeicao"].map(function (k) {
-    return "<span>" + EMOJI_REC[k] + " " + Math.floor(r[k] || 0) + "</span>";
-  }).join("");
-  let prontos = 0, restam = 0;
-  CFG.especiais.forEach(function (e) {
-    const feito = !!S.especiais[e.id];
-    const card = $("esp_" + e.id);
-    if (!card) return;
-    if (!feito) restam++;
-    card.classList.toggle("feito", feito);
-    const partes = ["flor", "agua", "refeicao"].filter(function (k) { return e.custo[k]; }).map(function (k) {
-      const tem = (r[k] || 0) >= e.custo[k];
-      return '<b class="' + (tem ? "ok" : "falta") + '">' + e.custo[k] + EMOJI_REC[k] + "</b>";
-    });
-    $("custo_" + e.id).innerHTML = feito ? "built — kept for this run" : "needs " + partes.join(" + ");
-    const pode = podeEspecial(e);
-    if (pode && !feito) prontos++;
-    const btn = $("btnEsp_" + e.id);
-    if (btn) btn.disabled = !pode;
-  });
-  $("espNota").textContent = restam === 0 ? "ALL BUILT" : prontos > 0 ? prontos + " READY" : restam + " LEFT";
-  $("abrirEspeciais").className = "btnSkills" + (prontos > 0 ? " tem" : "");
-}
+// owner: montarEspeciais() removed with its panel.
+// owner: desenharEspeciais() removed with its panel.
 // A browser dialog over a fullscreen pixel game reads as a bug, so the question gets
 // asked in the game's own furniture — and it can show what is kept next to what is not,
 // which confirm() never could.
@@ -1525,21 +1337,7 @@ function duracao(seg) {
   const h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60);
   return h > 0 ? h + "h " + String(m).padStart(2, "0") + "m" : m + "m " + String(Math.floor(seg % 60)).padStart(2, "0") + "s";
 }
-function mostrarRetencao() {
-  const dias = R.dias.length, primeiro = R.dias[0] || diaLocal();
-  // how far apart the first and last session are, in whole days
-  const vao = Math.round((new Date(R.dias[R.dias.length - 1] || primeiro) - new Date(primeiro)) / 86400000) + 1;
-  const linha = function (r, v) {
-    return '<div class="upgrade"><div class="info"><div class="nome">' + v
-      + '</div><div class="desc">' + r + "</div></div></div>";
-  };
-  $("statsCorpo").innerHTML =
-    linha("distinct days played", dias + (dias === 1 ? " day" : " days"))
-    + linha("total time played", duracao(R.segundos))
-    + linha("torches passed", String(R.tochas))
-    + linha("first session &middot; span", primeiro + " &middot; " + vao + (vao === 1 ? " day" : " days"))
-    + linha("the neighbourhood knows you", "×" + bonusDias().toFixed(2) + " to everything");
-}
+// owner: mostrarRetencao() removed with its panel.
 
 // ============================================================
 // THE STREET — the fiction layer.
@@ -1618,8 +1416,6 @@ function mostrarCartao(c) {
 // Called from the HUD tick. One card per threshold crossed, in order, never two at once.
 function verificarCapitulo() {
   if (!S.introSeen) return;                 // the intro is already saying chapter one
-  // the epilogue is the beat that closed the last run; chapter one waits until it is read
-  if ($("sheetEpilogo").classList.contains("aberto")) return;
   const i = Math.max(0, S.capVisto | 0);
   if (i >= CAPITULOS.length) return;
   if (cartaoT > 0) return;                  // a card still up wins; the next one waits
@@ -1640,25 +1436,19 @@ function verificarCapitulo() {
 // It never repeats and never replays after the torch: seen ids live in S.guiaVistos, which
 // transicionar() does NOT wipe. And it never blocks input: the bubble is pointer-through,
 // dismissed by a tap that still lands on the game underneath.
+// owner: the steps that pointed at PROJECTS and the TORCH went with those buttons, and the
+// neighbours who spoke the lines went with the cast. What is left is the same guide, minus
+// the names: one warm line per thing you can actually still do.
 const GUIA = [
   { id: "tap", alvo: "btnClique",
-    quando: () => S.geradores === 0,
-    voz: ["ODETE", "Tap the button — or the street itself. That is you helping."] },
-  { id: "projects", alvo: "openProjects",
-    quando: () => S.geradores === 0 && S.energia >= custoGerador(),
-    voz: ["RUI", "Enough to start a <b>PROJECT</b>. Open it — a project works on its own, forever."] },
+    quando: () => S.energiaTotal === 0,
+    voz: "Tap the button — or the street itself. That is you helping." },
   { id: "rhythm", alvo: "modeQuick",
-    quando: () => S.geradores >= 2,
-    voz: ["SAFI", "Now the one that matters: <b>GO FAST</b> tires the team, <b>GO STEADY</b> lasts. Tap the rhythm to weigh it."] },
+    quando: () => S.energiaTotal >= 60,
+    voz: "Now the one that matters: <b>GO FAST</b> tires the team, <b>GO STEADY</b> lasts. Tap the rhythm to weigh it." },
   { id: "upgrades", alvo: "openUpgrades",
     quando: () => !todosUpgrades() && S.energia >= CFG.custoU1,
-    voz: ["MARA", "Enough set aside for an <b>UPGRADE</b>. Have a look."] },
-  { id: "torch", alvo: "openTorch",
-    quando: () => S.energiaTotal >= CFG.metaPrestigio,
-    voz: ["BEN", "The street can stand without you now. Open the <b>TORCH</b> when you are ready to pass it on."] },
-  { id: "skills", alvo: "openTorch",
-    quando: () => S.transicoes >= 1,
-    voz: ["KOJO", "You passed the torch. A few things you keep for good now — find <b>SKILLS</b> under it."] }
+    voz: "Enough set aside for an <b>UPGRADE</b>. Have a look." }
 ];
 function todosUpgrades() { return [1, 2, 3, 4, 5, 6, 7].every(function (n) { return S["u" + n]; }); }
 let guiaAtual = null, guiaAlvoEl = null, guiaMostradoEm = 0;
@@ -1685,7 +1475,7 @@ function pularGuia() { GUIA.forEach(function (g) { marcarGuia(g.id); }); esconde
 function mostrarGuia(g) {
   const el = $("guia"); if (!el) return;
   const alvo = $(g.alvo);
-  $("guiaV").innerHTML = "<b>" + g.voz[0] + "</b> — " + g.voz[1];
+  $("guiaV").innerHTML = g.voz;
   guiaAtual = g.id;
   guiaAlvoEl = alvo || null;
   el.classList.add("mostra");
@@ -1708,7 +1498,6 @@ function verificarGuia() {
   if (!S.introSeen) return;
   if (guiaAtual) return;                    // one at a time
   if (cartaoT > 0) return;                  // a chapter card is telling the story; wait for it
-  if ($("sheetEpilogo").classList.contains("aberto")) return;
   for (let i = 0; i < SHEETS.length; i++) if ($(SHEETS[i]).classList.contains("aberto")) return;
   for (let i = 0; i < GUIA.length; i++) {
     const g = GUIA[i];
@@ -1770,22 +1559,7 @@ function escreverNoMuro(nome, prox, projetos, tochas) {
 // what the scenery can ask for, without knowing how any of this is stored
 function muroNomes() { return MURO.map(function (e) { return e.nome; }); }
 function muroTotal() { return MURO.length; }
-function mostrarMuro() {
-  if (!MURO.length) {
-    $("muroCorpo").innerHTML = '<div class="muroVazio"><b>MARA</b> — "Nothing on it yet. '
-      + 'Pass the torch once and I\'ll paint you."</div>';
-    return;
-  }
-  let html = "";
-  for (let i = MURO.length - 1; i >= 0; i--) {
-    const e = MURO[i];
-    html += '<div class="upgrade"><div class="muroN">' + romano(e.n) + '</div><div class="info">'
-      + '<div class="nome">' + e.nome + " — " + e.proj + (e.proj === 1 ? " project" : " projects")
-      + '</div><div class="desc">' + (e.prox ? "handed to " + e.prox + " &middot; " : "")
-      + e.cauda + "</div></div></div>";
-  }
-  $("muroCorpo").innerHTML = html;
-}
+// owner: mostrarMuro() removed with its panel.
 
 // ---------- the epilogue ----------
 // Prestige used to be a panel and a reset. This is the four seconds where the player
@@ -1796,20 +1570,7 @@ const EPILOGO_VOZ = [
   ["RUI", "Second time. Still embarrassing. Still worked."],
   ["MARA", "I keep the names. You just keep showing up."]
 ];
-function mostrarEpilogo(d) {
-  const voz = EPILOGO_VOZ[Math.min(Math.max(0, d.anoIdx), EPILOGO_VOZ.length - 1)];
-  $("epilogoCorpo").innerHTML =
-    "<b>" + d.spark + "</b> ran the " + ordinal(d.ano) + " year.<br>"
-    + d.projetos + (d.projetos === 1 ? " project" : " projects") + " started on this street.<br>"
-    + "<b>" + d.prox + "</b> takes the torch.";
-  $("epilogoWisdom").textContent = "★ WISDOM " + d.sabedoria
-    + " — that many people know where the shortcuts are.";
-  $("epilogoVoz").innerHTML = "<b>" + voz[0] + "</b> — &ldquo;" + voz[1] + "&rdquo;";
-  $("btnEpilogo").textContent = "BEGIN — YOU ARE " + d.prox;
-  $("btnEpilogoMuro").innerHTML = "▚ SEE THE WALL — " + MURO.length
-    + (MURO.length === 1 ? " NAME" : " NAMES");
-  abrir("sheetEpilogo");
-}
+// owner: mostrarEpilogo() removed with its panel.
 
 // ---------- coming back ----------
 // The night's summary is gated on having projects, so somebody who passed the torch and
@@ -6479,29 +6240,14 @@ function desenhar() {
   $("barPoluicao").style.width = Math.min(S.poluicao / 3, 100) + "%";
   $("eficiencia").textContent = Math.round(eficiencia() * 100) + "%";
   $("ganhoClique").textContent = ganhoClique().toFixed(1);
-  $("nGeradores").textContent = S.geradores;
-  $("nGeradores2").textContent = S.geradores;
-  $("worldPct").textContent = Math.round(worldHealth() * 100) + "%";
-  $("wisChip").textContent = S.inovacao > 0 ? "★ wisdom " + S.inovacao : "";
 
-  // ---- the board's progress panel: a percentage, a bar, and a line under it ----
-  // owner: STREET stays visible but stops updating. The number and bar keep whatever they
-  // showed at last render, so the element occupies its slot and does not visually change.
-  // (Was: pctRua = round(worldHealth()*100); write to #ruaPct/#barRua.)
-  // ...and the two cards that carry a number of their own
+  // the one card left that carries a number of its own
   const naoTem = [1, 2, 3, 4, 5, 6, 7].filter(function (n) { return !S["u" + n]; });
   const podeComprar = naoTem.filter(function (n) { return S.energia >= CFG["custoU" + n]; }).length;
   $("upNota").textContent = naoTem.length === 0 ? "ALL" : podeComprar > 0 ? podeComprar + " READY" : naoTem.length + " LEFT";
   $("openUpgrades").className = "cartao" + (podeComprar > 0 ? " pronto" : "");
-  const fracTocha = Math.min(1, S.energiaTotal / CFG.metaPrestigio);
-  $("torchNota").textContent = fracTocha >= 1 ? "READY" : Math.floor(fracTocha * 100) + "%";
-  $("openTorch").className = "cartao" + (fracTocha >= 1 ? " pronto" : "");
-  $("openProjects").className = "cartao" + (quantosCabem(1).n > 0 ? " pronto" : "");
 
-  desenharProjetos();
-  desenharEspeciais();
 
-  desenharRitmo();
 
   $("cardU1").classList.toggle("comprado", S.u1);
   $("btnU1").textContent = fmt(CFG.custoU1);
@@ -6519,21 +6265,6 @@ function desenhar() {
     $("btnU" + n).disabled = comprado || S.energia < custo;
   });
 
-  const pronto = S.energiaTotal >= CFG.metaPrestigio;
-  $("barPrestigio").style.width = Math.min(S.energiaTotal / CFG.metaPrestigio * 100, 100) + "%";
-  $("btnPrestigio").textContent = pronto
-    ? "PASS THE TORCH — +" + inovacaoAoTransicionar() + " WISDOM"
-    : fmt(S.energiaTotal) + " / " + fmt(CFG.metaPrestigio) + " TOTAL IMPACT";
-  $("btnPrestigio").disabled = !pronto;
-
-  if (S.inovacao > 0) {
-    $("linhaInovacao").style.display = "block";
-    $("inovacao").textContent = S.inovacao;
-    $("bonus").textContent = bonusInovacao().toFixed(1);
-  }
-  $("muroNota").textContent = MURO.length
-    ? "— " + MURO.length + (MURO.length === 1 ? " NAME" : " NAMES") : "— EMPTY";
-  desenharSkills();
   desenharSuperHUD();
   alertaMundo();
   verificarCapitulo();
@@ -6559,145 +6290,15 @@ function desenharSuperHUD() {
 // A project is the thing that earns while you are not touching the screen, and the sheet
 // used to show its price and nothing else. Two short lines: what you already have, and
 // what one more buys — both read off the live formulas.
-function desenharProjetos() {
-  const um = taxaDeUmProjeto();
-  $("oQueEh").innerHTML = S.geradores > 0
-    ? "<b>" + taxaCurta(prodPorSegundo()) + "</b> from " + S.geradores
-      + (S.geradores === 1 ? " project" : " projects") + " — they work on their own, forever"
-    : "projects earn <b>every second, by themselves</b> — taps are the only income you have until then";
-
-  // the primary button always buys ONE, at the next project's price
-  const c1 = custoGerador();
-  const b = $("btnGerador");
-  if (S.energia >= c1) {
-    b.textContent = "+ PROJECT — " + fmt(c1);
-    b.disabled = false;
-  } else {
-    b.textContent = "+ PROJECT — " + fmt(c1) + " (NOT ENOUGH)";
-    b.disabled = true;
-  }
-  // the compact MAX beside it: how many the current energy affords, in one tap
-  const compraMax = quantosCabem(Infinity);
-  const bm = $("btnGeradorMax");
-  bm.innerHTML = "MAX<br><b>×" + compraMax.n + "</b>";
-  bm.disabled = compraMax.n <= 0;
-  $("oQueDa").innerHTML = "each adds <i>+" + taxaCurta(um) + "</i> forever &middot; next one costs "
-    + fmt(c1) + ", and every one after is +"
-    + Math.round((CFG.custoGeradorFator - 1) * 100) + "%";
-}
+// owner: desenharProjetos() removed with its panel.
 
 // The skills surface. One skill ships; the sheet is a list, so a second one is markup and
 // a CFG line — but there are no empty slots pretending to be content.
-function desenharSkills() {
-  const liberada = skillLiberada(), tem = S.skillAuto;
-  const podePagar = S.energia >= CFG.custoSkillAuto;
-  $("abrirSkills").className = "btnSkills" + (liberada && !tem && podePagar ? " tem" : "");
-  $("skillsNota").textContent = tem ? "✓" : liberada ? (podePagar ? "— 1 READY" : "") : "— LOCKED";
-
-  const trava = $("skillTrava");
-  trava.className = "skillNota" + (liberada ? "" : " travada");
-  trava.textContent = liberada
-    ? "learned once and kept through every torch — upgrades reset, skills do not"
-    : "🔒 skills are learned after you pass the torch for the first time";
-
-  $("cardAuto").classList.toggle("comprado", tem);
-  $("cardAuto").classList.toggle("canal", canalizando > 0);
-  const b = $("btnSkillAuto");
-  b.textContent = fmt(CFG.custoSkillAuto);
-  b.disabled = tem || !liberada || !podePagar;
-
-  const pct = (foco / CFG.focoMax) * 100;
-  $("barFoco").style.width = pct + "%";
-  $("focoTexto").textContent = !tem ? "+" + CFG.autoFogoTiros + " shots/s while it channels"
-    : canalizando > 0 ? "CHANNELLING — " + Math.ceil(canalizando) + "s left"
-      : "FOCUS " + Math.floor(foco) + " / " + CFG.focoMax;
-
-  // the charge lives on the button that swings the wand, so it is never out of sight
-  $("foco").style.width = tem ? pct + "%" : "0%";
-  $("btnClique").classList.toggle("canal", canalizando > 0);
-}
+// owner: desenharSkills() removed with the AUTO-FIRE skill.
 
 // Everything the player needs to make the one decision this prototype measures.
 // Every number is read from the live formulas; none of it is written down twice.
-function desenharRitmo() {
-  const rapido = S.modo === "carvao";
-  const outro = rapido ? "limpo" : "carvao";
-  const taxa = taxaCurta;
-
-  // --- the state chip in the menu row ---
-  const mq = $("modeQuick");
-  const classe = rapido ? "fast" : "steady";
-  if (mq.dataset.modo !== classe) {
-    mq.dataset.modo = classe;
-    renderIcon($("modeIcon"), rapido ? "flame" : "leaf");
-    $("modeNome").textContent = rapido ? "FAST" : "STEADY";
-  }
-  const saudeFimAtual = saudeDe(cansacoEq(S.modo));
-  const cansando = rapido && S.geradores > 0 && S.poluicao < cansacoEq("carvao") - 0.5;
-  const descansando = !rapido && S.poluicao > 0.5;
-  $("modeSub").textContent = rapido
-    ? (S.geradores > 0 ? "→" + Math.round(saudeFimAtual * 100) + "%" : "3/s each")
-    : (descansando ? "→100%" : "×" + rampaAtual().toFixed(1));
-  // pulse only while it is actively costing you something
-  mq.className = "cartao " + classe + (cansando && eficiencia() < 0.9 ? " doi" : "");
-
-  // --- where the team is heading, on the team chip ---
-  const tend = $("tendencia");
-  if (cansando) {
-    tend.className = "rotulo tend cai";
-    tend.textContent = "1m ↓ " + Math.round(saudeDe(cansacoEm("carvao", 60)) * 100) + "%";
-  } else if (descansando) {
-    tend.className = "rotulo tend sobe";
-    tend.textContent = "90% ↑ " + curto(segundosAteSaude("limpo", 0.9));
-  } else {
-    tend.className = "rotulo tend";
-    tend.textContent = rapido ? "settled" : "rested";
-  }
-
-  // --- the trade, side by side, inside the projects sheet ---
-  const nomes = { carvao: "🔥 FAST", limpo: "🌱 STEADY" };
-  $("rTitA").textContent = "NOW · " + nomes[S.modo];
-  $("rTitB").textContent = "SWITCH · " + nomes[outro];
-  $("rColA").className = "rCol " + (rapido ? "quente" : "fria");
-  $("rColB").className = "rCol " + (rapido ? "fria" : "quente");
-
-  const aAgora = taxaAgora(S.modo), aFim = taxaAssentada(S.modo);
-  const bAgora = taxaAgora(outro), bFim = taxaAssentada(outro);
-  $("rTaxaA").textContent = taxa(aAgora);
-  $("rTaxaB").textContent = taxa(bAgora);
-  $("rFimA").textContent = taxa(aFim);
-  $("rFimB").textContent = taxa(bFim);
-  $("rTaxaA").className = ""; $("rFimA").className = aFim >= bFim ? "bom" : "ruim";
-  $("rTaxaB").className = bAgora > aAgora ? "bom" : ""; $("rFimB").className = bFim > aFim ? "bom" : "ruim";
-  const saudeA = saudeDe(cansacoEq(S.modo)), saudeB = saudeDe(cansacoEq(outro));
-  $("rSaudeA").textContent = Math.round(eficiencia() * 100) + "% → " + Math.round(saudeA * 100) + "%";
-  $("rSaudeB").textContent = Math.round(eficiencia() * 100) + "% → " + Math.round(saudeB * 100) + "%";
-  $("rSaudeA").className = saudeA >= saudeB ? "bom" : "ruim";
-  $("rSaudeB").className = saudeB > saudeA ? "bom" : "ruim";
-
-  // --- the cost nobody was told about ---
-  const perde = !rapido && fracaoRampa() > 0.02;
-  $("avisoRampa").className = "avisoRampa" + (perde ? " mostra" : "");
-  if (perde) {
-    $("avisoRampa").textContent = "⚠ SWITCHING RESETS THE RAMP — you lose ×"
-      + rampaAtual().toFixed(2) + " and start again at ×1.00 ("
-      + curto(rampaCheia()) + " to climb back)";
-  }
-
-  $("modoCarvao").classList.toggle("ativo", rapido);
-  $("modoLimpo").classList.toggle("ativo", !rapido);
-  // the columns above already carry the rates; this line only adds what they cannot —
-  // where the climb currently is
-  if (rapido) {
-    $("descModo").textContent = "";
-    $("boxRampa").style.display = "none";
-  } else {
-    $("descModo").textContent = "ramp ×" + rampaAtual().toFixed(2) + " → ×" + tetoLimpoAtual().toFixed(2)
-      + " (" + curto((1 - fracaoRampa()) * rampaCheia()) + " to go)";
-    $("boxRampa").style.display = "block";
-    $("barRampa").style.width = (fracaoRampa() * 100) + "%";
-  }
-}
+// owner: desenharRitmo() removed with its panel. The rhythm card in the control block still renders itself.
 
 // owner: the top alert strip is gone (element, style and text). Kept as an empty function
 // because the frame loop and several state changes still call it.
@@ -6746,8 +6347,7 @@ function verificarAnuncios() {
 // owner: the REAL DATA ticker is gone (element, style and rotation).
 
 // ---------- sheets ----------
-const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch", "sheetStats", "sheetConfirm",
-  "sheetSkills", "sheetMuro", "sheetEpilogo", "sheetEspeciais"];
+const SHEETS = ["sheetUpgrades"];
 function abrir(id) {
   SHEETS.forEach(function (s) { $(s).classList.toggle("aberto", s === id && !$(s).classList.contains("aberto")); });
 }
@@ -6813,33 +6413,16 @@ document.addEventListener("DOMContentLoaded", () => {
   ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
     cv.addEventListener(ev, function () { soltar("mundo"); });
   });
-  $("btnGerador").onclick = function () { comprarGerador(1); };
-  $("btnGeradorMax").onclick = function () { comprarGerador("max"); };
-  $("modoCarvao").onclick = () => { marcarGuia("rhythm"); definirModo("carvao"); };
-  $("modoLimpo").onclick = () => { marcarGuia("rhythm"); definirModo("limpo"); };
+  // owner: the projects sheet is gone, and with it its buy buttons and its copy of the
+  // rhythm switch. The rhythm now lives only on the card in the control block.
   $("modeQuick").onclick = () => { marcarGuia("rhythm"); definirModo(S.modo === "carvao" ? "limpo" : "carvao"); };
   $("btnU1").onclick = () => comprar("u1", CFG.custoU1);
   $("btnU2").onclick = () => comprar("u2", CFG.custoU2);
   $("btnU3").onclick = () => comprar("u3", CFG.custoU3);
   [4, 5, 6, 7].forEach(function (n) { $("btnU" + n).onclick = () => comprar("u" + n, CFG["custoU" + n]); });
-  $("btnPrestigio").onclick = pedirTransicao;
-  $("btnConfirmaSim").onclick = function () { fecharTudo(); transicionar(); };
-  $("btnConfirmaNao").onclick = () => abrir("sheetTorch");
-  $("abrirSkills").onclick = () => { marcarGuia("skills"); abrir("sheetSkills"); };
-  $("abrirMuro").onclick = function () { mostrarMuro(); abrir("sheetMuro"); };
-  $("btnEpilogoMuro").onclick = function () { mostrarMuro(); abrir("sheetMuro"); };
-  $("btnEpilogo").onclick = function () { fecharTudo(); };
-  $("btnSkillAuto").onclick = comprarSkill;
-  $("openProjects").onclick = () => { marcarGuia("projects"); abrir("sheetProjects"); };
-  // owner: cut special projects. Button stays in the projects sheet, click is inert.
-  $("abrirEspeciais").onclick = function () {};
+  // owner: the torch, the wall, the epilogue, the projects sheet and the special projects
+  // are gone — every button that opened them went with them.
   $("openUpgrades").onclick = () => { marcarGuia("upgrades"); abrir("sheetUpgrades"); };
-  // owner: cut the three-day-test / retention panel. The gear button and the torch button
-  // still exist and still take a click, but neither opens sheetStats anymore. The gear now
-  // does nothing (kept as a placeholder — later we'll wire real settings to it), and the
-  // torch just opens its sheet with no long-press behavior.
-  const bt = $("openTorch");
-  bt.onclick = function () { marcarGuia("torch"); abrir("sheetTorch"); };
   document.querySelectorAll(".fechar").forEach(function (b) {
     b.onclick = function () { $(b.dataset.close).classList.remove("aberto"); };
   });
@@ -6893,7 +6476,6 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarMobs(dt);
     atualizarDrops(dt);
     atualizarChamada(dt);
-    atualizarWand(dt);
     atualizarSuper(dt);
     verificarAnuncios();
     if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
