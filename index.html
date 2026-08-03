@@ -2978,6 +2978,42 @@ function itemSprite(tipo) {
   const m = ITEM_MAPS[tipo] || ITEM_MAPS.smoke;
   return sprite("item:" + tipo, m, ITEM_C);
 }
+// A DROP HAS TO BE THE THING IT GIVES YOU. The drops were drawn off the board's ITENS sheet —
+// a flower, a water jug, a meal — one per kind of trouble, and the owner asked the only
+// question that matters about them: *"esses itens que os bichos ficam dropando... o que que
+// eles são? Se eles forem alguma moeda do jogo ou algum item do jogo, que ele seja exatamente
+// o visual igual."* He is right and the answer is not a nicer flower. Picking one up adds
+// IMPACT, and impact already has a glyph — the leaf in the top-left counter of the HUD. Three
+// beautiful items that are not that glyph teach the player that there are three currencies
+// when there is one.
+//
+// So the drop is now the HUD's own impact icon, the same 12x12 `ICONS.leaf` map, baked once
+// with the same 1 px dark outline `renderIcon()` gives it in the chrome — literally the same
+// picture in the same colours, on the ground instead of in the bar. What the trouble was is
+// still said, but by the thing that was always saying it: the colour of the four ticks
+// breathing around it and the word that pops on pickup (SHARED! / CLEAN! / CLEAR!).
+const icoCv = {};
+function iconeMundo(nome) {
+  if (icoCv[nome]) return icoCv[nome];
+  const ic = ICONS[nome];
+  const c = document.createElement("canvas");
+  c.width = 14; c.height = 14;
+  const g = c.getContext("2d");
+  g.fillStyle = "#12242e";                       // the chrome's own keyline, so it reads on
+  ic.map.forEach(function (row, y) {             // paving, on grass and on a night street
+    for (let x = 0; x < row.length; x++) {
+      if (row.charAt(x) === ".") continue;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) g.fillRect(x + 1 + dx, y + 1 + dy, 1, 1);
+    }
+  });
+  ic.map.forEach(function (row, y) {
+    for (let x = 0; x < row.length; x++) {
+      const ch = row.charAt(x);
+      if (ch !== ".") { g.fillStyle = ic.pal[ch]; g.fillRect(x + 1, y + 1, 1, 1); }
+    }
+  });
+  return (icoCv[nome] = c);
+}
 
 let mobs = [];
 // The three of them were the last figures in the world still written in flat hex, and being
@@ -3008,17 +3044,62 @@ function drawMobs(smog) {
       cx.translate(0, GROUND); cx.scale(1, squash); cx.translate(0, -GROUND);
       cx.globalAlpha = m.dying / 8;
     }
+    // A TROUBLE THAT HAS REACHED YOU IS DOING SOMETHING TO THE PLACE. It used to stop dead
+    // and stand there bobbing, which is the least alarming thing an obstacle can do, and the
+    // owner asked for the opposite: *"em vez de ficarem parados, eles podem fazer alguma
+    // animação... como se estivessem me atrapalhando ou estragando o mundo ao redor."*
+    // So the parked state gets its own idle per creature, and each one is the creature's own
+    // harm made visible: the smoke BELCHES and darkens the air round itself, the toxic drum
+    // LEAKS and a puddle spreads under it, the money bag SHAKES and throws coins away.
+    // `m.parado` is read and nothing else — movement, the block, hp and spawning are all
+    // untouched, this is the same sprite with something happening around it.
+    const trava = m.parado && m.dying <= 0;
+    const bat = trava ? Math.sin(tick * 0.16 + m.wx * 0.03) : 0;   // its own phase, per mob
     if (m.type === "smog") {
       sombra(sx + 9, GROUND, 13, 0.13);          // it floats, so its shadow is soft and wide
-      { const mp = mobLuz("smog", SMOG_MOB.pal); drawMap(mp._id, SMOG_MOB.map, mp, sx, GROUND - 25 + bob, m.flash > 0); }
+      if (trava) {
+        // it breathes out: three puffs climbing and spreading, drawn under the sprite so the
+        // creature stays the readable shape and only the AIR round it thickens
+        for (let i = 0; i < 3; i++) {
+          const f = ((tick * 0.9 + i * 34) % 100) / 100;
+          const r = Math.round(4 + f * 9);
+          cx.globalAlpha = (1 - f) * 0.34;
+          cx.fillStyle = "#6d6478";
+          cx.fillRect(sx + 9 - r, GROUND - 22 - Math.round(f * 16) - (r >> 1), r * 2, r);
+          cx.globalAlpha = 1;
+        }
+        if (tick % 7 === 0) parts.push({ x: sx + 9, y: GROUND - 26, vx: (Math.random() - 0.5) * 22,
+          vy: -16 - Math.random() * 16, life: 0.9, amb: 1, c: "#8a8194", grav: -6 });
+      }
+      { const mp = mobLuz("smog", SMOG_MOB.pal);
+        drawMap(mp._id, SMOG_MOB.map, mp, sx + Math.round(bat * 1.4), GROUND - 25 + bob - (trava ? Math.round(Math.abs(bat) * 2) : 0), m.flash > 0); }
     } else if (m.type === "barrel") {
       // 20 wide now, drawn one px left so it still stands on the same centre as its
       // siblings (sx+9) — the hit test never looked at the sprite, so this is paint only
       sombra(sx + 9, GROUND, 20, 0.26);
-      { const mp = mobLuz("barrel", BARREL_MOB.pal); drawMap(mp._id, BARREL_MOB.map, mp, sx - 1, GROUND - 22 + (bob ? 1 : 0), m.flash > 0); }
+      if (trava) {
+        // it leaks, and the puddle under it grows and shrinks as it soaks in: two flat
+        // ellipses on the ground plane, kept dark so they never compete with the Cetro
+        const w2 = 10 + Math.round(Math.abs(bat) * 5);
+        cx.globalAlpha = 0.55; cx.fillStyle = "#3d4a1c";
+        cx.fillRect(sx + 9 - w2, GROUND, w2 * 2, 2);
+        cx.fillRect(sx + 9 - w2 + 2, GROUND + 2, w2 * 2 - 4, 1);
+        cx.globalAlpha = 0.75; cx.fillStyle = "#5c6b22";
+        cx.fillRect(sx + 9 - w2 + 3, GROUND, w2 * 2 - 6, 1);
+        cx.globalAlpha = 1;
+        if (tick % 11 === 0) parts.push({ x: sx + 4, y: GROUND - 12, vx: -4, vy: 10,
+          life: 0.5, c: "#7d8f2c", grav: 120 });
+      }
+      { const mp = mobLuz("barrel", BARREL_MOB.pal);
+        drawMap(mp._id, BARREL_MOB.map, mp, sx - 1 + (trava ? Math.round(bat * 1.2) : 0), GROUND - 22 + (bob ? 1 : 0), m.flash > 0); }
     } else {
       sombra(sx + 9, GROUND, 18, 0.26);
-      { const mp = mobLuz("cash", CASH_MOB.pal); drawMap(mp._id, CASH_MOB.map, mp, sx, GROUND - 16 - (bob ? 0 : 1), m.flash > 0); }
+      if (trava && tick % 9 === 0) {              // it shakes and throws what it is hoarding
+        parts.push({ x: sx + 9, y: GROUND - 12, vx: (Math.random() - 0.5) * 46,
+          vy: -34 - Math.random() * 14, life: 0.6, c: "#c9a563", grav: 150 });
+      }
+      { const mp = mobLuz("cash", CASH_MOB.pal);
+        drawMap(mp._id, CASH_MOB.map, mp, sx + (trava ? Math.round(bat * 2) : 0), GROUND - 16 - (bob ? 0 : 1) - (trava ? Math.round(Math.abs(bat)) : 0), m.flash > 0); }
     }
     cx.globalAlpha = 1;
     cx.restore();
@@ -6479,8 +6560,27 @@ const VIDA_TOPO = { smog: 30, barrel: 27, cash: 21 };   // world px above ground
 // its own dark keyline, and now below the light source instead of above it. The hit flash
 // keeps a higher floor because two frames of white is the confirmation that you connected.
 // Empty pips take the same factor as full ones, so the read "how much is left" is untouched.
+// A PLAIN RED HEALTH BAR, WHICH IS WHAT EVERY GAME HAS. The readout was a row of white pips
+// — one block per hit point, blocks going out one at a time — and the owner named the two
+// things wrong with it in one line: *"a vida dos bichinhos parece que são pontinhos brancos,
+// pode ser uma barrinha vermelha padrão em vez de ser blocada, ela vai diminuindo."* It did
+// not read as health, and it was white.
+//
+// The white was already a known defect with a number on it: floored at 0.26 for the night,
+// the untouched #e8edf6 pips were the brightest thing in the whole ground band — measured at
+// 183 px over luma 200 in a NOITE frame against 78 for everything else, peaking at 237, which
+// is ABOVE the Cetro's resting hub (195.6) and above its crystal (214.7) and inverts the one
+// rule the lighting wave set. Dimming them was a patch on the symptom. A red fill on a dark
+// track fixes it at the root, because the board's own ACENTO reds sit around L 90 — a bar can
+// be unmistakable without being the light source in the frame.
+//
+// It still takes the hour the same way, in VALUE only and on a floor: this is game signal, so
+// it must not take the hour's TINT (a bar that goes blue at midnight has joined the world it
+// is supposed to sit on top of), and it must not glow at midnight either.
+// It reads `m.hp` and `m.hpMax` and nothing else — no hp value, no spawn, no block changes.
 const PIP_PISO = 0.67, PIP_PISO_FLASH = 0.82;
-let pipPasso = -1, PIP_CHEIO = "#e8edf6", PIP_VAZIO = "#4a4458", PIP_FLASH = "#ffffff";
+let pipPasso = -1, VIDA_CHEIO = "#c2361f", VIDA_BAIXO = "#8d2418", VIDA_LUZ = "#e0603a",
+    VIDA_TRILHO = "#3a2028", PIP_FLASH = "#ffffff";
 function pipLuzPasso() {
   const k = horaKey() >> 2;                        // same 24 steps a day as everything else
   if (k === pipPasso) return;
@@ -6490,8 +6590,10 @@ function pipLuzPasso() {
     const c = hexA(hex), f = 1 - (1 - piso) * e;
     return rgbS([cl255(c[0] * f), cl255(c[1] * f), cl255(c[2] * f)]);
   };
-  PIP_CHEIO = dim("#e8edf6", PIP_PISO);
-  PIP_VAZIO = dim("#4a4458", PIP_PISO);
+  VIDA_CHEIO = dim("#c2361f", PIP_PISO);
+  VIDA_BAIXO = dim("#8d2418", PIP_PISO);           // the last third goes darker, not brighter
+  VIDA_LUZ = dim("#e0603a", PIP_PISO);             // one lit row along the top of the fill
+  VIDA_TRILHO = dim("#3a2028", PIP_PISO);
   PIP_FLASH = dim("#ffffff", PIP_PISO_FLASH);
 }
 function desenharVidaMob(m) {
@@ -6499,14 +6601,21 @@ function desenharVidaMob(m) {
   const sx = Math.round(m.wx - worldX);
   if (sx < -20 || sx > W + 20) return;
   pipLuzPasso();
-  const n = m.hpMax, larg = n * 3 - 1;
+  // one width for every monster, so "half a bar" means the same thing whatever you are
+  // looking at — with pips the bar's LENGTH was the monster's max hp, which read as "this one
+  // is wider" rather than as "this one takes more hits"
+  const larg = 20, alt = 3;
   const x0 = sx + 5 - (larg >> 1), y = GROUND - (VIDA_TOPO[m.type] || 22);
+  const frac = Math.max(0, Math.min(1, m.hp / m.hpMax));
+  const cheio = Math.round(larg * frac);
   cx.fillStyle = "#10121c";                       // keyline: it has to read on any ground
-  cx.fillRect(x0 - 1, y - 1, larg + 2, 5);
-  for (let i = 0; i < n; i++) {
-    const cheio = i < m.hp;
-    cx.fillStyle = cheio ? (m.flash > 0 ? PIP_FLASH : PIP_CHEIO) : PIP_VAZIO;
-    cx.fillRect(x0 + i * 3, y, 2, 3);
+  cx.fillRect(x0 - 1, y - 1, larg + 2, alt + 2);
+  cx.fillStyle = VIDA_TRILHO;                     // the empty track it drains along
+  cx.fillRect(x0, y, larg, alt);
+  if (cheio > 0) {
+    cx.fillStyle = m.flash > 0 ? PIP_FLASH : (frac <= 0.34 ? VIDA_BAIXO : VIDA_CHEIO);
+    cx.fillRect(x0, y, cheio, alt);
+    if (m.flash <= 0) { cx.fillStyle = VIDA_LUZ; cx.fillRect(x0, y, cheio, 1); }
   }
 }
 
@@ -6552,10 +6661,20 @@ function desenharMundo() {
     if (sx < -12 || sx > W + 12) return;
     const y = GROUND - 16 + Math.round(Math.sin(animT * 5 + d.wx * 0.1) * 2);
     const fim = Math.max(0, Math.min(1, (CFG.dropVida - d.t) / 2));
-    // the board's ITENS sheet, one per kind of trouble; the tick colour is the item's own
+    // the tick colour still says which trouble left it; the ICON says what it gives you
     const cor = d.type === "cash" ? "#f3a03d" : d.type === "barrel" ? "#71a39c" : "#f2d2dc";
     cx.globalAlpha = fim;
-    cx.drawImage(itemSprite(d.type), sx - 4, y - 2);
+    cx.drawImage(iconeMundo("leaf"), sx - 5, y - 3);
+    // ...and a small plus beside it, so it reads as a PICKUP and not as scenery: the world is
+    // already full of leaves and this is the only one you can take
+    // ...in the board's ACENTO gold and NOT in the chrome's cream: #fdf6e6 measures L 244,
+    // which would put a pickup above the Cetro's hub (195.6) and its crystal (214.7) in a
+    // night frame, and the Cetro being the brightest warm thing after dark is a rule this
+    // file has held since the lighting wave. #eba748 is L 175 and unmistakably a plus.
+    cx.fillStyle = "#12242e";
+    cx.fillRect(sx + 6, y - 2, 5, 5);
+    cx.fillStyle = "#eba748";
+    cx.fillRect(sx + 8, y - 1, 1, 3); cx.fillRect(sx + 7, y, 3, 1);
     // four ticks breathing around it: pixel-art for "pick me up"
     cx.globalAlpha = fim * pulso;
     cx.fillStyle = cor;
@@ -6566,8 +6685,9 @@ function desenharMundo() {
   });
   // how much of a trouble is left, over its head. Damage was already in the game — hits
   // came off `hp` — but nothing ever showed it, so it read as if nothing was happening
-  // until the thing suddenly popped. Pips, not a bar: at two to five hits you can count
-  // them at a glance, and the *number* of pips is what says "this one is the big one".
+  // until the thing suddenly popped. It was pips for a while, on the argument that at two to
+  // five hits you can count them; the owner wanted the thing every game has and he was right
+  // twice over — see `desenharVidaMob`.
   mobs.forEach(function (m) { desenharVidaMob(m); });
   // a trouble standing in the way: two ticks at its feet say "this one is tappable"
   mobs.forEach(function (m) {
