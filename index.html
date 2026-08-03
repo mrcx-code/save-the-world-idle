@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#1a1c2c">
+<meta name="theme-color" content="#1a1e10">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,9 +11,14 @@
 <title>SAVE THE WORLD</title>
 <style>
   :root {
-    --ink: #0e0f1a; --panel: #1f2b57; --panel2: #29366f;
-    --texto: #f4f4f4; --sub: #94b0c2;
-    --gold: #ffcd75; --gold2: #ef7d57;
+    /* ---- the board's UI language ----
+       Sampled off the approved board's "UI CONCEITO" panel: warm cream type on deep olive
+       panels, olive-green cards a value lighter, a darker nav rail under them, and gold
+       reserved for the progress bar and the one action that matters. No navy anywhere —
+       the old chrome spoke a different language from the street it sat on. */
+    --ink: #14170c; --panel: #2b3320; --panel2: #3c4627;
+    --texto: #f2e8ce; --sub: #a9a184;
+    --gold: #eba748; --gold2: #da7a29;
     /* The chrome is DARK and has depth. The poster pass made every surface flat cream and
        against a saturated world it read washed out — and it also left the game speaking two
        languages, cream chrome over navy sheets. One language now: a deep blue-ink fill with
@@ -21,10 +26,14 @@
        shadow. The construction the poster pass won is kept; only the fill and the value
        changed. Gold is reserved for the one action that matters — contrast is the cheapest
        way to say which button is the main button. */
-    --chromeA: #2c3a68; --chromeB: #18203d; --chromeT: #eaf0ff; --chromeS: #93a6cf;
-    --ouroA: #ffd873; --ouroB: #f0a22e;
-    --creme: #fdf6e6; --contorno: #0b1020; --tinta: #101a30; --tinta2: #6b7a82;
-    --bad: #b13e53; --good: #38b764; --blue: #41a6f6; --purple: #8d5bd6;
+    --chromeA: #3c4627; --chromeB: #262d18; --chromeT: #f2e8ce; --chromeS: #a9a184;
+    --ouroA: #f3c05c; --ouroB: #da7a29;
+    --creme: #f6ecd5; --contorno: #14170c; --tinta: #1f2412; --tinta2: #6b7a82;
+    --bad: #b8503c; --good: #7d9a3c; --blue: #71a39c; --purple: #a08a4a;
+    /* the board's own furniture measurements */
+    --raio: 10px; --raioSm: 7px;
+    --barra: #363c21; --barraOn: #eba748;
+    --navBg: #1c2010; --navOn: #313a1f;
     /* responsive type scale — grows with the screen */
     --ui: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", sans-serif;
     --fs-xs: clamp(8px, 2.3vw, 11px);
@@ -34,7 +43,7 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent;
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-  html, body { height: 100%; overflow: hidden; background: #1a1c2c; }
+  html, body { height: 100%; overflow: hidden; background: #1a1e10; }
   /* No webfont. Press Start 2P came from Google Fonts over the network, which broke the
      one-file rule and blocked first paint; the canvas has its own bitmap font now and
      the chrome uses what the phone already has. */
@@ -48,33 +57,36 @@
      down the whole frame, and the vignette stacked on the canvas one. Direction C has no
      post-processing anywhere — the look has to hold up on form and colour alone. */
 
-  /* ---- HUD on top of the game ---- */
+  /* ---- HUD on top of the game ----
+     The board's UI CONCEITO puts the counters inside ONE dark rounded rail with a gear
+     sitting apart at its right end, not in three separate floating slabs. That is the
+     grammar copied here: a single pill, chips inside it, rounded corners, cream on deep
+     olive, and the gear as its own square at the end of the row. */
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0;
     top: calc(6px + env(safe-area-inset-top));
-    display: flex; gap: 5px; justify-content: center; padding: 0 6px; pointer-events: none; }
-  /* the readouts wear the same modelling as the buttons, one notch quieter, so the chrome
-     is one language: same ink keyline, same hard offset shadow, same sun direction */
-  .chip { background:
-      linear-gradient(158deg, rgba(255,255,255,.09) 0%, rgba(255,255,255,.02) 44%, rgba(255,255,255,0) 62%),
-      linear-gradient(180deg, #33436f 0%, var(--chromeA) 54%, var(--chromeB) 100%);
-    border: 2px solid var(--contorno); border-radius: 8px; padding: 5px 8px; flex: 1 1 0;
-    max-width: 170px; min-width: 0; color: var(--chromeT);
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.20),
-      inset 0 -2px 0 rgba(0,0,0,.24);
-    display: flex; align-items: center; gap: 7px; }
+    display: flex; gap: 6px; align-items: stretch; padding: 0 8px; pointer-events: none; }
+  #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; align-items: stretch;
+    background: linear-gradient(180deg, #2b3320, #1b2010);
+    border: 2px solid var(--contorno); border-radius: var(--raio); padding: 4px;
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.10); }
+  .chip { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px;
+    background: #1b1c0f; border-radius: var(--raioSm); padding: 4px 6px; color: var(--chromeT); }
   .cInfo { min-width: 0; flex: 1; }
   .chip .rotulo { font-size: var(--fs-xs); color: var(--chromeS); white-space: nowrap; overflow: hidden;
     letter-spacing: .06em; font-weight: 700; }
-  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1.1; color: var(--chromeT);
-    font-variant-numeric: tabular-nums; text-shadow: 0 1px 0 rgba(0,0,0,.55); }
-  .pi { image-rendering: pixelated; width: 22px; height: 22px; flex: 0 0 auto; }
+  .chip .valor { font-size: var(--fs-md); font-weight: 800; line-height: 1.15; color: var(--chromeT);
+    font-variant-numeric: tabular-nums; }
+  #openConfig { pointer-events: auto; flex: 0 0 auto; width: 44px; border-radius: var(--raio);
+    background: linear-gradient(180deg, #3c4627, #262d18); padding: 0;
+    display: flex; align-items: center; justify-content: center; }
+  .pi { image-rendering: pixelated; width: 20px; height: 20px; flex: 0 0 auto; }
   .pi.big { width: 30px; height: 30px; }
-  #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: #7ce8a4; }
-  .minibar { height: 5px; background: #0d1226; border: 1px solid var(--contorno); margin-top: 3px; }
+  #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: #b7d16a; }
+  .minibar { height: 4px; background: #0f1208; border-radius: 2px; margin-top: 3px; overflow: hidden; }
   .minibar > div { height: 100%; background: var(--bad); transition: width .3s; }
   /* where the team is heading, not just where it is */
-  .chip .tend { margin-top: 4px; font-size: 7px; white-space: nowrap; }
-  .tend.cai { color: #ff9d8a; } .tend.sobe { color: #8ef0ad; }
+  .chip .tend { margin-top: 3px; font-size: 7px; white-space: nowrap; }
+  .tend.cai { color: #e39176; } .tend.sobe { color: #b7d16a; }
 
   /* the whole frame washes with the rhythm you just chose */
   #flash { position: fixed; inset: 0; z-index: 8; pointer-events: none; opacity: 0; }
@@ -87,16 +99,16 @@
   .pop { animation: estala .42s ease-out 1; }
   @keyframes estala { 0% { transform: scale(1.14); filter: brightness(1.9) } 100% { transform: scale(1); filter: none } }
 
-  #offline { display: none; position: fixed; z-index: 12; left: 50%; transform: translateX(-50%);
+  #offline { display: none; position: fixed; z-index: 12; border-radius: var(--raio); left: 50%; transform: translateX(-50%);
     top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
-    background: #234d2c; border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #38b764;
-    color: #c9f5d4; padding: 8px 10px; font-size: var(--fs-xs); line-height: 1.7; }
+    background: #35431f; border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #8aa347;
+    color: #dbe7b4; padding: 8px 10px; font-size: var(--fs-xs); line-height: 1.7; }
 
   /* ---- chapter cards: the run gets named out loud ----
      Thresholds are fractions of CFG.metaPrestigio, computed at fire time — nothing here
      freezes the target. Pointer-through on purpose: the whole game is one button and a
      card that eats a swing would be worse than no card at all. */
-  #cartao { display: none; position: fixed; z-index: 12; left: 50%; transform: translateX(-50%);
+  #cartao { display: none; position: fixed; z-index: 12; border-radius: var(--raio); left: 50%; transform: translateX(-50%);
     top: 28%; width: min(420px, 92vw); text-align: center; pointer-events: none;
     background: linear-gradient(180deg, rgba(36,50,92,.96), rgba(18,25,51,.96));
     /* purple, not gold: REAL DATA owns the gold left edge, and a made-up line must never
@@ -108,7 +120,7 @@
   #cartao .cn { font-size: var(--fs-xs); color: var(--sub); letter-spacing: .2em; }
   #cartao .ct { font-size: var(--fs-md); color: var(--gold); margin: 7px 0 9px;
     text-shadow: 2px 2px 0 var(--ink); }
-  #cartao .cv { font-size: var(--fs-xs); color: #c6d4f0; line-height: 1.75; }
+  #cartao .cv { font-size: var(--fs-xs); color: #d9cfae; line-height: 1.75; }
   #cartao .cv b { color: var(--gold); }
   @keyframes cartaoVai {
     0% { opacity: 0; transform: translateX(-50%) translateY(10px) }
@@ -120,89 +132,84 @@
      Painted, street, and it only ever grows. Its own localStorage key, for the same
      reason the retention record has one: passing the torch wipes S. */
   .btnMuro { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 8px;
-    background: linear-gradient(180deg, #2f6f4d, #163a28); border-color: var(--ink); color: #b7ffce; }
+    background: linear-gradient(180deg, #5b7a2c, #2c3d16); border-color: var(--ink); color: #d3e6a2; }
   #sheetMuro .upgrade { align-items: flex-start; }
   .muroN { font-size: var(--fs-sm); color: var(--gold); min-width: 34px; letter-spacing: .06em; }
   .muroVazio { font-size: var(--fs-xs); color: var(--sub); line-height: 1.9; }
   /* the epilogue: same furniture as every other sheet, one beat louder */
   #epilogoCorpo { font-size: var(--fs-sm); line-height: 2; margin-bottom: 4px; }
   #epilogoCorpo b { color: var(--gold); }
-  #epilogoVoz { font-size: var(--fs-xs); color: #c6d4f0; line-height: 1.8; margin-top: 9px;
+  #epilogoVoz { font-size: var(--fs-xs); color: #d9cfae; line-height: 1.8; margin-top: 9px;
     border-left: 4px solid var(--gold); padding-left: 8px; }
   #epilogoVoz b { color: var(--gold); }
   #btnEpilogo { width: 100%; padding: 14px 8px; font-size: var(--fs-sm); margin-top: 10px;
-    color: #f3e8ff; background: linear-gradient(180deg, #7f4fd4, #4b2a86); }
+    color: #f6ecd5; background: linear-gradient(180deg, #b98a30, #6d4d15); }
 
   /* one line that says what the world wants from you right now */
-  #alerta { display: none; position: fixed; z-index: 11; left: 50%; transform: translateX(-50%);
+  #alerta { display: none; position: fixed; z-index: 11; border-radius: var(--raio); left: 50%; transform: translateX(-50%);
     top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
     border: 3px solid var(--ink); border-radius: 9px; padding: 7px 9px; font-size: var(--fs-xs); line-height: 1.7;
     text-align: center; background: rgba(14,15,26,.9); }
   #alerta.mostra { display: block; }
-  #alerta.perigo { background: #4a1f2b; box-shadow: inset 0 0 0 2px var(--bad); color: #ffb0b0; }
-  #alerta.chama { background: #4a3a12; box-shadow: inset 0 0 0 2px var(--gold); color: #ffe9b0;
+  #alerta.perigo { background: #43241a; box-shadow: inset 0 0 0 2px var(--bad); color: #eeae90; }
+  #alerta.chama { background: #43391a; box-shadow: inset 0 0 0 2px var(--gold); color: #fbe7ae;
     animation: pulsa .9s steps(2, end) infinite; }
-  #alerta.festa { background: #1c4a2e; box-shadow: inset 0 0 0 2px var(--good); color: #b7ffce; }
-  #alerta.magia { background: #33235c; box-shadow: inset 0 0 0 2px var(--purple); color: #cfa9ff; }
+  #alerta.festa { background: #2f3d1c; box-shadow: inset 0 0 0 2px var(--good); color: #d3e6a2; }
+  #alerta.magia { background: #3b3418; box-shadow: inset 0 0 0 2px var(--purple); color: #e0c47a; }
   @keyframes pulsa { 0% { opacity: 1 } 50% { opacity: .62 } 100% { opacity: 1 } }
 
   /* REAL DATA became a thin ticker instead of a slab. It was eating a fifth of the screen
      to say one sentence; this hands most of that height back to the world.
      Keeps --hControles rather than a fixed 122px: that variable is measured from the real
      control block on load and on resize, and it is what stops this covering the menu bar. */
-  #fato { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
+  #fato { position: fixed; z-index: 9; border-radius: var(--raioSm); left: 50%; transform: translateX(-50%);
     bottom: calc(var(--hControles, 122px) + env(safe-area-inset-bottom)); width: min(520px, 94vw);
-    font-size: var(--fs-xs); color: #c6d4f0; line-height: 1.45;
-    background: linear-gradient(180deg, #202a4c, #141b33);
-    border: 2px solid var(--contorno); border-left: 5px solid var(--gold); border-radius: 7px;
+    font-size: var(--fs-xs); color: #d9cfae; line-height: 1.45;
+    background: linear-gradient(180deg, #2b3320, #232817);
+    border: 2px solid var(--contorno); border-left: 5px solid var(--gold);
     box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.12); padding: 5px 8px;
     max-height: 3.9em; overflow: hidden; }
   #fato b { color: var(--gold); }
 
-  /* ---- bottom controls ---- */
+  /* ---- bottom controls: the board's UI CONCEITO, mapped onto this game's real functions ----
+     The board stacks three things under the scene: a PROGRESS PANEL with a percentage and a
+     bar and a line under it; a row of FOUR ACTION CARDS, each an icon over a name over a
+     value; and a dark BOTTOM RAIL. Nothing is invented to fill them — the progress panel is
+     the street's health, the four cards are the four things this game actually lets you
+     open or toggle (the rhythm, the projects, the upgrades, the torch), and the rail holds
+     the one action the whole prototype is built around.
+     --hControles is still measured off the real block on load and on resize; the rule that
+     no panel may cover this block is what that variable exists for. */
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
-    bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
-    /* ONE COLUMN OF SECONDARY THINGS, ONE ACTION.
-       The block used to be two flex rows, and the top one read as two little squares
-       floating with dead space beside them — which is what the owner saw and named.
-       (Half of that was a bug: an orphaned comment tail two rules below was eating the
-       `#modeQuick { flex: 1 1 auto }` declaration whole, so the rhythm readout, designed
-       to be the wide thing in the block, was collapsing to its content and sitting there
-       as a square. It is fixed, but the shape it exposed was the real problem.)
-       Now the four secondary controls are a single vertical stack at the side — keep,
-       rhythm, build, build — and the one action takes the whole other column, full
-       height. The markup is untouched: the two row wrappers and the pair wrapper are
-       `display: contents`, so their buttons land directly in this grid. --hControles is
-       still measured off the real block, so the block is free to change height. */
-    display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
-    grid-auto-rows: min-content; gap: 5px; }
-  #linhaTopo, #linhaMain, #colLado { display: contents; }
-  #controls button { display: flex; align-items: center; justify-content: center; gap: 6px; }
-  /* the thing you keep: an icon, and only an icon — a slim strip at the top of the stack */
-  .btnIcone { grid-column: 1; grid-row: 1; width: auto; padding: 1px 0; min-height: 20px; }
-  .btnIcone .pi { width: 16px; height: 16px; }
-  #modeQuick { grid-column: 1; grid-row: 2; }
-  #openProjects { grid-column: 1; grid-row: 3; }
-  #openUpgrades { grid-column: 1; grid-row: 4; }
-  #btnClique { grid-column: 2; grid-row: 1 / span 4; }
-  /* the things you build with, named */
-  #colLado button { min-height: 27px; padding: 3px 8px; font-size: var(--fs-sm);
-    justify-content: flex-start; gap: 5px; }
-  #colLado b { font-weight: 700; font-size: var(--fs-sm); }
-  #colLado .rot { font-size: 8px; letter-spacing: .5px; opacity: .8; margin-left: auto; }
-  /* Poster chrome from the estetica pass; the components below it are the jogabilidade
-     pass's new UI, kept because they are structure, not style.
-     ROUNDER AND RICHER WITHOUT TURNING INTO A WEB BUTTON. The owner asked for rounded
-     corners and a light gradient. The trap is that radius + gradient is also the recipe
-     for a generic app button, and what stops it here is that every OTHER property stays
-     hard: the outline is still a 2px ink keyline, the drop shadow is still a hard offset
-     with zero blur (it is a printed shadow, not a soft one), the press still snaps down
-     by whole pixels, and nothing is translucent. What is new is the modelling INSIDE the
-     shape: a three-stop vertical ramp with the break above the middle instead of a flat
-     two-stop, a diagonal sheen falling off by 46% (the same sun-up-and-to-the-right the
-     sprites are lit by, so the chrome and the world agree about where the light is), a
-     lit 1px top edge and a 2px shaded inner floor. */
-  button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno); border-radius: 9px;
+    bottom: calc(8px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
+
+  /* the progress panel — "RUA: 42%" on the board, the street's health here */
+  #painelRua { background: linear-gradient(180deg, #2b3320, #1e2312);
+    border: 2px solid var(--contorno); border-radius: var(--raio); padding: 6px 10px 7px;
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.09); margin-bottom: 6px; }
+  #painelRua .pr1 { display: flex; align-items: center; gap: 8px; }
+  #painelRua .prT { font-size: var(--fs-sm); font-weight: 800; letter-spacing: .08em; color: var(--creme); }
+  #painelRua .prV { font-size: var(--fs-sm); font-weight: 800; color: var(--gold);
+    font-variant-numeric: tabular-nums; }
+  .prBar { flex: 1 1 auto; height: 9px; background: var(--barra); border-radius: 5px; overflow: hidden; }
+  .prBar > div { height: 100%; width: 0%; border-radius: 5px; transition: width .3s;
+    background: linear-gradient(180deg, #f6cf7e, var(--barraOn)); }
+  #ruaSub { font-size: var(--fs-xs); color: var(--sub); line-height: 1.5; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* the four cards — icon over name over value, exactly the board's card */
+  #cartoes { display: flex; gap: 6px; margin-bottom: 6px; }
+  .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 2px; padding: 6px 2px 5px; border-radius: var(--raio);
+    background: linear-gradient(180deg, #46512c, #333c22); }
+  .cartao .cn { font-size: 8px; letter-spacing: .04em; color: var(--creme); white-space: nowrap;
+    overflow: hidden; max-width: 100%; }
+  .cartao .cv { font-size: var(--fs-xs); font-weight: 800; color: var(--gold); white-space: nowrap;
+    font-variant-numeric: tabular-nums; }
+  .cartao.pronto { box-shadow: 0 3px 0 var(--contorno), 0 0 14px rgba(235,167,72,.55); }
+
+  button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno);
+    border-radius: var(--raioSm);
     cursor: pointer; color: var(--chromeT); text-transform: uppercase;
     background:
       linear-gradient(158deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.03) 44%, rgba(255,255,255,0) 62%),
@@ -212,49 +219,42 @@
     touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   button:disabled { opacity: .5; cursor: default; }
   button:not(:disabled):active { transform: translateY(2px);
-    box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22),
-      inset 0 -1px 0 rgba(0,0,0,.26); }
-  /* the RHYTHM you are running: the one decision this whole prototype exists to measure,
-     so it gets a row of its own. This comment used to have no opening `/*`, and the
-     browser swallowed the rule under it — see the note on #controls. */
-  #modeQuick { min-width: 0; gap: 6px; padding: 4px 8px; justify-content: flex-start; }
-  #modeQuick .mq { display: flex; flex-direction: column; align-items: flex-start; min-width: 0;
-    line-height: 1.25; overflow: hidden; }
-  #modeQuick .mq b { font-size: 9px; font-weight: normal; }
-  #modeQuick .mq i { font-size: 8px; font-style: normal; opacity: .85; white-space: nowrap; }
-  #modeQuick.fast { color: #ffd2cd; background:
-    linear-gradient(158deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 44%, rgba(255,255,255,0) 62%),
-    linear-gradient(180deg, #a53a4c 0%, #8c2c3e 54%, #45131f 100%) !important; }
-  #modeQuick.steady { color: #c9f5d4; background:
-    linear-gradient(158deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 44%, rgba(255,255,255,0) 62%),
-    linear-gradient(180deg, #268650 0%, #1f7043 54%, #0c331d 100%) !important; }
+    box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14); }
+  /* the rhythm card: the one decision this prototype exists to measure, so it is the card
+     that is allowed to change colour and to pulse */
+  #modeQuick.fast { background: linear-gradient(180deg, #8a4028, #4a2113) !important; }
+  #modeQuick.fast .cn { color: #f2d3b0; }
+  #modeQuick.steady { background: linear-gradient(180deg, #5b7a2c, #2c3d16) !important; }
+  #modeQuick.steady .cn { color: #dbe7b4; }
   /* it is costing you right now: say so without words */
   #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
-  @keyframes doendo {
-    0%   { box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 0 rgba(0,0,0,.26) }
-    50%  { box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 0 rgba(0,0,0,.26), 0 0 16px rgba(255,107,87,.9) }
-    100% { box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 0 rgba(0,0,0,.26) } }
-  /* the main action: the rest of the block, and the only thing in it with weight */
-  /* the one action of the game, and it should not be arguable which one it is: the new
-     layout's geometry, wearing the gold the chrome pass reserved for exactly this button */
-  #btnClique { flex: 1 1 auto; min-width: 0; min-height: 74px; padding: 11px 10px;
+  @keyframes doendo { 0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 16px rgba(200,90,50,.9) } 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } }
+  /* the bottom rail, and the one thing standing in it */
+  #rail { background: var(--navBg); border: 2px solid var(--contorno); border-radius: var(--raio);
+    padding: 5px; display: flex; box-shadow: 0 3px 0 var(--contorno); }
+  #btnClique { flex: 1 1 auto; min-width: 0; min-height: 62px; padding: 9px 10px;
+    border-radius: var(--raioSm);
     font-size: var(--fs-lg); font-weight: 800;
-    background:
-      linear-gradient(158deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 42%, rgba(255,255,255,0) 60%),
-      linear-gradient(180deg, #ffe9a6 0%, #ffe28f 16%, var(--ouroA) 40%, var(--ouroB) 100%);
-    color: #2a1a06; border-width: 3px; border-radius: 12px; letter-spacing: .02em;
+    background: linear-gradient(180deg, #f8d98f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
+    color: #221806; border-width: 2px; letter-spacing: .02em;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.45);
+    box-shadow: 0 4px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.55),
+      inset 0 -3px 0 rgba(120,60,0,.28); position: relative; }
+  #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
+    color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
+    font-size: var(--fs-lg); font-weight: 800;
+    background: linear-gradient(180deg, #f8d98f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
+    color: #221806; border-width: 3px; letter-spacing: .02em;
     display: flex; align-items: center; justify-content: center; gap: 10px;
     text-shadow: 0 1px 0 rgba(255,255,255,.45);
     box-shadow: 0 6px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.55),
       inset 0 -3px 0 rgba(120,60,0,.28); position: relative; overflow: hidden; }
   #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
     color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
-  #btnClique.segurando { transform: translateY(4px);
-    background:
-      linear-gradient(158deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.08) 42%, rgba(255,255,255,0) 60%),
-      linear-gradient(180deg, #fff5c8 0%, #fff0b8 16%, #ffdd8c 40%, #f7b845 100%);
-    box-shadow: 0 2px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.6),
-      inset 0 -3px 0 rgba(120,60,0,.24); }
+  #btnClique.segurando { transform: translateY(3px);
+    background: linear-gradient(180deg, #fdeec2 0%, #f6cf7e 34%, #e8a244 100%);
+    box-shadow: 0 2px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.6); }
   #btnClique.segurando #dicaHold { color: rgba(42,26,6,.85); }
   /* the wand's charge, on the button that swings it */
   #foco { position: absolute; left: 0; top: 0; height: 4px; width: 0%; background: var(--purple);
@@ -264,7 +264,7 @@
   .cs i { display: block; width: 6px; height: 6px; background: rgba(18,36,46,.16);
     box-shadow: inset 0 0 0 1px rgba(18,36,46,.42); }
   .cs i.on { background: var(--contorno); box-shadow: none; }
-  #btnClique.super { background: #ffe9b0;
+  #btnClique.super { background: #fbe7ae;
     box-shadow: 0 5px 0 var(--contorno), 0 0 26px rgba(255,205,117,.95);
     animation: superPronto .5s steps(2, end) infinite; }
   #btnClique.super .cs i { background: var(--contorno); box-shadow: none; }
@@ -280,8 +280,8 @@
      again the moment a button grows a line of text */
   .sheet { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%) translateY(110%);
     bottom: calc(var(--hControles, 120px) + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
-    background: linear-gradient(180deg, #24325c 0%, #161e3a 55%, #121933 100%);
-    border: 3px solid var(--contorno); border-radius: 12px;
+    background: linear-gradient(180deg, #333c22 0%, #242a16 55%, #1e2312 100%);
+    border: 3px solid var(--contorno); border-radius: var(--raio);
     box-shadow: 0 5px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.13);
     /* the menu bar is protected by `bottom`, not by this: max-height only grows upward,
        so the projects sheet can hold its explanation without reaching the buttons below */
@@ -290,62 +290,62 @@
   .sheet.aberto { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
   .sheetHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .sheetHead .t { font-size: var(--fs-sm); color: var(--gold); text-shadow: 1px 1px 0 var(--ink); }
-  .fechar { padding: 8px 12px; font-size: var(--fs-sm); color: #ffd2cd;
-    background: linear-gradient(180deg, #8c2c3e, #4b1622); }
+  .fechar { padding: 8px 12px; font-size: var(--fs-sm); color: #f2d3b0;
+    background: linear-gradient(180deg, #8a4028, #4a2113); }
 
   /* Buy button and mode buttons wear the poster palette; everything below is the
      jogabilidade pass's new UI and is kept as-is. */
   .btnCompra { width: 100%; padding: 13px 10px; font-size: var(--fs-sm); text-align: left; line-height: 1.5;
-    color: #2a1a06; text-shadow: 0 1px 0 rgba(255,255,255,.4);
-    background: linear-gradient(180deg, #ffe28f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
+    color: #221806; text-shadow: 0 1px 0 rgba(255,255,255,.4);
+    background: linear-gradient(180deg, #f8d98f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
     box-shadow: 0 4px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   /* what a project IS, in two short lines — the owner could not tell from the price alone */
   .explica { font-size: 8px; color: var(--sub); line-height: 1.9; margin-bottom: 8px; }
   .explica.sub { margin: 7px 0 0; }
   .explica b { color: var(--gold); }
-  .explica i { color: #8ef0ad; font-style: normal; }
+  .explica i { color: #b7d16a; font-style: normal; }
   /* how many at once: three fixed targets read faster than a control you have to cycle */
   .selQtd { display: flex; gap: 6px; margin-bottom: 7px; }
   .selQtd button { flex: 1; padding: 10px 4px; font-size: var(--fs-xs); }
-  .selQtd button.ativo { color: #2a1a06;
+  .selQtd button.ativo { color: #221806;
     background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
     box-shadow: 0 3px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   .modo { display: flex; gap: 6px; margin-top: 8px; }
   .modo button { flex: 1; padding: 13px 6px; font-size: var(--fs-sm); }
-  #modoCarvao, #modoLimpo { background: linear-gradient(180deg, #2b3557, #171d33); color: #97a6c6; }
-  #modoCarvao.ativo { background: linear-gradient(180deg, #8c2c3e, #4b1622); color: #ffd2cd; }
-  #modoLimpo.ativo { background: linear-gradient(180deg, #1f7043, #0e3a21); color: #c9f5d4; }
+  #modoCarvao, #modoLimpo { background: linear-gradient(180deg, #3a4324, #242a16); color: #a9a184; }
+  #modoCarvao.ativo { background: linear-gradient(180deg, #8a4028, #4a2113); color: #f2d3b0; }
+  #modoLimpo.ativo { background: linear-gradient(180deg, #5b7a2c, #2c3d16); color: #dbe7b4; }
   .descModo { font-size: 8px; color: var(--sub); margin-top: 8px; line-height: 1.8; }
   .descModo:empty { margin: 0; }
 
   /* the trade, side by side: what you are running now against what switching would do */
   .ritmo { display: flex; gap: 7px; margin-top: 9px; }
-  .rCol { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; border-radius: 7px; padding: 8px 7px; }
+  .rCol { flex: 1 1 0; min-width: 0; border-radius: var(--raioSm); background: linear-gradient(180deg, #232817, #171b0d); border: 2px solid #000; padding: 8px 7px; }
   .rCol.quente { box-shadow: inset 0 0 0 1px var(--bad); }
   .rCol.fria { box-shadow: inset 0 0 0 1px var(--good); }
   .rTit { font-size: 8px; color: var(--sub); margin-bottom: 6px; white-space: nowrap;
     overflow: hidden; text-overflow: clip; }
-  .rCol.quente .rTit { color: #ffb0b0; } .rCol.fria .rTit { color: #b7ffce; }
+  .rCol.quente .rTit { color: #eeae90; } .rCol.fria .rTit { color: #d3e6a2; }
   .rL { display: flex; justify-content: space-between; align-items: baseline; gap: 4px;
     font-size: 8px; color: var(--sub); line-height: 1.95; }
   .rL b { font-size: 9px; font-weight: normal; color: var(--texto); white-space: nowrap; }
-  .rL b.bom { color: #8ef0ad; } .rL b.ruim { color: #ff9d8a; }
+  .rL b.bom { color: #b7d16a; } .rL b.ruim { color: #e39176; }
   .avisoRampa { display: none; font-size: 8px; line-height: 1.9; margin-top: 8px; padding: 6px 7px;
-    color: #ffd7cf; background: #4a1f2b; border: 2px solid var(--bad); }
+    color: #f0d4b8; background: #43241a; border: 2px solid var(--bad); }
   .avisoRampa.mostra { display: block; }
 
-  .barra { height: 10px; background: #000; border: 2px solid var(--ink); margin-top: 6px; }
+  .barra { height: 10px; border-radius: 4px; overflow: hidden; background: #000; border: 2px solid var(--ink); margin-top: 6px; }
   .barra > div { height: 100%; transition: width .3s;
     background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.25) 0 2px, transparent 2px 6px); }
   #barRampa { background-color: var(--good); width: 0%; }
   #barPrestigio { background-color: var(--purple); width: 0%; }
 
-  .upgrade { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, #141b33, #0d1226);
-    border: 2px solid #000; border-radius: 7px; padding: 9px; margin-bottom: 7px; min-height: 54px; }
+  .upgrade { display: flex; align-items: center; gap: 8px; border-radius: var(--raioSm); background: linear-gradient(180deg, #232817, #171b0d);
+    border: 2px solid #000; padding: 9px; margin-bottom: 7px; min-height: 54px; }
   .upgrade .info { flex: 1; }
   .upgrade .nome { font-size: var(--fs-sm); }
   .upgrade .desc { font-size: var(--fs-xs); color: var(--sub); margin-top: 4px; line-height: 1.7; }
-  .upgrade button { padding: 12px 12px; font-size: var(--fs-sm); color: #2a1a06;
+  .upgrade button { padding: 12px 12px; font-size: var(--fs-sm); color: #221806;
     background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
     box-shadow: 0 3px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.5); }
   .upgrade.comprado { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
@@ -354,37 +354,37 @@
   .upgrade.comprado .check { display: block; }
 
   #btnPrestigio, #btnConfirmaSim { width: 100%; padding: 14px 8px; font-size: var(--fs-sm); margin-top: 8px;
-    color: #f3e8ff; background: linear-gradient(180deg, #7f4fd4, #4b2a86); }
+    color: #f6ecd5; background: linear-gradient(180deg, #b98a30, #6d4d15); }
   #btnConfirmaNao { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 7px;
-    color: #b9c8e8; background: linear-gradient(180deg, #2b3557, #171d33); }
+    color: #cfc4a4; background: linear-gradient(180deg, #3a4324, #242a16); }
   .placar { display: flex; gap: 7px; margin-bottom: 8px; }
-  .placar > div { flex: 1; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; border-radius: 7px; padding: 9px; }
+  .placar > div { flex: 1; border-radius: var(--raioSm); background: linear-gradient(180deg, #232817, #171b0d); border: 2px solid #000; padding: 9px; }
   .placar .r { font-size: var(--fs-xs); color: var(--sub); line-height: 1.7; }
   .placar .v { font-size: var(--fs-sm); margin-bottom: 4px; }
   .placar .ganha .v { color: var(--good); }
-  .placar .perde .v { color: #ff9d8a; }
+  .placar .perde .v { color: #e39176; }
   .avisoPrestigio { font-size: var(--fs-xs); color: var(--sub); margin-top: 8px; line-height: 1.8; }
   /* SKILLS: its own surface, in the sheet language, reached from the torch — because the
      torch is where everything you keep lives */
   .btnSkills { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 8px;
-    background: #3a2a5e; border-color: var(--ink); color: #cfa9ff; }
+    background: #3c3a1c; border-color: var(--ink); color: #e0c47a; }
   .btnSkills.tem { box-shadow: 0 4px 0 var(--ink), 0 0 16px rgba(141,91,214,.7); }
   #skillsNota { color: var(--gold); }
   .skillNota { font-size: var(--fs-xs); color: var(--sub); line-height: 1.8; margin-bottom: 9px; }
-  .skillNota.travada { color: #ffd7cf; background: #4a1f2b; border: 2px solid var(--bad); padding: 7px 8px; }
+  .skillNota.travada { color: #f0d4b8; background: #43241a; border: 2px solid var(--bad); padding: 7px 8px; }
   #cardAuto { border-color: var(--purple); }
   #cardAuto.comprado { border-color: var(--purple); box-shadow: inset 0 0 0 1px var(--purple); }
-  #cardAuto .check { color: #cfa9ff; }
+  #cardAuto .check { color: #e0c47a; }
   .focoBar { height: 8px; margin-top: 7px; }
   #barFoco { background-color: var(--purple); width: 0%; }
   #cardAuto.canal { box-shadow: inset 0 0 0 2px var(--purple), 0 0 18px rgba(141,91,214,.6); }
-  #linhaInovacao { display: none; color: #cfa9ff; font-size: var(--fs-xs); margin-top: 8px; }
+  #linhaInovacao { display: none; color: #e0c47a; font-size: var(--fs-xs); margin-top: 8px; }
 
   /* ---- intro / lore ---- */
   #lore { position: fixed; inset: 0; z-index: 50; background: rgba(10,11,20,.92);
     display: flex; align-items: center; justify-content: center; padding: 16px; }
   #lore.escondido { display: none; }
-  .loreBox { background: var(--panel); border: 4px solid var(--ink); border-radius: 14px;
+  .loreBox { border-radius: var(--raio); background: var(--panel); border: 4px solid var(--ink);
     box-shadow: inset 0 0 0 2px var(--panel2), 6px 6px 0 #000; max-width: 440px; padding: 18px 16px; }
   .loreBox h2 { font-size: var(--fs-lg); color: var(--gold); margin-bottom: 12px; text-shadow: 2px 2px 0 var(--ink); }
   #loreArt { display: block; width: 100%; image-rendering: pixelated; border: 3px solid var(--ink);
@@ -411,15 +411,19 @@
   </div>
 </div>
 
+<!-- The board's top bar: one dark rail of counters, and a gear standing apart at its end. -->
 <div id="hudTop">
-  <div class="chip" id="chipTaxa"><canvas class="pi" data-i="bolt" width="12" height="12"></canvas>
-    <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo"><span id="taxa">0</span>/s</div></div></div>
-  <div class="chip" id="chipTime"><canvas class="pi" data-i="tired" width="12" height="12"></canvas>
-    <div class="cInfo"><div class="valor" id="eficiencia">100%</div>
-      <div class="minibar"><div id="barPoluicao"></div></div>
-      <div class="rotulo tend" id="tendencia"></div><span id="poluicao" style="display:none">0</span></div></div>
-  <div class="chip"><canvas class="pi" data-i="leaf" width="12" height="12"></canvas>
-    <div class="cInfo"><div class="valor" id="worldPct">0%</div><div class="rotulo" id="wisChip"></div></div></div>
+  <div id="barraTopo">
+    <div class="chip" id="chipTaxa"><canvas class="pi" data-i="leaf" width="12" height="12"></canvas>
+      <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo"><span id="taxa">0</span>/s</div></div></div>
+    <div class="chip" id="chipTime"><canvas class="pi" data-i="hands" width="12" height="12"></canvas>
+      <div class="cInfo"><div class="valor" id="eficiencia">100%</div>
+        <div class="minibar"><div id="barPoluicao"></div></div>
+        <div class="rotulo tend" id="tendencia"></div><span id="poluicao" style="display:none">0</span></div></div>
+    <div class="chip"><canvas class="pi" data-i="sun" width="12" height="12"></canvas>
+      <div class="cInfo"><div class="valor" id="worldPct">0%</div><div class="rotulo" id="wisChip"></div></div></div>
+  </div>
+  <button id="openConfig" aria-label="stats"><canvas class="pi" data-i="gear" width="12" height="12"></canvas></button>
 </div>
 
 <div id="offline"></div>
@@ -434,16 +438,22 @@
      button beside it, the two things you BUILD with are a stacked pair at the side, and
      the main action takes the whole rest of the block under your thumb. -->
 <div id="controls">
-  <div id="linhaTopo">
-    <button id="openTorch" class="btnIcone" aria-label="torch"><canvas class="pi" data-i="torch" width="12" height="12"></canvas></button>
-    <button id="modeQuick"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas><span
-      class="mq"><b id="modeNome">FAST</b><i id="modeSub"></i></span></button>
+  <div id="painelRua">
+    <div class="pr1"><span class="prT">STREET</span><span class="prV" id="ruaPct">0%</span>
+      <div class="prBar"><div id="barRua"></div></div></div>
+    <div id="ruaSub"></div>
   </div>
-  <div id="linhaMain">
-    <div id="colLado">
-      <button id="openProjects"><canvas class="pi" data-i="house" width="12" height="12"></canvas><b id="nGeradores">0</b><span class="rot">PROJECTS</span></button>
-      <button id="openUpgrades"><canvas class="pi" data-i="up" width="12" height="12"></canvas><span class="rot">UPGRADES</span></button>
-    </div>
+  <div id="cartoes">
+    <button id="modeQuick" class="cartao"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas>
+      <span class="cn" id="modeNome">FAST</span><span class="cv" id="modeSub"></span></button>
+    <button id="openProjects" class="cartao"><canvas class="pi" data-i="house" width="12" height="12"></canvas>
+      <span class="cn">PROJECTS</span><span class="cv" id="nGeradores">0</span></button>
+    <button id="openUpgrades" class="cartao"><canvas class="pi" data-i="up" width="12" height="12"></canvas>
+      <span class="cn">UPGRADES</span><span class="cv" id="upNota">—</span></button>
+    <button id="openTorch" class="cartao"><canvas class="pi" data-i="torch" width="12" height="12"></canvas>
+      <span class="cn">TORCH</span><span class="cv" id="torchNota">0%</span></button>
+  </div>
+  <div id="rail">
     <button id="btnClique"><div id="foco"></div><span id="cargaSuper" class="cs"></span><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
   </div>
 </div>
@@ -1633,7 +1643,7 @@ function mixA(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(
 function rgbS(c) { return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + ")"; }
 // The horizon colour is light in BOTH states — bleached ochre when sick, pale sky when
 // healed. Everything distant washes toward it, which is the value architecture.
-function horizonC(h) { return mixA([220, 213, 198], [208, 242, 255], h); }
+function horizonC(h) { return mixA([220, 213, 198], [226, 233, 216], h); }
 // aerial perspective: dist 0 = at your feet, 1 = dissolved into the horizon
 function longe(c, dist, h) { return rgbS(mixA(c, horizonC(h), dist)); }
 
@@ -1679,110 +1689,138 @@ function palMix(cd, cs, hv, tc) {
   const m = lerp(md, ms, tc) * desb;
   return [cl255(L + ux / un * m), cl255(L + uy / un * m), cl255(L + uz / un * m)];
 }
-// [sick, healed, distance into the haze]
-const PALETA = {
-  nuvB:  [[198, 192, 178], [184, 232, 251], 0],
-  nuvT:  [[224, 218, 205], [255, 255, 255], 0],
-  nuvD:  [[172, 166, 152], [127, 196, 232], 0],
-  serraFar:  [[182, 176, 162], [147, 185, 212], 0.44],
-  serraFarL: [[202, 196, 182], [178, 216, 238], 0.40],
-  serraNear:  [[158, 151, 137], [102, 152, 186], 0.25],
-  serraNearL: [[186, 179, 164], [142, 190, 220], 0.21],
-  cidade:  [[93, 88, 80], [63, 111, 158], 0.24],
-  marcoC:  [[102, 97, 88], [70, 112, 156], 0.19],
-  marcoL:  [[136, 130, 118], [122, 168, 208], 0.15],
-  marcoE:  [[74, 70, 64], [44, 78, 116], 0.25],
-  marcoR:  [[140, 132, 120], [198, 62, 50], 0.18],
-  morro:   [[132, 126, 112], [58, 118, 72], 0.20],
-  traco:   [[118, 112, 100], [82, 62, 52], 0.18],
-  caixa:   [[150, 145, 132], [72, 148, 184], 0.12],
-  // the three green planes, still separated by value at every t
-  mataFar:  [[99, 95, 72], [99, 201, 119], 0.42],
-  mataFarL: [[141, 133, 105], [143, 221, 152], 0.36],
-  mataFarK: [[76, 74, 60], [46, 118, 82], 0.21],
-  mataMid:  [[74, 72, 56], [47, 156, 92], 0.20],
-  mataMidL: [[123, 117, 92], [104, 190, 127], 0.17],
-  mataMidK: [[48, 47, 40], [24, 76, 56], 0.10],
-  mataNear:  [[58, 56, 44], [28, 107, 66], 0.04],
-  mataNearL: [[109, 103, 80], [90, 160, 105], 0.03],
-  mataNearK: [[34, 33, 28], [14, 50, 38], 0.02],
-  rodape:  [[70, 66, 52], [18, 74, 46], 0],
-  trilha:  [[168, 156, 128], [216, 184, 120], 0],
-  trilhaL: [[196, 186, 158], [244, 216, 150], 0],
-  sulcoA:  [[136, 126, 102], [176, 142, 88], 0],
-  sulcoB:  [[222, 214, 192], [255, 238, 194], 0],
-  gramaA:  [[99, 78, 56], [66, 158, 100], 0],
-  gramaB:  [[84, 65, 46], [52, 132, 84], 0],
-  folha:   [[70, 54, 40], [46, 155, 84], 0],
-  agua:    [[68, 64, 58], [58, 168, 216], 0],
-  aguaFundo: [[52, 43, 33], [44, 80, 50], 0],
-  aguaRef: [[50, 46, 52], [38, 104, 72], 0.10],
-  brilho:  [[126, 122, 114], [176, 220, 255], 0],
-  junco:   [[60, 50, 36], [34, 106, 60], 0],
-  frenteC: [[74, 68, 52], [20, 68, 44], 0],
-  frenteL: [[104, 96, 74], [44, 110, 62], 0]
+// ---------- THE BOARD'S PALETTE ----------
+// Sampled off the approved art board's own PALETA strip, which names six families:
+//   TERRA  #512d0c #804411 #9d561c #b9732c
+//   FOLHAS #3e4721 #525d2a #767f34 #979a46
+//   ÁGUA   #54827d #71a39c #dad8c0
+//   CÉU    #567c8f #87a7ab
+//   LUZ    #fde79d #e3b970 #a88148 #5c421f
+//   ACENTO #22190d #482f19 #5c3b1f #da7a29 #f3a03d
+// Everything below is authored inside those families. The board is the HEALED end of the
+// arc; the sick end is derived from it by `desbotar()` instead of being written by hand, so
+// the bleach is one rule applied uniformly rather than forty independent guesses. Value is
+// preserved and lifted (smoke scatters light: a sick world is too bright, never dark) and
+// the residual tint is the board's warm LUZ ochre.
+const PB = {
+  terra: [[81, 45, 12], [128, 68, 17], [157, 86, 28], [185, 115, 44]],
+  folha: [[62, 71, 33], [82, 93, 42], [118, 127, 52], [151, 154, 70]],
+  agua:  [[84, 130, 125], [113, 163, 156], [218, 216, 192]],
+  ceu:   [[86, 124, 143], [135, 167, 171]],
+  luz:   [[253, 231, 157], [227, 185, 112], [168, 129, 72], [92, 66, 31]],
+  acento: [[34, 25, 13], [72, 47, 25], [92, 59, 31], [218, 122, 41], [243, 160, 61]]
 };
-// the hillside is authored as families, so it keeps its own loop
-const MORRO_PAREDE = [[226, 162, 56], [58, 176, 202], [226, 108, 76], [236, 214, 172], [136, 196, 70], [206, 96, 146]];
-const MORRO_LUZ = [[252, 200, 108], [110, 216, 236], [252, 156, 122], [255, 244, 214], [186, 232, 118], [240, 152, 190]];
-const MORRO_TELHA = [[184, 74, 48], [162, 88, 58], [154, 68, 50]];
-const MORRO_TELHAL = [[222, 110, 74], [204, 126, 88], [198, 102, 78]];
-const MORRO_CINZA = [154, 148, 132], MORRO_CINZAT = [140, 133, 118];
-// ---------- THE RHYTHM, AS WEATHER ----------
-// GO FAST and GO STEADY were a HUD readout and nothing else: the scene was pixel-identical
-// either way, so the one decision this prototype exists to measure had no consequence you
-// could SEE. It does now, and it is weather, not a colour grade — the air in front of a
-// world being pushed is thick, hot and full of cinders, and the air in front of a world
-// being tended is clear and full of living things.
-//
-// Two rules keep it from stealing the show:
-//   · the sick->healed arc stays dominant. The rhythm only ever adds warm haze, and it adds
-//     it IN PROPORTION TO DISTANCE — the near plane barely moves, the horizon takes most of
-//     it. That is aerial perspective thickening, which is the physically true reading of
-//     dirty air, and it means the value separation between the near planes (the whole
-//     architecture) survives at every t. A healed world in GO FAST still reads healed.
-//   · GO STEADY is the world exactly as authored. It does not get a second look of its own;
-//     it gets more life in it. "Better" here means "nothing is in the way".
-// `ritmoV` eases across ~1.1s so the switch is a change of weather you watch arrive, and it
-// is quantised to eight steps before it reaches any bake key, so the sky and the ground are
-// re-baked at most eight times per switch instead of once a frame.
-const HAZE_FAST = [236, 176, 96];        // hot, opaque, and lighter than what it covers
-let ritmoV = 0, ritmoUlt = null, ritmoT = 0, ritmoVirou = 0;
-function ritmoPasso() {
-  const agora = performance.now();
-  const primeira = !ritmoT;
-  const dt = primeira ? 0 : Math.min(0.1, (agora - ritmoT) / 1000);
-  ritmoT = agora;
-  const modo = (typeof S !== "undefined" && S.modo) || "limpo";
-  const alvo = modo === "carvao" ? 1 : 0;
-  if (ritmoUlt !== null && ritmoUlt !== modo) ritmoVirou = 1;   // one-shot: the air turns over
-  ritmoUlt = modo;
-  // Reopening the game in GO FAST must not show a clear sky for a second while the ease
-  // catches up: the very first frame arrives in whatever weather the save was left in.
-  if (primeira) ritmoV = alvo;
-  if (dt) {
-    const k = 1 - Math.pow(0.02, dt / 1.1);
-    ritmoV += (alvo - ritmoV) * k;
-    if (Math.abs(alvo - ritmoV) < 0.004) ritmoV = alvo;
-    ritmoVirou = Math.max(0, ritmoVirou - dt / 1.4);
-  }
-  return ritmoV;
+// the bleach: luma kept and lifted, chroma dropped to a memory of warm ochre
+function desbotar(c) {
+  const L = lumaOf(c), g = L * 0.66 + 74;
+  return [cl255(g * 1.035), cl255(g * 0.995), cl255(g * 0.905)];
 }
-function ritmoQ() { return Math.round(ritmoV * 8) / 8; }
+// [healed, distance into the haze] — the sick end is computed
+const PALETA_BASE = {
+  nuvB:  [[224, 235, 240], 0],
+  nuvT:  [[255, 253, 242], 0],
+  nuvD:  [[176, 200, 210], 0],
+  serraFar:  [[124, 152, 158], 0.44],
+  serraFarL: [[158, 182, 182], 0.40],
+  serraNear:  [[86, 118, 124], 0.25],
+  serraNearL: [[122, 154, 152], 0.21],
+  cidade:  [[92, 120, 134], 0.24],
+  marcoC:  [[104, 120, 130], 0.19],
+  marcoL:  [[150, 168, 172], 0.15],
+  marcoE:  [[64, 78, 88], 0.25],
+  marcoR:  [[176, 82, 46], 0.18],
+  morro:   [[80, 98, 50], 0.20],
+  traco:   [[92, 59, 31], 0.18],
+  caixa:   [[113, 163, 156], 0.12],
+  // the three green planes, still separated by value at every t
+  mataFar:  [[118, 143, 66], 0.42],
+  mataFarL: [[158, 172, 90], 0.36],
+  mataFarK: [[66, 88, 44], 0.21],
+  mataMid:  [[86, 112, 50], 0.20],
+  mataMidL: [[126, 148, 66], 0.17],
+  mataMidK: [[44, 60, 32], 0.10],
+  mataNear:  [[58, 84, 40], 0.04],
+  mataNearL: [[98, 124, 54], 0.03],
+  mataNearK: [[28, 40, 24], 0.02],
+  rodape:  [[34, 46, 24], 0],
+  // the street: warm stone, TERRA/LUZ, never green — the board's cobbles
+  trilha:  [[168, 148, 116], 0],
+  trilhaL: [[206, 188, 152], 0],
+  sulcoA:  [[126, 104, 76], 0],
+  sulcoB:  [[236, 222, 188], 0],
+  gramaA:  [[104, 126, 56], 0],
+  gramaB:  [[80, 100, 44], 0],
+  folha:   [[118, 143, 66], 0],
+  agua:    [[84, 130, 125], 0],
+  aguaFundo: [[44, 74, 72], 0],
+  aguaRef: [[64, 104, 100], 0.10],
+  brilho:  [[218, 216, 192], 0],
+  junco:   [[66, 92, 42], 0],
+  frenteC: [[34, 48, 24], 0],
+  frenteL: [[64, 84, 36], 0]
+};
+const PALETA = {};
+for (const k in PALETA_BASE) {
+  PALETA[k] = [desbotar(PALETA_BASE[k][0]), PALETA_BASE[k][0], PALETA_BASE[k][1]];
+}
+// the hillside is authored as families, so it keeps its own loop.
+// Board walls: ochre, cream, terracotta, sage, pale ÁGUA, dusty rose — the painted
+// neighbourhood of the CENÁRIOS strip, not the saturated favela of the old poster pass.
+const MORRO_PAREDE = [[198, 152, 88], [216, 198, 154], [176, 104, 62], [140, 152, 102], [126, 154, 158], [186, 130, 106]];
+const MORRO_LUZ = [[230, 190, 120], [246, 232, 194], [212, 142, 92], [174, 186, 132], [166, 190, 194], [216, 164, 140]];
+const MORRO_TELHA = [[150, 74, 44], [132, 68, 40], [142, 80, 48]];
+const MORRO_TELHAL = [[188, 102, 62], [168, 94, 56], [180, 106, 66]];
+const MORRO_CINZA = [154, 148, 132], MORRO_CINZAT = [140, 133, 118];
+// ---------- LUZ & ATMOSFERA: the four times of day ----------
+// The board devotes a whole strip to them — MANHÃ, TARDE, PÓS-CHUVA, NOITE — and they are
+// four different pictures of the same street, not four filters over one. So the light is
+// NOT a wash laid over the finished frame (the direction has no post-processing and a flat
+// overlay greys everything it touches): it is folded into the palette at the point the
+// palette is resolved, and into the sky ramp at the point the sky is baked. Every colour in
+// the world is therefore authored under that light, which is what the thumbnails show.
+//
+// It runs on the clock and on nothing else. It must not read the economy: the sick→healed
+// arc already runs on saturation and hanging a second meaning on the same pixels would make
+// both unreadable. One full day is CFG-free scenery, four minutes long.
+const HORAS = [
+  { nome: "MANHÃ", ceu: [[92, 138, 166], [122, 164, 182], [158, 190, 190], [196, 214, 198], [228, 232, 214]],
+    tinta: [232, 236, 214], forca: 0.05, escala: 1.02, escuro: 0 },
+  { nome: "TARDE", ceu: [[104, 110, 150], [168, 126, 124], [214, 154, 96], [236, 190, 124], [246, 222, 176]],
+    tinta: [246, 168, 84], forca: 0.24, escala: 0.95, escuro: 0.10 },
+  { nome: "PÓS-CHUVA", ceu: [[46, 72, 96], [70, 100, 120], [96, 128, 140], [140, 166, 168], [186, 204, 196]],
+    tinta: [150, 180, 196], forca: 0.18, escala: 0.86, escuro: 0.45 },
+  { nome: "NOITE", ceu: [[14, 24, 44], [20, 34, 58], [32, 50, 76], [50, 72, 96], [78, 100, 112]],
+    tinta: [46, 66, 110], forca: 0.34, escala: 0.44, escuro: 1 }
+];
+const DIA_SEG = 240;                        // one full turn of the four, in seconds
+let relogio = 0;                            // advanced by the frame loop, in seconds
+function horaAgora() {
+  const t = (relogio / DIA_SEG) % 1 * HORAS.length;
+  const i = Math.floor(t), f = t - i;
+  const s = f * f * (3 - 2 * f);            // smoothstep: the turn, not a cut
+  return { a: HORAS[i % HORAS.length], b: HORAS[(i + 1) % HORAS.length], f: s };
+}
+// how dark it is right now, 0..1 — what makes windows and street lamps come on
+function escuridao() { const q = horaAgora(); return lerp(q.a.escuro, q.b.escuro, q.f); }
+// the light applied to one already-resolved colour
+function luzDoDia(c) {
+  const q = horaAgora();
+  const esc = lerp(q.a.escala, q.b.escala, q.f), forca = lerp(q.a.forca, q.b.forca, q.f);
+  const tin = mixA(q.a.tinta, q.b.tinta, q.f);
+  return mixA([cl255(c[0] * esc), cl255(c[1] * esc), cl255(c[2] * esc)], tin, forca);
+}
+// quantised so the palette and the sky re-bake a handful of times a minute, not every frame
+function horaKey() { return Math.round((relogio / DIA_SEG) % 1 * 96); }
+
 let palCache = null, palKey = -1;
 function pal(h) {
-  const rq = ritmoQ();
-  const passo = Math.round(h * 96);
-  const key = passo + rq * 1000;                  // health step and rhythm step, one cache key
+  const key = Math.round(h * 96) * 128 + horaKey();
   if (palCache && palKey === key) return palCache;
   palKey = key;
-  const hv = passo / 96, tc = Math.pow(hv, 0.78); // chroma leads value a little: colour is the reward
-  const horiz = horizonC(hv);
-  const P = { _h: hv, _r: rq };
-  // the rhythm rides on the distance each entry already carries: 6% of haze at your feet,
-  // up to ~38% at the ridge line, so the middle distance thickens and the near band holds
-  const puxa = function (c, dist) { return rq ? mixA(c, HAZE_FAST, rq * (0.06 + 0.66 * dist)) : c; };
-  const resolva = function (e) { return puxa(mixA(palMix(e[0], e[1], hv, tc), horiz, e[2]), e[2]); };
+  const hv = Math.round(h * 96) / 96, tc = Math.pow(hv, 0.78);   // chroma leads value a little
+  const horiz = luzDoDia(horizonC(hv));
+  const P = { _h: hv };
+  const resolva = function (e) { return luzDoDia(mixA(palMix(e[0], e[1], hv, tc), horizonC(hv), e[2])); };
   for (const k in PALETA) { const c = resolva(PALETA[k]); P[k + "A"] = c; P[k] = rgbS(c); }
   // thick air eats the bright strip on the horizon: the band is the value architecture, so
   // it is dimmed rather than moved, and it comes straight back when you go steady
@@ -1790,7 +1828,7 @@ function pal(h) {
   // the hillside families, sick end shared so a bleached favela is one grey mass with the
   // faintest memory of paint in it — which is exactly what a bleached photograph looks like
   const fam = function (arr, cinza, dist) {
-    return arr.map(function (c) { return rgbS(puxa(mixA(palMix(cinza, c, hv, tc), horiz, dist), dist)); });
+    return arr.map(function (c) { return rgbS(luzDoDia(mixA(palMix(cinza, c, hv, tc), horizonC(hv), dist))); });
   };
   P.parede = fam(MORRO_PAREDE, MORRO_CINZA, 0.14);
   P.paredeL = fam(MORRO_LUZ, MORRO_CINZA, 0.12);
@@ -1816,19 +1854,26 @@ function sombra(cxp, y, w, a) {
 // works on a phone at 30% brightness, outdoors, in half a second. No dithering, no bloom,
 // no colour grade, no vignette: fidelity here comes from form and chroma, and every one of
 // those effects was working against it.
-const CEU_SAO = [[31, 143, 216], [63, 171, 230], [108, 203, 240], [168, 228, 248], [216, 244, 255]];
-const CEU_DOENTE = [[154, 148, 136], [170, 164, 151], [187, 181, 167], [203, 197, 182], [220, 213, 198]];
+// The board's CÉU: a medium slate-blue at the zenith washing down to a warm pale band at
+// the rooftops. Not the poster's electric cyan — the street is lit by afternoon, not neon.
+const CEU_SAO = [[70, 118, 156], [92, 143, 172], [130, 172, 186], [180, 205, 202], [226, 233, 216]];
+const CEU_DOENTE = CEU_SAO.map(desbotar);
 function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the horizon
   const f = Math.min(0.999, Math.max(0, t)) * (CEU_SAO.length - 1);
   const i = Math.floor(f), k = f - i, tc = Math.pow(h, 0.78);
-  return mixA(palMix(CEU_DOENTE[i], CEU_SAO[i], h, tc), palMix(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h, tc), k);
+  const base = mixA(palMix(CEU_DOENTE[i], CEU_SAO[i], h, tc), palMix(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h, tc), k);
+  // ...and then the hour. The sky is where the four light states are most of the picture,
+  // so it takes its OWN ramp per hour rather than a tint over the midday one — a sunset is
+  // not noon with orange on it. Health still decides how much colour survives the smoke.
+  const q = horaAgora();
+  const hora = mixA(mixA(q.a.ceu[i], q.a.ceu[i + 1], k), mixA(q.b.ceu[i], q.b.ceu[i + 1], k), q.f);
+  return mixA(base, hora, 0.30 + 0.55 * h);
 }
 // The sky is baked and rebuilt only when world health moves a step, so a normal frame is
 // one drawImage. Without the dither it is also two thirds cheaper to bake.
 let skyCv = null, skyKey = "";
 function skyCanvas(h) {
-  const rq = ritmoQ();
-  const key = W + "," + GROUND + "," + Math.round(h * 48) + "," + rq;
+  const key = W + "," + GROUND + "," + Math.round(h * 48) + "," + horaKey();
   if (skyCv && skyKey === key) return skyCv;
   if (!skyCv) skyCv = document.createElement("canvas");
   skyCv.width = W; skyCv.height = GROUND + 2;
@@ -1854,15 +1899,24 @@ function skyCanvas(h) {
       if (w > 0) g.fillRect(sunX - w, sunY + y, w * 2, 1);
     }
   };
-  // In GO FAST you are looking at it through the air you are making: the corona swells and
-  // goes orange while the disc itself dulls, which is what a sun in smoke actually does.
-  const gl = rgbS(mixA([255, 236, 150], [255, 170, 74], rq));
-  const gl2 = rgbS(mixA([255, 240, 168], [255, 186, 92], rq));
-  g.globalAlpha = 0.16 + 0.22 * h + 0.20 * rq; disco(rgbS(mixA([226, 220, 204], gl, h)), r + 5 + Math.round(rq * 6));
-  g.globalAlpha = 0.34 + 0.30 * h + 0.16 * rq; disco(rgbS(mixA([230, 224, 208], gl2, h)), r + 2 + Math.round(rq * 3));
+  const qH = horaAgora(), noite = lerp(qH.a.escuro, qH.b.escuro, qH.f);
+  const sunC = function (a, b) { return rgbS(luzDoDia(mixA(a, b, h))); };
+  g.globalAlpha = (1 - noite) * (0.16 + 0.22 * h); disco(rgbS(mixA([226, 220, 204], [255, 236, 150], h)), r + 5);
+  g.globalAlpha = (1 - noite) * (0.34 + 0.30 * h); disco(rgbS(mixA([230, 224, 208], [255, 240, 168], h)), r + 2);
+  g.globalAlpha = 1 - noite * 0.94;
+  disco(sunC([216, 208, 188], [255, 228, 136]), r);
+  disco(sunC([228, 222, 206], [255, 252, 232]), Math.max(2, r - 3));
   g.globalAlpha = 1;
-  disco(rgbS(mixA(mixA([216, 208, 188], [255, 228, 136], h), [246, 198, 118], rq)), r);
-  disco(rgbS(mixA(mixA([228, 222, 206], [255, 252, 232], h), [255, 226, 166], rq)), Math.max(2, r - 3));
+  if (noite > 0.5) {          // and when it has gone, the stars the board hangs over NOITE
+    const nn = (noite - 0.5) * 2;
+    for (let st = 0; st < 26; st++) {
+      const sxx = Math.round(hash01(st * 13 + 1) * W);
+      const syy = Math.round(hash01(st * 29 + 5) * GROUND * 0.7);
+      g.globalAlpha = nn * (0.30 + hash01(st * 7 + 3) * 0.6);
+      g.fillStyle = "#e8eef0"; g.fillRect(sxx, syy, 1, 1);
+    }
+    g.globalAlpha = 1;
+  }
   return skyCv;
 }
 
@@ -1872,16 +1926,17 @@ function skyCanvas(h) {
 let chaoCv = null, chaoKey = "";
 function chaoCanvas(h) {
   const alt = H - GROUND;
-  const rq = ritmoQ();
-  const key = W + "," + alt + "," + Math.round(h * 48) + "," + rq;
+  const key = W + "," + alt + "," + Math.round(h * 48) + "," + horaKey();
   if (chaoCv && chaoKey === key) return chaoCv;
   if (!chaoCv) chaoCv = document.createElement("canvas");
   chaoCv.width = W; chaoCv.height = alt;
   chaoKey = key;
   const g = chaoCv.getContext("2d");
   const tc = Math.pow(h, 0.78);
-  const perto = palMix([90, 80, 64], [23, 84, 55], h, tc);     // at your feet
-  const longeC = palMix([138, 128, 104], [55, 151, 90], h, tc); // where it meets the path
+  // The board's street is COBBLE, not lawn: TERRA and LUZ warm stone under the feet, going
+  // a value lighter and a touch greener where the plants crowd in at the path's edge.
+  const perto = palMix(desbotar([124, 104, 76]), [124, 104, 76], h, tc);   // at your feet
+  const longeC = palMix(desbotar([168, 148, 116]), [168, 148, 116], h, tc); // where it meets the path
   for (let y = 0; y < alt; y++) {
     const t = Math.pow(y / alt, 0.62);
     let c = mixA(longeC, perto, t);
@@ -1984,36 +2039,46 @@ function hash01(k) { // deterministic 0..1 per world segment
 
 // ---- pixel icons (no emoji, no text) ----
 const ICONS = {
-  bolt: { pal: { X: "#ffcd75" }, map: [
+  bolt: { pal: { X: "#eba748" }, map: [
     "......XX....", ".....XXX....", "....XXX.....", "...XXXX.....", "..XXXXXXX...", ".....XXX....",
     "....XXX.....", "...XXX......", "..XXX.......", ".XXX........", ".XX.........", "............"] },
-  tired: { pal: { K: "#94b0c2", X: "#b13e53" }, map: [
+  tired: { pal: { K: "#a9a184", X: "#b8503c" }, map: [
     "............", "............", ".KKKKKKKKK..", ".K.......K..", ".K.XX....KK.", ".K.XX....KK.",
     ".K.......K..", ".KKKKKKKKK..", "............", "............", "............", "............"] },
-  leaf: { pal: { X: "#38b764", K: "#1f6e40" }, map: [
+  leaf: { pal: { X: "#767f34", K: "#3e4721" }, map: [
     "............", ".......XXX..", ".....XXXXX..", "....XXXXXX..", "...XXXXXXX..", "..XXXXXXX...",
     "..XXXXXX....", "..XXXXX.....", "...KXX......", "...K........", "..K.........", "............"] },
-  house: { pal: { X: "#c9a86a", K: "#10121c", W: "#ffe08a" }, map: [
+  house: { pal: { X: "#b9732c", K: "#14170c", W: "#fde79d" }, map: [
     "............", ".....KK.....", "....KXXK....", "...KXXXXK...", "..KXXXXXXK..", ".KKKKKKKKKK.",
     ".KXXXXXXXXK.", ".KXWWXXWWXK.", ".KXWWXXWWXK.", ".KXXXXXXXXK.", ".KKKKKKKKKK.", "............"] },
-  up: { pal: { X: "#ffcd75" }, map: [
+  up: { pal: { X: "#eba748" }, map: [
     "............", ".....XX.....", "....XXXX....", "...XXXXXX...", "..XXXXXXXX..", ".XXXXXXXXXX.",
     "....XXXX....", "....XXXX....", "....XXXX....", "....XXXX....", "............", "............"] },
   // A wooden stick with a burning rag on it is a dungeon prop, and this game is a street in
   // 2026. Same meaning — the thing you keep and hand on — as a modern emblem: a flame inside
   // a badge, in the purple the torch sheet and the skills already use.
-  torch: { pal: { X: "#ef7d57", W: "#ffcd75", K: "#2b1f4a", G: "#8d5bd6" }, map: [
+  torch: { pal: { X: "#da7a29", W: "#eba748", K: "#3a2712", G: "#96682f" }, map: [
     "............", "...GGGGGG...", "..GKKKKKKG..", ".GKK.WW.KKG.", ".GK.WWWW.KG.", ".GK.WXXW.KG.",
     ".GKWXXXXWKG.", ".GKWXWWXWKG.", "..GKWXXWKG..", "...GGGGGG...", "............", "............"] },
-  flame: { pal: { X: "#ef7d57", W: "#ffcd75" }, map: [
+  // ---- the board's ÍCONES sheet: a sun, hands over a bowl, a gear ----
+  sun: { pal: { W: "#fde79d", X: "#eba748", O: "#da7a29" }, map: [
+    "............", "....O..O....", "..O.XXXX.O..", "....XWWX....", "..OXWWWWXO..", "..OXWWWWXO..",
+    "....XWWX....", "..O.XXXX.O..", "....O..O....", "............", "............", "............"] },
+  hands: { pal: { S: "#a9743f", s: "#c08a52", G: "#525d2a", W: "#767f34" }, map: [
+    "............", "...SS..ss...", "..SSSS.sss..", "..SSSS.sss..", "...SS...ss..", "..GGGGGGGG..",
+    ".GWGGGGGGWG.", ".GGGGGGGGGG.", ".GGGGGGGGGG.", "..GG....GG..", "..GG....GG..", "............"] },
+  gear: { pal: { X: "#eba748", K: "#3c4627" }, map: [
+    "............", "...X.XX.X...", "...XXXXXX...", ".XXXXKKXXXX.", "..XXXKKXXX..", ".XXKK..KKXX.",
+    ".XXKK..KKXX.", "..XXXKKXXX..", ".XXXXKKXXXX.", "...XXXXXX...", "...X.XX.X...", "............"] },
+  flame: { pal: { X: "#da7a29", W: "#eba748" }, map: [
     "............", ".....X......", "....XX......", "....XXX.....", "...XXXXX....", "...XWXXX....",
     "..XWWXXX....", "..XWWWXX....", "...XWWX.....", "....XX......", "............", "............"] },
   // key stays `sword` because the markup names it; what it draws is the wand. Its star is
   // white-cored with a green halo, the same magic colours the wand uses in the world, and
   // green is the one hue that still reads on cream chrome AND on the yellow action button.
-  sword: { pal: { W: "#fffce8", G: "#6fdd94", B: "#9a6f42", R: "#c3a878" }, map: [
-    "........W...", "......G.W.G.", ".......WWW..", "....GWWWWWG.", ".......WWW..", "......G.B.G.",
-    "......BB....", ".....BB.....", "....RB......", "...RR.......", "..BR........", "............"] }
+  sword: { pal: { W: "#fffce8", G: "#eba748", L: "#767f34", B: "#6d4620", O: "#da7a29" }, map: [
+    "....L.......", "...LGGGL....", "..LG...GL...", "..G..W..G.L.", "..G.WWW.G.L.", "..G..W..GL..",
+    "..LG...GL...", "...LGGGL....", "....BB......", "...OB.......", "..BO........", "..B........."] }
 };
 function renderIcon(cnv, name) {
   const ic = ICONS[name]; if (!ic || !cnv) return;
@@ -2209,14 +2274,17 @@ const IPE_MAP = [
 // Three authored states rather than a lerp, because "bare → budding → full bloom" is a
 // story and an interpolation is a smear. The pale pair is the bloom half-way through, sun-
 // bleached toward the ochre the whole sick palette runs on.
-const IPE_AMARELO = { K: "#6b4410", D: "#c4870d", B: "#f0ad14", H: "#ffd247", W: "#fff2ab" };
-const IPE_ROSA = { K: "#5e2440", D: "#bf5480", B: "#e77aa6", H: "#f6a4c6", W: "#ffd8e8" };
-const IPE_AMARELO_PAL = { K: "#8e7652", D: "#ba9851", B: "#d0ab54", H: "#d8bd6e", W: "#d8cd9f" };
-const IPE_ROSA_PAL = { K: "#87666a", D: "#b87e8a", B: "#cc919d", H: "#d3a6ad", W: "#d8c0be" };
-const TREE_PAL = { K: "#12331f", D: "#1c5c38", B: "#2e9b54", H: "#4fc272", W: "#8ff0ad" };
-const TREE_PAL2 = { K: "#16301a", D: "#256030", B: "#3aa14c", H: "#61c86c", W: "#9df0a4" };
-const PINE_PAL = { K: "#0d2a1a", D: "#175030", B: "#227a44", H: "#3aa25e", W: "#6fdd94" };
-const PINE_PAL2 = { K: "#0f2a22", D: "#19553c", B: "#238050", H: "#3da86e", W: "#78e0a8" };
+// The ipê keeps its two flowering colours — they are the one place the board lets a hue in
+// that is not TERRA or FOLHAS — but pulled onto the board's ACENTO orange and a dustier rose.
+const IPE_AMARELO = { K: "#5c421f", D: "#c8891f", B: "#e8a52e", H: "#f3a03d", W: "#fde79d" };
+const IPE_ROSA = { K: "#5e2b3a", D: "#b4667e", B: "#cf8399", H: "#e0a8b8", W: "#f2d2dc" };
+const IPE_AMARELO_PAL = { K: "#8e7652", D: "#b89a5e", B: "#cbae66", H: "#d8bf80", W: "#e0d3a8" };
+const IPE_ROSA_PAL = { K: "#87666a", D: "#b2848c", B: "#c4959c", H: "#d0a8ad", W: "#dcc2c0" };
+// FOLHAS, four steps, exactly as the board's leaf swatches run
+const TREE_PAL = { K: "#2b3418", D: "#3e4721", B: "#525d2a", H: "#767f34", W: "#979a46" };
+const TREE_PAL2 = { K: "#26301a", D: "#3a4623", B: "#4d5a2c", H: "#6d7c38", W: "#8f9850" };
+const PINE_PAL = { K: "#232c16", D: "#36401e", B: "#485327", H: "#667030", W: "#8a9040" };
+const PINE_PAL2 = { K: "#212c1c", D: "#334224", B: "#45572e", H: "#607238", W: "#849448" };
 
 let mobs = [];
 function drawMobs(smog) {
@@ -2254,19 +2322,19 @@ function drawMobs(smog) {
 // The postcard is only 128x42, so it keeps its own compact cuts of the hero and the smog
 // blob: the full-size sprites would fill two thirds of the frame on their own.
 const HERO_MINI = [
-  "...KKKK...",
-  "..KRRrrKK.",
-  ".KdRRrrrRK",
-  ".Kbbbbbbbb",
-  ".KhaSSssK.",
+  "..KKKKK...",
+  ".KhhHHttK.",
+  "KhFhHHtttK",
+  "KhhaSSsHtK",
   ".KhaSeSsK.",
   ".KhaSSssK.",
   "..KnnnnK..",
-  "..KjJLLK..",
-  ".KjJGJLlK.",
-  ".KjJGJLlK.",
-  ".KjJJJLlK.",
-  "..KiiiiK.."
+  ".KWWwwWWK.",
+  ".KWwGGwWK.",
+  ".KWoGGoWK.",
+  "..KwGGwK..",
+  "..KGGGGK..",
+  "..KooooK.."
 ];
 const SMOG_MINI = { pal: { X: "#7a7288", K: "#10121c", D: "#5c5568" }, map: [
   ".XXXXXX..", "XXXXXXXX.", "XKXXXKXX.", "XXXXXXXX.", "XDXDXDXD.", ".XXXXXX.."] };
@@ -2323,41 +2391,50 @@ function drawLoreArt() {
 // read as crude. He is now on the same grid as the world — twice the pixels, half the size
 // — and the extra resolution is spent on shading. One light direction: the sun sits up and
 // to the right, so every material gets a lit right/top rim, a base, and a shaded left side.
+// ---------- THE KID FROM THE BOARD ----------
+// He is not the red-cap, blue-jacket runner any more. The board's PERSONAGEM PRINCIPAL is a
+// dark-skinned child with a big round crown of curly hair that has leaves and little orange
+// flowers growing in it, wearing a cream embroidered poncho over a fringed green outfit and
+// sandals. Every colour below is out of the board's own families: skin and wood on TERRA,
+// the outfit on FOLHAS, the poncho on LUZ's cream end, the embroidery and the beads on
+// ACENTO orange. The silhouette is deliberately WIDE at the head and narrow at the ankles —
+// the hair is the read, at any size, and that is what makes him recognisable at 22 px.
 const HERO_COLORS = {
-  K: "#0e0f18",                                             // outline
-  r: "#f2798d", R: "#c9455c", d: "#9c3346", b: "#6d2233",   // cap: rim / base / shade / brim
-  s: "#ffeacd", S: "#f6cfa2", a: "#d8a87e", n: "#a97a58",   // skin
-  h: "#40252c", e: "#17141f",                               // hair, eye
-  l: "#9ad8ff", L: "#57b0ff", J: "#2f8be0", j: "#1f63ad", i: "#12406f", // jacket
-  G: "#ffcd75", W: "#e8edf6"
+  K: "#14170c",                                             // outline
+  h: "#231708", H: "#4a3018", t: "#75491f",                 // hair: shade / base / sunlit rim
+  F: "#f3a03d", o: "#da7a29", L: "#767f34",                 // flowers, embroidery, leaves
+  s: "#c08a52", S: "#a9743f", a: "#8a5a2e", n: "#6d431f",   // skin: rim / base / shade / deep
+  e: "#1f1409",                                             // eye
+  W: "#f0e6c8", w: "#d8cba6", v: "#b3a47f",                 // poncho: lit / base / shade
+  G: "#525d2a", g: "#3e4721", y: "#767f34"                  // the green outfit under it
 };
-const HERO_MAP = [ // 22x26: red cap, face, blue jacket — facing right, lit from the right
-  ".........KKKK.........",
-  ".......KKRRrrKK.......",
-  "......KdRRRrrrRK......",
-  ".....KdRRRRrrrrRK.....",
-  ".....KdRRRRRrrrRK.....",
-  "....KbbbbbbbbbbdddK...",
-  ".....KhaSSSSSssK......",
-  ".....KhaSSSSSssK......",
-  ".....KhaSSeSSssK......",
-  ".....KhaSSeSSssK......",
-  ".....KhaSSSSSsssK.....",
-  ".....KaaSSSSSssK......",
-  "......KnaSSSsnK.......",
-  ".......KnnnnnK........",
-  "....KKjJJJJLLLLlKK....",
-  "...KjjJWWWWLLLLlK.....",
-  "...KjJJJWWLLLLLlK.....",
-  "...KjJJJJJLLLLLlK.....",
-  "...KjJJJJJLLLLLlK.....",
-  "...KjJJGGJLLLLLlK.....",
-  "...KjJJGGJLLLLLlK.....",
-  "...KjJJJJJLLLLLlK.....",
-  "....KjJJJJJLLLLlK.....",
-  "....KiiJJJJJLLlK......",
-  "....KiiiJJJJLLlK......",
-  "....KKiiiiiiiiKK......"
+const HERO_MAP = [ // 22x26 — head and body; the legs and the arms are drawn under this
+  "......KKKKKK..........",
+  "....KKhhHHHHtKK.......",
+  "..KKhhhHHHHHHttKK.....",
+  ".KhhFhhHHHHHHHtttFK...",
+  ".KhhhhhHHHHHHHtttttK..",
+  ".KhhhhhHHHHHHHtttttK..",
+  ".KhLhhaSSSSsssHtttFK..",
+  ".KhhhhaSSeSsssHHttK...",
+  ".KhhhhaSSeSsssHHttK...",
+  ".KhFhhaSSSSsssKHHtK...",
+  "..KhhhaSSSSsssK..KK...",
+  "...KhhaaSSSssK........",
+  ".....KaaSSssK.........",
+  "......KnnSnK..........",
+  "...KKKKnnnnKKKKK......",
+  "..KWWWWvwwwwWWWWK.....",
+  "..KWWWvwGGGwvWWWWK....",
+  "..KWoWvwGGGwvWoWWK....",
+  "..KWWWvwwGwwvWWWWK....",
+  "..KWWWvwwGwwvWWWWK....",
+  "..KWoWvwoooowvWoWK....",
+  "...KKWvwwGwwvWKKK.....",
+  "....KwwGGGGGwwK.......",
+  "....KwGGGGGGGwK.......",
+  "....KoGGGGGGGoK.......",
+  ".....KKGGGGGKK........"
 ];
 // 4-frame classic run cycle, in world pixels: [frontLegDx, frontLegDy, backLegDx, backLegDy, armDx, bob]
 const RUN = [
@@ -2446,6 +2523,65 @@ function desenharMagias() {
 // stays a stick; it **tapers**, two pixels thick at the grip down to one at the tip; and it
 // **bows** slightly across its span, because a branch that is perfectly straight is a dowel.
 // `brilho` is the charge, and it is only ever non-zero while he is casting.
+// ---------- BASTÃO — CETRO DA VIDA ----------
+// The board gives this object a name and a page of its own: "feito de madeira, memória e
+// esperança". A worked branch, bound in cord that spirals up the shaft, carrying a spoked
+// wooden wheel at the top with a warm core, leaves growing straight off the rim, and cords
+// hanging under it with beads and a crystal. It is drawn, not sprited, because it has to
+// follow the arm through a swing and a full front flip.
+//
+// The wheel is baked once per (radius, glow step) into an offscreen canvas: it is thirty-odd
+// fillRects and it would otherwise be paid on every frame of every swing.
+const CETRO = { casca: "#3a2712", mad: "#6d4620", madL: "#96682f", cord: "#da7a29",
+  cordL: "#f3a03d", folha: "#525d2a", folhaL: "#767f34", conta: "#eba748",
+  cristal: "#9fc4bd", cristalL: "#dad8c0" };
+const rodaCv = {};
+function rodaCanvas(r, aceso) {
+  const id = r + "," + aceso;
+  if (rodaCv[id]) return rodaCv[id];
+  const R = r + 6, N = R * 2 + 1;                  // room for the leaves off the rim
+  const c = document.createElement("canvas");
+  c.width = N; c.height = N;
+  const g = c.getContext("2d");
+  const cxx = R, cyy = R;
+  const px = function (x, y, cor) { g.fillStyle = cor; g.fillRect(cxx + x, cyy + y, 1, 1); };
+  // the leaves first, so the rim overlaps them and they read as growing out from under it
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4 - Math.PI / 8;
+    const lx = Math.cos(a), ly = Math.sin(a);
+    for (let s = 0; s < 5; s++) {
+      const d = r + 1 + s, wdt = s < 3 ? 2 - (s > 1 ? 1 : 0) : 0;
+      const bx = Math.round(lx * d), by = Math.round(ly * d);
+      for (let o = -wdt; o <= wdt; o++) {
+        px(bx - Math.round(ly * o), by + Math.round(lx * o), o < 0 ? CETRO.folhaL : CETRO.folha);
+      }
+    }
+  }
+  // the rim: two rings, the outer one dark so the wheel keeps a hard silhouette
+  for (let a = 0; a < 360; a += 3) {
+    const rad = a * Math.PI / 180, co = Math.cos(rad), si = Math.sin(rad);
+    px(Math.round(co * r), Math.round(si * r), CETRO.casca);
+    px(Math.round(co * (r - 1)), Math.round(si * (r - 1)), si < -0.2 || co > 0.4 ? CETRO.madL : CETRO.mad);
+    px(Math.round(co * (r - 2)), Math.round(si * (r - 2)), CETRO.mad);
+  }
+  // eight spokes out of a hub, which is what makes it a wheel and not a ring
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4;
+    for (let d = 2; d < r - 1; d++) {
+      px(Math.round(Math.cos(a) * d), Math.round(Math.sin(a) * d), k % 2 ? CETRO.mad : CETRO.madL);
+    }
+  }
+  // the hub: wood, then the sun inside it
+  for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) {
+    if (Math.abs(x) + Math.abs(y) <= 3) px(x, y, CETRO.casca);
+  }
+  const nucleo = aceso ? ["#fffbe8", "#f3c05c", "#da7a29"] : ["#f3c05c", "#c8891f", "#8a5a2e"];
+  px(0, 0, nucleo[0]);
+  [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { px(d[0], d[1], nucleo[1]); });
+  [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (d) { px(d[0], d[1], nucleo[2]); });
+  rodaCv[id] = { c: c, off: R };
+  return rodaCv[id];
+}
 function vara(x0, y0v, x1, y1v, brilho) {
   const n = Math.max(2, Math.abs(x1 - x0), Math.abs(y1v - y0v));
   const dx = x1 - x0, dy = y1v - y0v, len = Math.max(1, Math.hypot(dx, dy));
@@ -2455,23 +2591,42 @@ function vara(x0, y0v, x1, y1v, brilho) {
     const t = i / n, arc = Math.sin(t * Math.PI) * 0.95;
     px.push(Math.round(x0 + dx * t + nx * arc));
     py.push(Math.round(y0v + dy * t + ny * arc));
-    pw.push(t < 0.62 ? 2 : 1);                     // thick at the hand, whittled at the tip
+    pw.push(t < 0.72 ? 2 : 1);                     // thick at the hand, whittled at the tip
   }
-  cx.fillStyle = "#22180f";
+  cx.fillStyle = CETRO.casca;
   for (let i = 0; i <= n; i++) cx.fillRect(px[i] - 1, py[i] - 1, pw[i] + 2, pw[i] + 2);
-  cx.fillStyle = "#6b4a2e";
+  cx.fillStyle = CETRO.mad;
   for (let i = 0; i <= n; i++) cx.fillRect(px[i], py[i], pw[i], pw[i]);
-  cx.fillStyle = "#a2794c";                        // the sun catches one side of the shaft
+  cx.fillStyle = CETRO.madL;                       // the sun catches one side of the shaft
   for (let i = 0; i <= n; i++) cx.fillRect(px[i] + pw[i] - 1, py[i], 1, pw[i]);
-  const wraps = Math.min(6, n - 1);                // the binding: cord wrapped round the grip
-  for (let i = 1; i <= wraps; i++) {
-    cx.fillStyle = i % 2 ? "#c3a878" : "#5c4a30";
-    cx.fillRect(px[i], py[i], 2, 2);
+  // the cord, spiralling the whole length of the shaft — the board devotes a close-up to it
+  for (let i = 2; i < n - 1; i += 3) {
+    cx.fillStyle = (i >> 1) % 2 ? CETRO.cordL : CETRO.cord;
+    cx.fillRect(px[i], py[i], 2, 1);
   }
-  const kx = px[n], ky = py[n];                    // the tip is just a knot in the wood
-  cx.fillStyle = "#22180f"; cx.fillRect(kx - 1, ky - 1, 4, 4);
-  cx.fillStyle = "#7d5836"; cx.fillRect(kx, ky, 2, 2);
-  cx.fillStyle = "#a2794c"; cx.fillRect(kx + 1, ky, 1, 1);
+  // and a couple of leaves sprouting off a stick that is still alive
+  for (let k = 0; k < 2; k++) {
+    const i = Math.round(n * (0.30 + k * 0.26)), sgn = k % 2 ? 1 : -1;
+    if (i < 1 || i > n) continue;
+    cx.fillStyle = CETRO.folha;
+    cx.fillRect(px[i] + Math.round(nx * 2 * sgn), py[i] + Math.round(ny * 2 * sgn), 2, 2);
+    cx.fillStyle = CETRO.folhaL;
+    cx.fillRect(px[i] + Math.round(nx * 3 * sgn), py[i] + Math.round(ny * 3 * sgn), 1, 1);
+  }
+  const kx = px[n], ky = py[n];
+  // the head of the staff: the spoked wheel, its leaves, and what hangs under it
+  const rd = rodaCanvas(6, brilho > 0);
+  cx.drawImage(rd.c, kx - rd.off + 1, ky - rd.off + 1);
+  // hanging cords: two beads on one, a crystal on the other. They fall with gravity, not
+  // with the staff, so they lag behind the swing instead of being welded to it.
+  const balanco = Math.round(Math.sin(animT * 3.1) * 1.2);
+  cx.fillStyle = CETRO.cord;
+  cx.fillRect(kx - 3 + balanco, ky + 6, 1, 5);
+  cx.fillRect(kx + 3, ky + 6, 1, 7);
+  cx.fillStyle = CETRO.conta;
+  cx.fillRect(kx - 4 + balanco, ky + 11, 3, 2);
+  cx.fillStyle = CETRO.cristal; cx.fillRect(kx + 2, ky + 13, 3, 4);
+  cx.fillStyle = CETRO.cristalL; cx.fillRect(kx + 3, ky + 14, 1, 2);
   if (brilho > 0) {                                // ...and only while he is casting, a fire
     luz(kx + 1, ky + 1, Math.min(1.9, brilho + flashCast * 0.7), 1);
     if (flashCast > 0.12) {
@@ -2530,67 +2685,80 @@ function drawHero() {
     }
   }
   if (rot) { cx.save(); cx.translate(pivoX, pivoY); cx.rotate(rot); cx.translate(-pivoX, -pivoY); }
-  // Not a cape — a windbreaker tail and a scarf. A cape put a knight in a 2026 street; this
-  // is a kid running through their own neighbourhood, and the silhouette still trails.
+  // The poncho, off the back of the shoulders — the board's cream cloth with an embroidered
+  // hem, hanging in three stepped panels so it reads as cloth and not as a cape.
   const flap = air ? -2 : (fi % 2 ? 1 : 0);
-  const capa = ["#e05a70", "#c9455c", "#a8384c", "#8b2c3d", "#6e2130"];
-  for (let i = 3; i >= 0; i--) {                    // the scarf, off the back of the neck
-    const sxx = bx + 2 - i * 4, hh = 3 + (i & 1);
-    const sy = y0 + 11 + i + (i > 1 ? flap : 0);
-    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy - 1, 6, hh + 2);
-    cx.fillStyle = capa[Math.min(4, i + 1)]; cx.fillRect(sxx, sy, 4, hh);
-    cx.fillStyle = capa[Math.max(0, i - 1)]; cx.fillRect(sxx, sy, 4, 1);
+  // One wedge of cloth off the far shoulder, widening as it falls, with the board's
+  // embroidered hem along the bottom. Three separate slabs read as a stack of bars; a
+  // trapezoid drawn row by row reads as a poncho seen from slightly behind.
+  const cloth = 7 + flap;
+  for (let r = 0; r < cloth; r++) {
+    const wdt = 3 + Math.round(r * 0.55), xx = bx + 3 - wdt, yy = y0 + 16 + r;
+    cx.fillStyle = "#14170c"; cx.fillRect(xx - 1, yy, wdt + 1, 1);
+    cx.fillStyle = r < 2 ? "#e2d6b4" : r < cloth - 2 ? "#c2b490" : "#b3a47f";
+    cx.fillRect(xx, yy, wdt, 1);
+    if (r === cloth - 1) { cx.fillStyle = "#da7a29"; cx.fillRect(xx, yy, wdt, 1); }
   }
-  cx.fillStyle = "#0e0f18"; cx.fillRect(bx - 1, y0 + 15, 9, 13);    // the jacket tail, cut short
-  cx.fillStyle = "#a8384c"; cx.fillRect(bx, y0 + 16, 7, 11 + flap);
-  cx.fillStyle = "#c9455c"; cx.fillRect(bx, y0 + 16, 7, 2);
-  cx.fillStyle = "#6e2130"; cx.fillRect(bx, y0 + 24 + flap, 7, 3);
-  cx.fillStyle = "#0e0f18"; cx.fillRect(bx + 1, y0 + 13, 8, 12);    // the backpack he carries
-  cx.fillStyle = "#2f4a7a"; cx.fillRect(bx + 2, y0 + 14, 6, 10);
-  cx.fillStyle = "#41639d"; cx.fillRect(bx + 6, y0 + 14, 2, 10);
-  cx.fillStyle = "#1b2c4c"; cx.fillRect(bx + 2, y0 + 18, 6, 2);
-  cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 3, y0 + 21, 2, 2);
-  // back arm swings behind the torso
+  cx.fillStyle = "#14170c"; cx.fillRect(bx + 3 - (3 + Math.round((cloth - 1) * 0.55)) - 1, y0 + 16 + cloth, 4 + Math.round((cloth - 1) * 0.55), 1);
+  // ...and under it the fringe: strands of green and orange cord hanging off the belt, which
+  // is the thing the board's PERSONAGEM sheet spends most of its detail on.
+  for (let i = 0; i < 4; i++) {
+    const fx = bx + 3 + i * 3, fl = 4 + ((i * 5) % 3) + (i % 2 ? flap : 0);
+    cx.fillStyle = "#14170c"; cx.fillRect(fx - 1, y0 + 26, 3, fl + 1);
+    cx.fillStyle = i % 2 ? "#767f34" : "#da7a29"; cx.fillRect(fx, y0 + 26, 1, fl);
+    cx.fillStyle = i % 2 ? "#525d2a" : "#eba748"; cx.fillRect(fx, y0 + 26 + fl - 2, 1, 2);
+  }
+  // back arm swings behind the torso: cream sleeve, dark hand
   const abx = bx + 4 + Math.round(P[4] * 0.4);
-  cx.fillStyle = "#0e0f18"; cx.fillRect(abx - 1, y0 + 16, 6, 10);
-  cx.fillStyle = "#1f63ad"; cx.fillRect(abx, y0 + 17, 4, 5);
-  cx.fillStyle = "#c39a72"; cx.fillRect(abx, y0 + 22, 4, 3);
+  cx.fillStyle = "#14170c"; cx.fillRect(abx - 1, y0 + 16, 6, 10);
+  cx.fillStyle = "#d8cba6"; cx.fillRect(abx, y0 + 17, 4, 5);
+  cx.fillStyle = "#8a5a2e"; cx.fillRect(abx, y0 + 22, 4, 3);
   // head + torso, baked once
   drawMap("hero", HERO_MAP, HERO_COLORS, bx, y0);
   // legs (jeans + sneakers) — the back leg reads a value darker so the stride has depth
   const hipY = y0 + 26;
+  // Baggy green trousers gathered at the ankle, and sandals — not jeans and sneakers. The
+  // thigh is drawn a pixel wider than the shin, which is the whole read of "baggy" at this
+  // size, and the back leg stays a value darker so the stride keeps its depth.
   function leg(hipX, dx, dy, back) {
-    const base = back ? "#242a49" : "#343d66", rim = back ? "#333c63" : "#48548a";
-    cx.fillStyle = "#12142a";
-    cx.fillRect(hipX - 1, hipY - 1, 7, 10);
-    cx.fillRect(hipX + dx - 1, hipY + 6, 7, 10 + dy);
+    const base = back ? "#3e4721" : "#525d2a", rim = back ? "#525d2a" : "#767f34";
+    cx.fillStyle = "#14170c";
+    cx.fillRect(hipX - 2, hipY - 1, 9, 10);
+    cx.fillRect(hipX + dx - 1, hipY + 6, 7, 9 + dy);
     cx.fillStyle = base;
-    cx.fillRect(hipX, hipY, 5, 8);
-    cx.fillRect(hipX + dx, hipY + 7, 5, 8 + dy);
-    cx.fillStyle = rim;                                   // sunlit right edge of the jeans
-    cx.fillRect(hipX + 4, hipY, 1, 8);
-    cx.fillRect(hipX + dx + 4, hipY + 7, 1, 8 + dy);
-    const sy = hipY + 15 + dy, sxx = hipX + dx - (dx < 0 ? 3 : 1);
-    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy - 1, 9, 4);
-    cx.fillStyle = back ? "#bcc5d6" : "#f2f5fb"; cx.fillRect(sxx, sy, 7, 2);
-    cx.fillStyle = back ? "#8d97ab" : "#aeb8ca"; cx.fillRect(sxx, sy + 1, 7, 1);
+    cx.fillRect(hipX - 1, hipY, 7, 8);
+    cx.fillRect(hipX + dx, hipY + 7, 5, 7 + dy);
+    cx.fillStyle = rim;                                   // sunlit right edge of the cloth
+    cx.fillRect(hipX + 5, hipY, 1, 8);
+    cx.fillRect(hipX + dx + 4, hipY + 7, 1, 7 + dy);
+    cx.fillStyle = "#da7a29";                             // the tie at the ankle
+    cx.fillRect(hipX + dx, hipY + 13 + dy, 5, 1);
+    const sy = hipY + 15 + dy, sxx = hipX + dx - (dx < 0 ? 2 : 1);
+    cx.fillStyle = "#14170c"; cx.fillRect(sxx - 1, sy - 2, 8, 4);
+    cx.fillStyle = back ? "#8a5a2e" : "#a9743f"; cx.fillRect(sxx, sy - 1, 6, 1);  // the foot
+    cx.fillStyle = back ? "#5c3b1f" : "#6d4620"; cx.fillRect(sxx, sy, 6, 1);      // the sole
+    cx.fillStyle = "#da7a29"; cx.fillRect(sxx + 2, sy - 1, 1, 1);                 // the strap
   }
   leg(bx + 6, P[2], P[3], true);   // back leg
   leg(bx + 11, P[0], P[1], false); // front leg
   // wand arm out of the front shoulder
   const asx = bx + 13 + Math.round(P[4] * 0.3);
-  function braco(hx2, hy2) {                        // sleeve from the shoulder, hand on the grip
+  // A short cream poncho sleeve at the shoulder, bare forearm out of it, and a beaded
+  // bracelet on the wrist — the board puts one on both arms.
+  function braco(hx2, hy2) {
     const fw = Math.max(3, hx2 - asx - 3);
-    cx.fillStyle = "#0e0f18";
+    cx.fillStyle = "#14170c";
     cx.fillRect(asx + 3, y0 + 18, fw + 2, 6);       // forearm
-    cx.fillRect(asx - 1, y0 + 16, 7, 7);            // upper arm
-    cx.fillStyle = "#1f63ad"; cx.fillRect(asx + 4, y0 + 19, fw, 4);
-    cx.fillStyle = "#2f8be0"; cx.fillRect(asx, y0 + 17, 5, 5);
-    cx.fillStyle = "#57b0ff"; cx.fillRect(asx, y0 + 17, 5, 2); cx.fillRect(asx + 4, y0 + 19, fw, 1);
-    cx.fillStyle = "#0e0f18"; cx.fillRect(hx2 - 1, hy2 - 1, 7, 7);
-    cx.fillStyle = "#f6cfa2"; cx.fillRect(hx2, hy2, 5, 5);
-    cx.fillStyle = "#ffeacd"; cx.fillRect(hx2 + 3, hy2, 2, 5);
-    cx.fillStyle = "#d8a87e"; cx.fillRect(hx2, hy2 + 4, 5, 1);
+    cx.fillRect(asx - 1, y0 + 16, 7, 7);            // upper arm, under the poncho
+    cx.fillStyle = "#a9743f"; cx.fillRect(asx + 4, y0 + 19, fw, 4);
+    cx.fillStyle = "#d8cba6"; cx.fillRect(asx, y0 + 17, 5, 5);
+    cx.fillStyle = "#f0e6c8"; cx.fillRect(asx, y0 + 17, 5, 2);
+    cx.fillStyle = "#c08a52"; cx.fillRect(asx + 4, y0 + 19, fw, 1);
+    cx.fillStyle = "#da7a29"; cx.fillRect(asx + 5, y0 + 19, 1, 4);   // the bracelet
+    cx.fillStyle = "#14170c"; cx.fillRect(hx2 - 1, hy2 - 1, 7, 7);
+    cx.fillStyle = "#a9743f"; cx.fillRect(hx2, hy2, 5, 5);
+    cx.fillStyle = "#c08a52"; cx.fillRect(hx2 + 3, hy2, 2, 5);
+    cx.fillStyle = "#8a5a2e"; cx.fillRect(hx2, hy2 + 4, 5, 1);
   }
   // The 3-hit combo, cast rather than swung. A new swing is detected here — attackT jumps
   // back up and attackType steps on — so the bolt is spawned from the drawing code and
@@ -2941,7 +3109,7 @@ function drawScene() {
           cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 12, 14, 3);
           cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 12, 14, 1);
           cx.fillStyle = traco; cx.fillRect(x + 2, y - 5, 3, 5);            // a door onto the steps
-          cx.fillStyle = h > 0.5 ? "rgba(255,224,138,.8)" : traco;
+          cx.fillStyle = (h > 0.5 || escuridao() > 0.4) ? "rgba(253,231,157,.85)" : traco;
           cx.fillRect(x + 7, y - 7, 3, 3);                                  // one window
           if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 8, y - 15, 4, 3); }  // water tank
         }
@@ -2991,33 +3159,51 @@ function drawScene() {
   // The dirt path he runs on: it used to be one flat 5px band straight across the widest
   // part of the frame. Now a sunlit crown, ruts and pebbles that scroll with the world, and
   // a shadow where the grass leans over the edge.
+  // ---- THE COBBLES ----
+  // The board's street is paved, and the paving is most of what makes those thumbnails read
+  // as a Brazilian neighbourhood rather than a countryside path. Eight courses laid in
+  // perspective: each one is taller, wider and scrolls faster than the one behind it, and
+  // each stone gets a lit top edge and a dark joint so the plane has grain instead of noise.
+  // Only the walkable band is paved; the near apron below it stays a plain shaded slab with
+  // a few big worn stones in it, which is both cheaper and what the board's foregrounds do.
   cx.fillStyle = P.trilha;
   cx.fillRect(0, GROUND, W, 8);
-  cx.fillStyle = P.trilhaL;
-  cx.fillRect(0, GROUND, W, 2);
-  const rutA = P.sulcoA, rutB = P.sulcoB;
-  const rk0 = Math.floor(worldX / 9) - 1;
-  for (let k = rk0; k < rk0 + Math.ceil(W / 9) + 2; k++) {
-    const gx = Math.round(k * 9 - worldX), r2 = hash01(k * 31 + 7);
-    cx.fillStyle = rutA;
-    cx.fillRect(gx, GROUND + 3, 5 + Math.floor(r2 * 4), 1);
-    if (r2 > 0.72) cx.fillRect(gx + 2, GROUND + 6, 3, 1);
-    if (r2 < 0.18) { cx.fillStyle = rutB; cx.fillRect(gx + 4, GROUND + 4, 2, 2); }
+  {
+    // the joint has to be a real value step below the stone or the whole thing reads as
+    // horizontal stripes instead of paving — that was the first attempt and it was wrong
+    const junta = rgbS(mixA(P.sulcoAA, [24, 20, 12], 0.45));
+    const faces = [P.trilha, P.trilhaL, rgbS(mixA(P.trilhaA, P.sulcoAA, 0.30)),
+      rgbS(mixA(P.trilhaA, P.sulcoAA, 0.60))];
+    let y = GROUND;
+    for (let i = 0; i < 8 && y < H; i++) {
+      const alt = 3 + (i >> 1), larg = 9 + i * 2, vel = 0.55 + i * 0.075;
+      const desl = worldX * vel, k0 = Math.floor(desl / larg) - 1;
+      cx.fillStyle = junta; cx.fillRect(0, y, W, alt);
+      for (let k = k0; k < k0 + Math.ceil(W / larg) + 2; k++) {
+        const gx = Math.round(k * larg - desl) + ((i & 1) ? larg >> 1 : 0);
+        const r2 = hash01(k * 31 + i * 7);
+        cx.fillStyle = faces[Math.floor(r2 * 4) & 3];
+        cx.fillRect(gx, y, larg - 2, alt - 1);                 // the stone, joints all round it
+        if (alt > 3) { cx.fillStyle = P.trilhaL; cx.fillRect(gx, y, larg - 2, 1); }
+      }
+      y += alt;
+    }
+    cx.fillStyle = "rgba(0,0,0,.20)"; cx.fillRect(0, y, W, 1); // the kerb, into the near apron
   }
-  cx.fillStyle = "rgba(0,0,0,.22)";
-  cx.fillRect(0, GROUND + 8, W, 1);
-  // speckle + tonal grass patches across the ground plane (hi-bit texture)
+  // Weeds coming up through the joints, and worn patches on the near apron. The board's
+  // street is paved AND overgrown — the plants are winning in every one of those thumbnails
+  // — so this is green pushing through stone rather than a lawn under it.
   const spk0 = Math.floor(worldX * 1.15 / 7) - 1;
   for (let k = spk0; k < spk0 + Math.ceil(W / 7) + 2; k++) {
     const gx = Math.round(k * 7 - worldX * 1.15);
-    const gy = GROUND + 9 + Math.floor(hash01(k * 23 + 3) * (H - GROUND - 12));
+    const gy = GROUND + 30 + Math.floor(hash01(k * 23 + 3) * (H - GROUND - 33));
     cx.fillStyle = "rgba(0,0,0,.16)";
-    cx.fillRect(gx, gy, 2, 1);
-    if (hash01(k * 5 + 8) > 0.6) cx.fillRect(gx + 3, gy + 2, 1, 1);
+    cx.fillRect(gx, gy, 3, 1);
     const gr2 = hash01(k * 13 + 11);
-    if (gr2 < 0.4) { // lighter/darker grass dashes
-      cx.fillStyle = gr2 < 0.2 ? P.gramaA : P.gramaB;
-      cx.fillRect(gx + 2, GROUND + 8 + Math.floor(hash01(k * 19 + 2) * (H - GROUND - 10)), 4, 2);
+    if (gr2 < 0.30) {                                    // a weed in a joint
+      const gy2 = GROUND + 3 + Math.floor(hash01(k * 19 + 2) * (H - GROUND - 8));
+      cx.fillStyle = gr2 < 0.15 ? P.gramaA : P.gramaB;
+      cx.fillRect(gx + 2, gy2, 1, 3); cx.fillRect(gx + 3, gy2 + 1, 1, 2);
     }
   }
   // grass tufts, dirt specks and flowers scroll with the world
@@ -3095,30 +3281,51 @@ function drawScene() {
           galhos("#4a3020", "#6b4830");
         }
       }
-    } else if (kind < 7) { // cottage: lit right wall, shaded left, roof overhang and a chimney
-      const paredes = [["#8a5c3e", "#a8764f", "#553826"], ["#7a6e62", "#968a7c", "#4e463e"], ["#836a52", "#9e8266", "#544335"]][k % 3];
-      const telhas = [["#a06a42", "#c2895a"], ["#8a4f4a", "#a86a64"], ["#4a6b52", "#68896c"]][k % 3];
-      sombra(sx + 21, GROUND, 38);
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 8, GROUND - 20, 27, 20);
-      cx.fillStyle = paredes[0]; cx.fillRect(sx + 9, GROUND - 19, 25, 19);
-      cx.fillStyle = paredes[2]; cx.fillRect(sx + 9, GROUND - 19, 4, 19);       // shaded left
-      cx.fillStyle = paredes[1]; cx.fillRect(sx + 31, GROUND - 19, 3, 19);      // sunlit right
-      cx.fillStyle = "#6b4a35"; cx.fillRect(sx + 28, GROUND - 34, 5, 8);        // chimney
-      cx.fillStyle = "#8a6549"; cx.fillRect(sx + 31, GROUND - 34, 2, 8);
-      cx.fillStyle = telhas[0]; cx.fillRect(sx + 4, GROUND - 27, 35, 8);        // roof, overhanging
-      cx.fillStyle = telhas[1]; cx.fillRect(sx + 4, GROUND - 27, 35, 2);
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 4, GROUND - 20, 35, 2);        // eave shadow
-      cx.fillStyle = "#3a2416"; cx.fillRect(sx + 25, GROUND - 13, 8, 13);       // door
-      cx.fillStyle = "#5a3a22"; cx.fillRect(sx + 26, GROUND - 12, 6, 12);
-      cx.fillStyle = "#ffcd75"; cx.fillRect(sx + 30, GROUND - 7, 1, 1);
-      if (alive) {                                                             // light spilling out
-        cx.globalAlpha = 0.20; cx.fillStyle = "#ffe08a";
-        cx.fillRect(sx + 10, GROUND - 18, 11, 12); cx.globalAlpha = 1;
+    } else if (kind < 7) { // the house on the street, out of the board's CENÁRIOS strip:
+      // a painted two-storey with a terracotta tiled roof pitched over a deep eave, a tall
+      // shuttered window upstairs, a doorway straight onto the pavement, and plants — on the
+      // sill, in a pot by the door, and climbing the wall. Nothing on that board is bare.
+      const paredes = [["#c9a86a", "#e2c489", "#8a6f42"], ["#d8c9a2", "#f0e2bb", "#93855f"],
+        ["#b58f6e", "#d4ab84", "#7d6047"], ["#a8b48c", "#c6d0a6", "#6f7a58"]][k % 4];
+      const telhas = ["#96482c", "#b45c38", "#6d3320"];
+      sombra(sx + 21, GROUND, 40);
+      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 6, GROUND - 32, 31, 32);
+      cx.fillStyle = paredes[0]; cx.fillRect(sx + 7, GROUND - 31, 29, 31);
+      cx.fillStyle = paredes[2]; cx.fillRect(sx + 7, GROUND - 31, 4, 31);       // shaded left
+      cx.fillStyle = paredes[1]; cx.fillRect(sx + 33, GROUND - 31, 3, 31);      // sunlit right
+      cx.fillStyle = "rgba(0,0,0,.13)"; cx.fillRect(sx + 7, GROUND - 15, 29, 1); // the floor line
+      // the roof: pantiles, drawn as a run of half-round ridges so it is not one slab
+      cx.fillStyle = telhas[2]; cx.fillRect(sx + 2, GROUND - 39, 39, 8);
+      for (let t2 = 0; t2 < 13; t2++) {
+        cx.fillStyle = telhas[t2 % 2]; cx.fillRect(sx + 2 + t2 * 3, GROUND - 38, 2, 7);
       }
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 16, 9, 9);
-      cx.fillStyle = alive ? "#ffe08a" : "#241f1a"; cx.fillRect(sx + 12, GROUND - 15, 7, 7);
-      cx.fillStyle = "#2a1c12";
-      cx.fillRect(sx + 15, GROUND - 15, 1, 7); cx.fillRect(sx + 12, GROUND - 12, 7, 1);
+      cx.fillStyle = "#d07048"; cx.fillRect(sx + 2, GROUND - 39, 39, 2);        // the sunlit ridge
+      cx.fillStyle = "rgba(0,0,0,.30)"; cx.fillRect(sx + 3, GROUND - 31, 37, 2); // under the eave
+      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 25, GROUND - 14, 9, 14);       // the doorway
+      cx.fillStyle = "#4a6b52"; cx.fillRect(sx + 26, GROUND - 13, 7, 13);       // a painted door
+      cx.fillStyle = "#68896c"; cx.fillRect(sx + 31, GROUND - 13, 1, 13);
+      cx.fillStyle = "#eba748"; cx.fillRect(sx + 30, GROUND - 7, 1, 1);
+      // the upstairs window, shuttered, with the light of a room behind it
+      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 29, 11, 12);
+      cx.fillStyle = (alive || escuridao() > 0.4) ? "#fde79d" : "#3a3428"; cx.fillRect(sx + 12, GROUND - 28, 9, 10);
+      cx.fillStyle = "#7d6047"; cx.fillRect(sx + 12, GROUND - 28, 2, 10); cx.fillRect(sx + 19, GROUND - 28, 2, 10);
+      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 17, 11, 2);       // the sill
+      cx.fillStyle = "#8a6f42"; cx.fillRect(sx + 11, GROUND - 17, 11, 1);
+      if (alive) {                                                             // light spilling out
+        cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d";
+        cx.fillRect(sx + 9, GROUND - 27, 15, 12); cx.globalAlpha = 1;
+      }
+      // plants: a box on the sill, a pot by the door, and a vine up the shaded corner
+      cx.fillStyle = "#96482c"; cx.fillRect(sx + 13, GROUND - 19, 7, 3);
+      cx.fillStyle = "#3e4721"; cx.fillRect(sx + 12, GROUND - 21, 9, 2);
+      cx.fillStyle = "#767f34"; cx.fillRect(sx + 13, GROUND - 22, 3, 2); cx.fillRect(sx + 18, GROUND - 21, 2, 2);
+      cx.fillStyle = "#96482c"; cx.fillRect(sx + 20, GROUND - 5, 5, 5);
+      cx.fillStyle = "#525d2a"; cx.fillRect(sx + 19, GROUND - 9, 7, 4);
+      cx.fillStyle = "#767f34"; cx.fillRect(sx + 20, GROUND - 11, 2, 3); cx.fillRect(sx + 23, GROUND - 10, 2, 2);
+      cx.fillStyle = "#3e4721";
+      for (let v = 0; v < 9; v++) cx.fillRect(sx + 7 + (v & 1 ? 0 : 2), GROUND - 4 - v * 3, 3, 3);
+      cx.fillStyle = "#525d2a";
+      for (let v = 1; v < 8; v += 2) cx.fillRect(sx + 9, GROUND - 4 - v * 3, 2, 2);
     } else if (kind < 8) { // pond: muddy bank, the sky reflected in it, drifting shimmer
       cx.fillStyle = P.aguaFundo;
       cx.fillRect(sx + 5, GROUND + 2, 36, 13);
@@ -3223,31 +3430,150 @@ function drawScene() {
       cx.fillStyle = "#3e4760"; cx.fillRect(sx + 22, GROUND - 22, 2, 22);
       cx.fillRect(sx + 22, GROUND - 23, 8, 2);
       cx.fillStyle = "#2b2f45"; cx.fillRect(sx + 27, GROUND - 26, 6, 3); // solar panel on top
-      const on = h > 0.3;
+      const on = h > 0.3 || escuridao() > 0.4;
       if (on) { cx.globalAlpha = 0.22; cx.fillStyle = "#cfe8ff"; cx.fillRect(sx + 24, GROUND - 21, 12, 14); cx.globalAlpha = 1; }
       cx.fillStyle = on ? "#e8f4ff" : "#4a5068"; cx.fillRect(sx + 28, GROUND - 21, 4, 3);
     }
     // project buildings appear as you launch projects
     if (S.geradores > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
-      if (S.modo === "limpo") { // windmill with hub and shadowed pole
-        cx.fillStyle = "#a9a9b8"; cx.fillRect(sx + 40, GROUND - 34, 1, 34);
-        cx.fillStyle = "#d8d8e0"; cx.fillRect(sx + 41, GROUND - 34, 2, 34);
-        cx.save(); cx.translate(sx + 41, GROUND - 34); cx.rotate(tick / 14);
-        cx.fillStyle = "#f4f4f4";
-        cx.fillRect(-1, -15, 2, 30); cx.fillRect(-15, -1, 30, 2);
-        cx.restore();
-        cx.fillStyle = "#2b2f45"; cx.fillRect(sx + 39, GROUND - 36, 5, 5);
-        cx.fillStyle = "#ffcd75"; cx.fillRect(sx + 40, GROUND - 35, 3, 3);
-      } else { // brick factory with lit windows and double smoke
-        cx.fillStyle = "#4a3a34"; cx.fillRect(sx + 35, GROUND - 23, 22, 23);
-        cx.fillStyle = "#7a5a50"; cx.fillRect(sx + 36, GROUND - 22, 20, 22);
-        cx.fillStyle = "#5d4540"; cx.fillRect(sx + 36, GROUND - 22, 20, 3);
-        cx.fillStyle = "#ffe08a"; cx.fillRect(sx + 39, GROUND - 15, 4, 5); cx.fillRect(sx + 48, GROUND - 15, 4, 5);
-        cx.fillStyle = "#3e4760"; cx.fillRect(sx + 50, GROUND - 34, 6, 12);
-        cx.fillStyle = "rgba(130,130,130,.7)";
+      // A project is a thing somebody built on their own roof. GO STEADY grows it a garden
+      // and a water tank; GO FAST bolts a generator to it and it smokes. White wind turbines
+      // were the loudest thing on screen that is nowhere on the board.
+      if (S.modo === "limpo") { // the rooftop garden: a tank, beds, a vine down the wall
+        cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 34, GROUND - 27, 22, 27);
+        cx.fillStyle = "#b58f6e"; cx.fillRect(sx + 35, GROUND - 26, 20, 26);
+        cx.fillStyle = "#8a6f42"; cx.fillRect(sx + 35, GROUND - 26, 3, 26);
+        cx.fillStyle = "#96482c"; cx.fillRect(sx + 33, GROUND - 30, 24, 4);   // the parapet
+        cx.fillStyle = "#d07048"; cx.fillRect(sx + 33, GROUND - 30, 24, 1);
+        cx.fillStyle = "#7d8894"; cx.fillRect(sx + 48, GROUND - 40, 8, 10);   // the water tank
+        cx.fillStyle = "#9fa9b4"; cx.fillRect(sx + 54, GROUND - 40, 2, 10);
+        cx.fillStyle = "#3a4227"; cx.fillRect(sx + 47, GROUND - 41, 10, 2);
+        cx.fillStyle = "#3e4721"; cx.fillRect(sx + 35, GROUND - 36, 12, 6);   // the beds on top
+        cx.fillStyle = "#525d2a"; cx.fillRect(sx + 35, GROUND - 37, 12, 2);
+        cx.fillStyle = "#767f34";
+        cx.fillRect(sx + 37, GROUND - 39 + (Math.floor(tick / 22) % 2), 2, 3);
+        cx.fillRect(sx + 42, GROUND - 38, 2, 2);
+        cx.fillStyle = "#eba748"; cx.fillRect(sx + 44, GROUND - 39, 2, 2);    // something flowering
+        cx.fillStyle = "#3e4721";
+        for (let v = 0; v < 8; v++) cx.fillRect(sx + 35 + (v & 1 ? 0 : 2), GROUND - 3 - v * 3, 3, 3);
+        cx.fillStyle = "#fde79d"; cx.fillRect(sx + 41, GROUND - 18, 4, 5); cx.fillRect(sx + 48, GROUND - 18, 4, 5);
+      } else { // the same building with a generator bolted on, and it smokes
+        cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 34, GROUND - 27, 22, 27);
+        cx.fillStyle = "#8a7360"; cx.fillRect(sx + 35, GROUND - 26, 20, 26);
+        cx.fillStyle = "#645343"; cx.fillRect(sx + 35, GROUND - 26, 3, 26);
+        cx.fillStyle = "#5c3b1f"; cx.fillRect(sx + 33, GROUND - 30, 24, 4);
+        cx.fillStyle = "#fde79d"; cx.fillRect(sx + 41, GROUND - 18, 4, 5); cx.fillRect(sx + 48, GROUND - 18, 4, 5);
+        cx.fillStyle = "#3f4235"; cx.fillRect(sx + 44, GROUND - 38, 9, 8);    // the generator
+        cx.fillStyle = "#585c4b"; cx.fillRect(sx + 51, GROUND - 38, 2, 8);
+        cx.fillStyle = "#2a2b1a"; cx.fillRect(sx + 46, GROUND - 46, 4, 9);    // its flue
+        cx.fillStyle = "rgba(150,145,130,.62)";
         const p = (tick % 36) / 36, p2 = ((tick + 18) % 36) / 36;
-        cx.fillRect(sx + 50 + p * 7, GROUND - 40 - p * 16, 5 - p * 2, 4);
-        cx.fillRect(sx + 50 + p2 * 7, GROUND - 40 - p2 * 16, 5 - p2 * 2, 4);
+        cx.fillRect(sx + 45 + p * 7, GROUND - 52 - p * 16, 5 - p * 2, 4);
+        cx.fillRect(sx + 45 + p2 * 7, GROUND - 52 - p2 * 16, 5 - p2 * 2, 4);
+      }
+    }
+  }
+
+  // ---- THE FRAME ----
+  // Every CENÁRIOS thumbnail on the board is composed the same way: dark foliage and dark
+  // masonry crowding both edges and the top corners, with the light kept in a slot down the
+  // middle. Without it a side-scroller is a wide empty sky with a strip of things along the
+  // bottom, which is exactly what this frame was. These are near, dark, low in contrast and
+  // barely parallax — they are the proscenium, not scenery, and they never reach the middle
+  // third where the character and the troubles live.
+  {
+    const escuro = P.frenteC, meio = P.frenteL, borda = P.mataNearL;
+    const fim = GROUND + 12;
+    const desl = worldX * 0.05;
+    // The inner edge is a profile, not a stack of blobs: for every row, one number says how
+    // far in the mass reaches, and it is a wide swell plus a small lobe so the silhouette
+    // scallops like foliage instead of stepping like boxes.
+    // widths are fractions of W, never pixels: the canvas is window.innerWidth/3, so a
+    // hardcoded 60 is a fifth of the frame on one phone and the whole of it on another
+    const wBase = W * 0.058, wSwell = W * 0.062, wLobo = W * 0.024;
+    const perfil = function (y, fase) {
+      const t = y / fim;
+      return Math.max(0, Math.round(wBase + wSwell * Math.pow(1 - t, 1.5)
+        + Math.sin(y * 0.11 + fase) * wLobo
+        + Math.sin(y * 0.031 + fase * 1.7) * wLobo * 1.3
+        + Math.sin(y * 0.62 + fase * 3.3) * wLobo * 0.55));   // the leaf scallop
+    };
+    const lado = function (dir, fase) {
+      for (let y = -2; y < fim; y++) {
+        const w2 = perfil(y, fase);
+        if (w2 <= 0) continue;
+        const x0 = dir > 0 ? 0 : W - w2;
+        // texture, not stripes: a coarse checker of two greens broken by a third
+        const banda = ((y >> 2) + (dir > 0 ? 0 : 1)) & 1;
+        cx.fillStyle = banda ? escuro : meio;
+        cx.fillRect(x0, y, w2, 1);
+        if (((y * 7 + (dir > 0 ? 0 : 3)) % 11) < 3) {
+          cx.fillStyle = banda ? meio : escuro;
+          cx.fillRect(x0 + (dir > 0 ? Math.round(w2 * 0.3) : 1), y, Math.max(2, w2 >> 2), 1);
+        }
+        cx.fillStyle = borda;                                 // the light that gets round it
+        cx.fillRect(dir > 0 ? w2 - 2 : W - w2, y, 2, 1);
+      }
+    };
+    lado(1, desl * 0.02);
+    lado(-1, 4.1 + desl * 0.02);
+  }
+
+  // ---- POWER LINES ----
+  // Every single CENÁRIOS and LUZ & ATMOSFERA thumbnail on the board has them: leaning
+  // concrete-and-timber poles with a crossarm, a fat knot of cable at the top and wires
+  // sagging away across the sky. They are the one silhouette that says "this street" faster
+  // than anything else, so they get their own pass, drawn over the buildings and under the
+  // hero, with a catenary between consecutive poles rather than a straight line.
+  {
+    const passo = 62, vel = 0.92, base = GROUND - 1;
+    // 1 exactly in the PÓS-CHUVA hour, 0 in the other three
+    const esc = escuridao(), molhado = Math.max(0, 1 - Math.abs(esc - 0.45) / 0.32);
+    const k0 = Math.floor(worldX * vel / passo) - 1;
+    const alt = function (k) { return 46 + Math.round(hash01(k * 17 + 4) * 9); };
+    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+      const sx = Math.round(k * passo - worldX * vel);
+      const hA = alt(k), hB = alt(k + 1);
+      const topA = base - hA, topB = base - hB, nx = Math.round(sx + passo);
+      // the wires first, so the poles overlap them where they are tied off
+      for (let f = 0; f < 3; f++) {
+        const dy = f * 3, sag = 7 + f * 2;
+        cx.fillStyle = f === 1 ? "rgba(20,23,12,.85)" : "rgba(20,23,12,.62)";
+        for (let x = Math.max(-2, sx); x <= Math.min(W + 2, nx); x += 2) {
+          const t = (x - sx) / passo;
+          const y = topA + dy + (topB - topA) * t + Math.round(Math.sin(t * Math.PI) * sag);
+          cx.fillRect(x, y, 2, 1);
+        }
+      }
+      if (sx < -14 || sx > W + 14) continue;
+      const incl = hash01(k * 23 + 9) > 0.6 ? 1 : 0;      // half of them lean
+      cx.fillStyle = "#3a3527";
+      for (let y = 0; y < hA; y++) cx.fillRect(sx + Math.round(y / hA * incl), base - y, 3, 1);
+      cx.fillStyle = "#57503c";
+      for (let y = 0; y < hA; y++) cx.fillRect(sx + 2 + Math.round(y / hA * incl), base - y, 1, 1);
+      cx.fillStyle = "#3a3527"; cx.fillRect(sx - 4 + incl, topA + 2, 11, 2);   // the crossarm
+      cx.fillStyle = "#57503c"; cx.fillRect(sx - 4 + incl, topA + 2, 11, 1);
+      cx.fillStyle = "#2a2b1a"; cx.fillRect(sx - 2 + incl, topA + 4, 2, 2); cx.fillRect(sx + 3 + incl, topA + 4, 2, 2);
+      cx.fillStyle = "#1f2412"; cx.fillRect(sx - 1 + incl, topA + 6, 5, 4);    // the knot of cable
+      if (hash01(k * 41 + 3) > 0.55) {                                          // a lamp on the arm
+        const on = h > 0.3 || escuridao() > 0.4;
+        cx.fillStyle = "#2a2b1a"; cx.fillRect(sx + 6 + incl, topA + 4, 4, 2);
+        cx.fillStyle = on ? "#fde79d" : "#4a4a3a"; cx.fillRect(sx + 7 + incl, topA + 6, 2, 2);
+        if (on) { cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d"; cx.fillRect(sx + 3 + incl, topA + 6, 9, 12); cx.globalAlpha = 1; }
+      }
+      if (h > 0.4) {                                    // and something climbing it, of course
+        cx.fillStyle = "#3e4721";
+        for (let y = 2; y < Math.round(hA * 0.5); y += 3) cx.fillRect(sx + (y & 2 ? -1 : 3), base - y, 2, 2);
+      }
+      // PÓS-CHUVA: the board's third light state is entirely about the street being wet, and
+      // what says wet is a lamp smeared down the paving under it. Only in that hour.
+      if (molhado > 0.05) {
+        cx.globalAlpha = molhado * 0.34; cx.fillStyle = "#fde79d";
+        for (let y = 0; y < 16; y++) {
+          const wdt = 5 - Math.round(y / 5) + ((y & 1) ? 1 : 0);
+          cx.fillRect(sx + 6 + incl - (wdt >> 1) + (y & 2 ? 1 : 0), GROUND + y, wdt, 1);
+        }
+        cx.globalAlpha = 1;
       }
     }
   }
@@ -3625,6 +3951,24 @@ function desenhar() {
   $("worldPct").textContent = Math.round(worldHealth() * 100) + "%";
   $("wisChip").textContent = S.inovacao > 0 ? "★ wisdom " + S.inovacao : "";
 
+  // ---- the board's progress panel: a percentage, a bar, and a line under it ----
+  const pctRua = Math.round(worldHealth() * 100);
+  $("ruaPct").textContent = pctRua + "%";
+  $("barRua").style.width = pctRua + "%";
+  $("ruaSub").textContent = pctRua >= 95 ? "the street looks after itself now"
+    : pctRua >= 60 ? "green is coming back — keep going"
+      : pctRua >= 25 ? "it is turning · every small action changes the street"
+        : "nobody is saved alone · start something";
+  // ...and the two cards that carry a number of their own
+  const naoTem = [1, 2, 3, 4, 5, 6, 7].filter(function (n) { return !S["u" + n]; });
+  const podeComprar = naoTem.filter(function (n) { return S.energia >= CFG["custoU" + n]; }).length;
+  $("upNota").textContent = naoTem.length === 0 ? "ALL" : podeComprar > 0 ? podeComprar + " READY" : naoTem.length + " LEFT";
+  $("openUpgrades").className = "cartao" + (podeComprar > 0 ? " pronto" : "");
+  const fracTocha = Math.min(1, S.energiaTotal / CFG.metaPrestigio);
+  $("torchNota").textContent = fracTocha >= 1 ? "READY" : Math.floor(fracTocha * 100) + "%";
+  $("openTorch").className = "cartao" + (fracTocha >= 1 ? " pronto" : "");
+  $("openProjects").className = "cartao" + (quantosCabem(1).n > 0 ? " pronto" : "");
+
   desenharProjetos();
 
   desenharRitmo();
@@ -3763,7 +4107,7 @@ function desenharRitmo() {
     ? (S.geradores > 0 ? "→" + Math.round(saudeFimAtual * 100) + "%" : "3/s each")
     : (descansando ? "→100%" : "×" + rampaAtual().toFixed(1));
   // pulse only while it is actively costing you something
-  mq.className = classe + (cansando && eficiencia() < 0.9 ? " doi" : "");
+  mq.className = "cartao " + classe + (cansando && eficiencia() < 0.9 ? " doi" : "");
 
   // --- where the team is heading, on the team chip ---
   const tend = $("tendencia");
@@ -3960,6 +4304,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnSkillAuto").onclick = comprarSkill;
   $("openProjects").onclick = () => abrir("sheetProjects");
   $("openUpgrades").onclick = () => abrir("sheetUpgrades");
+  // the board puts a gear at the end of the top rail; the only settings-shaped surface this
+  // game has is the three-day-test readout, so that is what it opens
+  $("openConfig").onclick = function () { mostrarRetencao(); abrir("sheetStats"); };
   // tap the torch to pass it; hold it to see whether anyone is still coming back
   const bt = $("openTorch");
   let pressT = null, longo = false;
@@ -4026,7 +4373,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // spent playing rather than time the tab sat open
     R.segundos += dt; retAcc += dt;
     if (retAcc > 30) { retAcc = 0; marcarDia(); salvarRetencao(); }
-    tick++; animT += dt;
+    tick++; animT += dt; relogio += dt;
     drawScene();
     desenharMundo();
     hudAcc += dt;
