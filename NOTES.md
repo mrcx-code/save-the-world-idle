@@ -1706,6 +1706,122 @@ toda sessão começa lendo a última entrada.
   é medida frouxa (o ranking é denso ali) ou perda real, e a razão dele contra o rival não
   piorou (0,65). Se a próxima onda mexer na luma dele, mede isso primeiro.**
 
+- **2026-08-03 · visual — a rampa do céu estava virada ao contrário, e era ela o U invertido.**
+  Seis incrementos, cada um com `node test/smoke.js` verde. **FPS 61 do começo ao fim.** Nada
+  de `CFG`, `S`, fórmula ou economia foi tocado — **medido: `node test/sim.js` dá saída byte a
+  byte idêntica nos seis commits** (`diff` vazio, seis vezes).
+
+  **O placar, `test/board.js`, quadro inteiro, contra o painel RUA DO BAIRRO:**
+
+  | | luma | C* | topo→chão em quintos |
+  |---|---|---|---|
+  | BOARD | 90,1 | 19,5 | 141 101 83 60 66 |
+  | JOGO MANHÃ antes | 131,5 | 15,1 | **121 140 145 138 112** |
+  | JOGO MANHÃ depois | **118,8** | **16,7** | **125 131 116 120 102** |
+  | JOGO TARDE antes | 130,0 | 23,7 | 121 134 141 138 115 |
+  | JOGO TARDE depois | 124,5 | 22,7 | 125 134 130 127 108 |
+  | JOGO NOITE antes | 62,5 | 8,3 | 54 64 72 69 54 |
+  | JOGO NOITE depois | 59,8 | 8,7 | 56 63 66 64 50 |
+
+  **O U invertido acabou: o pico saiu do MEIO do quadro e os três quintos de baixo agora
+  descem, que é a assinatura que o board tem e nós não tínhamos.** O C* do quadro medido por
+  `medir.js` (que olha uma janela um pouco maior) vai de **15,8 para 18,1** contra 19,5 do
+  board. **Céu aberto no visível ficou em 31,2% no dígito, e `CEU alto` em 32,2%** — o
+  enquadramento das ondas 11 e 12 não foi tocado em lugar nenhum.
+
+  **(0) A atribuição primeiro, porque "de onde vem esse brilho" era palpite.** Escrevi uma
+  bancada descartável que parte o quadro medido nos mesmos cinco quintos e, dentro de cada
+  um, separa **pixel que ainda é céu aberto** de **pixel desenhado** (a mesma identidade de
+  pixel contra `skyCanvas` que a onda 11 inventou). **Medido, MANHÃ, antes:** quinto 1 **22%**
+  de céu a L 158,6 e desenhado a 110,9; quinto 2 **50%** a 165,1 / 114,7; quinto 3 **55%** a
+  **187,9** / 94,2; quinto 4 16% a **199,9** / 126,0; quinto 5 **0%** de céu, desenhado 112,4.
+  Ou seja: **metade dos dois quintos do meio é céu aberto e esse céu ficava MAIS CLARO quanto
+  mais descia.** Não era falta de haze nem uso da paleta — era a faixa de valor do próprio céu.
+
+  **(1) A rampa do céu ia ao contrário do board.** Amostrei o painel: o céu dele mede
+  **[149,186,201], L 179 no alto do quadro** e **[128,149,142], L 144 onde encosta no
+  telhado** — escurece descendo, porque a luz está em cima e a rua está recuando para a
+  sombra. A nossa ia de **136 no zênite a 231 no horizonte**. Todas as rampas de dia foram
+  viradas; a NOITE ficou intacta, porque à noite a luz é a lâmpada da própria rua e ali o
+  valor sobe mesmo em direção à linha do céu. **Medido: perfil 121 140 145 138 112 → 130 140
+  122 129 112, luma 131,5 → 126,6.**
+
+  **(2) Distância que lava para quase-branco não é haze, é borracha.** `horizonC` era
+  [220,213,198] doente / [226,233,216] são — **L 214 e 231, C* abaixo de 9** — e todo plano
+  distante carrega uma `dist` para dentro dele, até 0,44 na serra longe. Resultado: serra,
+  cidade e mata longe chegavam **mais claras que o céu na frente delas** e sem cor. O board
+  não faz nem uma coisa nem outra: o fundo da rua dele mede **[132,115,87], L 117 a C* 21**.
+  Agora é um verde quente enevoado quando são e um ocre lavado quando doente, os dois
+  **abaixo** do topo do céu e os dois com croma de verdade. **Medido: quinto 4 129 → 122,
+  luma 126,6 → 125,1, C* 15,5 → 15,7** — e o print é que é o argumento: a serra voltou a
+  ficar ATRÁS da faixa do céu em vez de brilhar na frente dela.
+
+  **(3) A rua estava pavimentada no valor de pedra em sol aberto, e a do board está na
+  sombra.** Linha a linha: **todo o chão visível é fiada de paralelepípedo**, então
+  `chaoCanvas` quase nunca aparece e o valor inteiro mora em `trilha`/`trilhaL`/`sulcoA` —
+  e só o `trilhaL` chegava a **L 224 aceso**. O calçamento perto do board mede **[113,87,48],
+  L 89,5 a C* 27,5**, porque os prédios dos dois lados estão entre ele e o sol. Mesma família
+  TERRA, quatro degraus abaixo, croma mantida: sombra é mais escura e mais QUENTE, não mais
+  cinza. A faixa separadora do horizonte deixou de ser misturada 30% ao branco e passou a 12%.
+  **Medido: quinto 5 112 → 102, luma 125,1 → 123,1, C* 15,7 → 15,9.**
+
+  **(4) A faixa debaixo do arco era o pico de um perfil que devia estar caindo.** Virada a
+  rampa, a anomalia que sobrou era o **segundo** quinto — 140 contra 101 do board, mais alto
+  que o quinto acima dele. Ele é 50% céu aberto e esse céu estava em **L 164**, a leitura mais
+  clara do quadro, porque a queda só começava abaixo dele. Agora a queda começa **no topo do
+  quadro visível**. E aqui apareceu a armadilha do resto da onda: **escurecer céu custa
+  croma** — a primeira tentativa perdeu 0,4 dela. As mesmas lumas foram reautoradas com o
+  azul **mais afastado do cinza** em vez de mais perto: **perfil 130 140 122 122 102 → 125 131
+  116 120 102, luma 123,1 → 118,8, C\* 15,9 → 16,5.**
+
+  **(5) Ele não ficou mais sem graça, o pelotão o alcançou.** A reexpansão de croma que a onda
+  12 pôs no menino **só disparava onde a tinta da hora mordia**, e à MANHÃ `forca` é 0,04:
+  não fazia absolutamente nada. A croma dele ficou fixa em C* 23,5 enquanto esta onda levava a
+  rua de C* 15,8 a 18,1. **A nota absoluta dele nunca se moveu (14,8) e a razão dele contra o
+  rival mais forte nunca se moveu (0,64), mas a posição caiu de 83 para 201 de 485** — está
+  medido e a atribuição é essa, não é perda de contraste, é o campo subindo. A direção diz
+  desde a primeira linha que **ele não dessatura com o mundo**; então isso virou um **piso de
+  1,32** sob a reexpansão, em toda hora, em torno da luma dele — neutro em luma pelo mesmo
+  argumento do termo ao lado, e **o poncho sai em 123,4 contra os 123,6 da onda 7**.
+
+  **O menino, de 485, fora da moldura, onda 12 → agora:** MANHÃ luma **49 → 16**, croma
+  **83 → 92**, dE **33 → 12**; NOITE luma **76 → 54**, croma **27 → 12**, dE **30 → 11**.
+  Razão C* dele / C* do quadro: MANHÃ **1,48 → 1,48**, NOITE **0,96 → 1,04** — ele deixou de
+  ser menos saturado que a própria rua em qualquer hora.
+
+  **(6) Cúmulo aceso por cima tem topo quente e barriga fria.** `CEU alto` é 38% do quadro a
+  C* 16,7 e ~10% dela é nuvem autorada como três neutros (C* 7, 5 e 11), de quando o céu atrás
+  também era quase branco. **Só o matiz, o valor intocado. Medido: C\* do quadro 16,6 → 16,7.**
+  Pequeno, e relatado como pequeno.
+
+  **Tentei e desfiz, os três medidos:** (a) as nuvens puxadas para L 200/228 e tingidas de
+  céu, na teoria de que 17,5% de tudo o que é desenhado no segundo quinto é nuvem a L 233/253
+  — **comprou 2 pontos de perfil e 0,1 de C\*, e o print recusou**: o cúmulo parou de se
+  separar do céu e a única coisa nítida lá em cima ficou embaçada. As nuvens do board são
+  brancas. (b) O caiado do morro (`MORRO_PAREDE`/`MORRO_LUZ`, cuja face acesa está autorada em
+  **L 232**, valor que o board não usa em prédio nenhum) 10–12% abaixo: **mexeu 0,0 em tudo**,
+  porque a favela não está no trecho de rua fixado em `worldX 4000`. Não medível nesta
+  bancada, não ficou. (c) A rampa do céu escurecida sem alargar o azul: perfil melhor, **C\*
+  0,4 pior**.
+
+  **Conferido em três níveis de saúde e quatro horas** (`test/cruz.js`): rua doente continua
+  ocre lavada e **não escura** (ARCO DOENTE/MANHÃ luma 139,5 contra SÃ 114,5 — o doente segue
+  sendo o mais CLARO dos dois), à NOITE o Cetro segue a coisa mais quente do quadro
+  (miolo 195,6 / cristal 214,7 contra poncho 123,4) e a rua doente à NOITE continua cinza
+  desbotada com o menino colorido em cima dela.
+
+  **Medido no fim:** smoke verde nos seis incrementos, **FPS 61**, `sim.js` idêntico.
+  **Próximo passo: o que resta do perfil é quase todo de composição, não de tinta. O quinto de
+  cima do board é 141 e o nosso é 125, e a atribuição diz por quê: lá em cima só 22% do nosso
+  quadro é céu e os outros 78% são a franja da copa a L 115 — o board põe folha só nos CANTOS
+  e deixa o topo do meio aberto, e nós fazemos exatamente o contrário. Dúvida honesta: dá para
+  subir a franja no meio e engordar as colunas na mesma medida, o que deixaria o céu aberto
+  parado em 31,2% e viraria o quadro na direção do board de graça; não fiz porque é desfazer o
+  incremento (3) da onda 11, que foi medido e aprovado, e porque a mesma mudança pode virar
+  túnel — e túnel foi recusado por print duas vezes já. A outra que sobra é o par esq→dir:
+  board 63 86 115 125 61 contra nosso 106 112 140 134 102, ou seja as bordas dele são metade
+  do valor das nossas, e isso é a mesma pergunta pela lateral.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
