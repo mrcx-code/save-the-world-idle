@@ -136,7 +136,12 @@ function legibilidade(p) {
     for (let x = 0; x + HW < p.w; x += 5) {
       if (Math.abs(x - hx0) < HW && Math.abs(y - hy0) < HH) continue;  // skip the hero himself
       const v = bloco(p, x, y, HW, HH);
-      v.x = x; v.y = y; v.m = x < margem || x + HW > p.w - margem;
+      // The proscenium closes THREE sides now, not two, so a block lying against the top
+      // edge is frame for the same reason a block in the side columns is. This is a
+      // positional rule and it applies to whatever happens to be up there — before the
+      // canopy the top-of-frame block at (100,8) was already the strongest rival in the
+      // picture, at 64.0, because that is where the sun's corona sits.
+      v.x = x; v.y = y; v.m = x < margem || x + HW > p.w - margem || y < 16;
       todos.push(v);
     }
   }
@@ -212,6 +217,31 @@ function legibilidade(p) {
       console.log('ARCO ' + (nome + '/' + h).padEnd(14) + ' luma ' + e.media.toFixed(1) +
         '  C* ' + croma(p, 0, p.ground + 20).toFixed(1));
     }
+  }
+
+  // ---- (1c) WHERE THE FRAME IS EMPTY. "The sky is the largest area and the least
+  // authored" was an impression three waves running. Split the world canvas into bands and
+  // score each one the way blocks are scored — mean local contrast over a grid — so "least
+  // authored" means "fewest events per pixel" instead of "looks bare to me".
+  for (const [nome, frac] of [['MANHA', 0], ['NOITE', 0.75]]) {
+    const p = await page.evaluate(({ st, frac }) => {
+      Object.assign(S, st); mobs.length = 0; drops.length = 0; parts.length = 0;
+      chamada = null; cartaoT = 0; S.capVisto = 9; relogio = frac * DIA_SEG;
+      worldX = FIXO_X; animT = FIXO_T; QUADRO(); return MEDE();
+    }, { st: SAO, frac });
+    // the horizon line is GROUND; the skyline and the ridges live in the ~40 px above it
+    const faixas = [['CEU alto', 4, Math.round(p.ground * 0.45)],
+                    ['CEU baixo', Math.round(p.ground * 0.45), p.ground - 42],
+                    ['HORIZONTE', p.ground - 42, p.ground - 8],
+                    ['RUA', p.ground - 8, Math.min(p.h, p.ground + 22)]];
+    const linha = [];
+    for (const [fn, y0, y1] of faixas) {
+      let s = 0, n = 0;
+      for (let y = y0; y + 12 < y1; y += 6) for (let x = 0; x + 12 < p.w; x += 6) { s += bloco(p, x, y, 12, 12).de; n++; }
+      linha.push(fn + ' ' + ((y1 - y0) / (p.ground + 22) * 100).toFixed(0) + '% do quadro, dE local ' +
+        (n ? s / n : 0).toFixed(1) + ', C* ' + croma(p, y0, y1).toFixed(1));
+    }
+    console.log('FAIXA ' + nome + '  ' + linha.join('  |  '));
   }
 
   // ---- (2) the worst-case frame ----

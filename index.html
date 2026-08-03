@@ -4061,6 +4061,38 @@ function drawScene() {
         cx.fillRect(dir > 0 ? w2 - 2 : W - w2, y, 2, 1);
       }
     };
+    // THE TOP OF THE FRAME. This block already said "both edges AND THE TOP CORNERS" and
+    // then only ever drew the two columns, and the measure finally put a number on what
+    // that left behind: split into bands, the sky is 68% of the world frame and carries a
+    // mean local dE of 8.9 at MANHA and 2.8 at NOITE, against 23.4 and 11.8 for the
+    // horizon band and 20.2 and 7.7 for the street. Two thirds of the picture at a third
+    // of the event density — the largest remaining distance to the board by a wide margin,
+    // and every street panel on the board closes exactly that gap with exactly this: canopy
+    // coming over the top edge, deepest in the corners, thinning to a scalloped fringe
+    // across the middle so the slot of light stays open.
+    // It adds NO new object to a frame that is already busy: it is the same mass, the same
+    // two greens, the same lit edge as the columns it grows out of, and it stays in the top
+    // sixth, which is the emptiest part of the picture and the furthest from anything the
+    // player has to read. It should also HELP the read, by closing the bright top that was
+    // pulling the eye away from the street — and that is measured, not assumed.
+    const dTopo = W * 0.46, dMeio = W * 0.030, alcance = W * 0.46;
+    for (let x = 0; x < W; x++) {
+      const borda2 = Math.max(0, 1 - Math.min(x, W - 1 - x) / alcance);
+      const d = Math.round(dMeio + dTopo * Math.pow(borda2, 1.45)
+        + Math.sin(x * 0.27 + 0.7) * (W * 0.013)
+        + Math.sin(x * 0.081 + 2.3) * (W * 0.019)
+        + Math.sin(x * 0.63 + 4.9) * (W * 0.007));   // the same leaf scallop, along x
+      if (d <= 0) continue;
+      const banda = ((x >> 2) & 1);
+      cx.fillStyle = banda ? escuro : meio;
+      cx.fillRect(x, 0, 1, d);
+      if (((x * 5) % 13) < 4) {                      // the coarse break, so it is not stripes
+        cx.fillStyle = banda ? meio : escuro;
+        cx.fillRect(x, Math.round(d * 0.35), 1, Math.max(2, d >> 2));
+      }
+      cx.fillStyle = borda;                          // the light that gets round it, underneath
+      cx.fillRect(x, d - 2, 1, 2);
+    }
     lado(1, desl * 0.02);
     lado(-1, 4.1 + desl * 0.02);
   }
