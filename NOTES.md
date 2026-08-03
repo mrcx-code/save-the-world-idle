@@ -2880,6 +2880,56 @@ toda sessão começa lendo a última entrada.
   não forcei altura fixa por frame. **Próximo passo:** se o dono achar o herói grande demais,
   `HERO_TARGET` é um botão só; e dá pra usar `idle` num estado parado de verdade se um dia
   existir (hoje o mundo sempre rola, então `walk` é o default, como antes).
+- **2026-08-03 · Mundo procedural → sprites autorados (monstros, drops, NPCs, deco).** O mesmo
+  payoff do herói, estendido ao resto do mundo. **Pipeline generalizado:** `test/inline-hero.js`
+  virou `test/inline-sheets.js` — recebe pasta + nome de variável, faz o mesmo knockout do
+  matte magenta (tolerância um tico mais larga porque fumaça tem borda macia e segura halo
+  rosa: `b>100 && r>100 && g<0.80·min(r,b) && |r−b|<90`), apara as margens, re-encoda e
+  *splica* um bloco base64 por marcador (`MOB_B64`, `DROP_B64`, `NPC_B64`, `DECOR_B64`). Cada
+  categoria carrega em `Image()` e blita HD (`imageSmoothingEnabled=true` só no sprite,
+  restaurado pra `false`), ancorado no pé, como o herói. **(1) Monstros:** `drawMobs()` escolhe
+  a animação do MESMO estado que já existia — andando/idle `_0,_1`; bloqueando produção
+  (`m.parado`) `_2,_3`; dissipando (`m.dying`) `_4,_5` — 2 frames off `tick`. `m.type`→folha:
+  smog→smog, barrel→drum, cash→cash. Flash de acerto preservado via cópia branca bakeada
+  (`whiteFlash`, `source-atop`). **Nada** de hp/spawn/movimento/hitbox/`m.parado`/`m.dying`
+  tocado — só leitura. Barra de vida vermelha intacta (`VIDA_TOPO` inalterado; alvos de altura
+  smog/drum 30, cash 26 pra cabeça ficar logo abaixo da barra). Aposentei `SMOG_MOB`/`CASH_MOB`/
+  `BARREL_MOB`/`mobLuz`. **(2) Drops:** flor/água/refeição autorados (`drop_0..2`) por tipo de
+  monstro, no footprint do ícone antigo pra o `+` e os ticks de "pega isto" continuarem
+  emoldurando. Lógica de coleta intocada; aposentei `ITEM_MAPS`/`itemSprite`/`iconeMundo`.
+  **(3) NPCs:** `pessoa()` blita `npcA`/`npcB` (três pessoas por folha) + cão de 4 frames;
+  idle suave de 2 frames off `tick`, dessincronizado por posição; continuam CENÁRIO PURO — sem
+  estado, sem hitbox, não clicáveis, fora da pista, call sites inalterados. Aposentei
+  `NPC_MAPS`/`NPC_C`/`npcSprite` e o IIFE da roda da cadeira. **(4) Deco:** banco/poste/vaso/
+  jardineira/cadeira/varal viram `decor_0..7`; o poste MANTÉM a luz emitida (brilho + poça,
+  fonte de luz, isenta da hora). Dois props novos da fatia: lixeira (na rotação de deco) e
+  bandeirinhas (penduradas atravessando segmentos que curam). `dc()`/`DECO_C` ficam — ainda
+  servem a cozinha comunitária. **(5) Ícones de HUD: PULEI, de propósito.** Os ícones do HUD
+  são canvas (`renderIcon`, 12×12 com contorno escuro de 1px casando com a fonte bitmap), então
+  o escape "é DOM/CSS" não valia — mas o conjunto `ui_*` (folha, cristal, grupo, casa, saco de
+  dinheiro, mapa, engrenagem) só cobre 4 dos 9 glifos do HUD: folha→ui_0, engrenagem→ui_6,
+  casa→ui_3, mãos→ui_2(grupo). Sol, ferramenta (upgrades), tocha, varinha (ataque) e chama
+  (GO FAST) não têm equivalente; cristal, dinheiro e mapa não têm casa no HUD. Trocar 4 de 9
+  deixaria a chrome metade HD-sombreada, metade pixel-plana, e a 12px o downscale perde o
+  contorno escuro que faz o ícone ler no creme (a engrenagem some). Não é "limpo" — segui a
+  instrução e pulei, deixando os `ui_*`/`item_*` como fonte pronta (a config de `inline-sheets.js`
+  já referencia `ui`). **Medido:** 4 folhas novas embutidas (MOB 18 frames, DROP 3, NPC 16,
+  DECOR 8 = 45 frames, ~1,79 MB de PNG antes do base64). Blocos base64 no arquivo: HERO 1096 KB
+  + MOB 836 KB + DROP 96 KB + NPC 998 KB + DECOR 456 KB = **3,40 MB embutidos**; `index.html`
+  **1,52 MB → 3,77 MB** (esperado — são os frames que são; sem fetch em runtime, um arquivo só).
+  `smoke.js` **verde** em cada um dos 4 incrementos, **FPS 61** em todos, `sim.js`
+  **byte-idêntico** ao baseline (`35ee525815d4…`) nos quatro — não toquei em CFG/economia/
+  `clicar`/`simular`/`atualizarMobs`. Prints lidos e julgados por mim em cada passo: monstro
+  andando, bloqueando (frames `_2,_3` menacing) e dissipando (drum vazando, saco espalhando
+  moeda); os três drops; lineup dos 7 NPCs + ciclo do cão; deco de dia e o poste com brilho de
+  noite — **sem franja magenta** em nenhum. **Cuidado que pediu atenção:** o frame de morte
+  contava pra baixo em tempo real no loop rAF e sumia antes do print — os harnesses
+  (`test/mobshot.js` etc.) congelam `requestAnimationFrame` e redesenham o mundo à mão pra
+  posar um estado. **Nota honesta:** como o herói, os novos sprites NÃO tingem com a hora (o
+  mundo à noite fica com vizinhos/deco em cor plena) — é o mesmo tratamento do herói, coerente,
+  mas se o dono achar berrante à noite dá pra passar um escurecimento global por cima. **Próximo
+  passo:** se um dia quiser HUD com os `ui_*`, precisa de um set que cubra os 9 glifos (falta
+  sol/ferramenta/tocha/varinha/chama), não os 7 atuais.
 
 ## Would cut with one more day
 
