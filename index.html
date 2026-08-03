@@ -4267,6 +4267,14 @@ function drawScene() {
     // sx 100 and 16 px wide, so nothing below y≈150 on the right may exceed ~14 px — this
     // profile is 13.1 there, where the old one was 9.2, and the lobe amplitude comes down
     // a notch to pay for the difference.
+    // TRIED AND BACKED OUT: 0.115·W. It measured what it promised — left/right fifths
+    // 93/90 → 86/84 against the board's 63/61 — and the screenshot refused it, which is the
+    // third time this project has trusted the print over the number and the third time the
+    // print was right. At that width the right column starts eating the third mob in the
+    // queue, the slot of sky between the two columns closes to a shaft, and the boy loses
+    // ground on all three axes (MANHÃ luma 25 → 29, croma 74 → 81, dE 18 → 21 of 485).
+    // Open sky also went THROUGH the held 31.2% to 30.1%. So 0.092·W is the limit: past it
+    // the frame stops being two buildings and becomes a tunnel again.
     const wBase = W * 0.092, wSwell = W * 0.16, wLobo = W * 0.021;
     const perfil = function (y, fase) {
       const t = y / fim;
@@ -4376,6 +4384,13 @@ function drawScene() {
     // The scallop follows the mass: at full amplitude across an open middle it would put
     // ±12 px of leaf back exactly where the middle was just cleared, so it is scaled by the
     // corner weight and only ripples where there is something to ripple.
+    // TRIED AND BACKED OUT: `alcance` widened to 0.40·W to repay the 1.3 points of open sky
+    // that opening the middle bought. It repaid them in the wrong currency — whole-frame
+    // open sky 32.1% → 31.4% but VISIBLE open sky 32.6% → 32.5%, i.e. every repaid pixel
+    // was behind the top HUD bar — and it cost a point of the top fifth (130 → 129). The
+    // debt is real and it is left standing, because the only place left to repay it where
+    // anyone can see is the middle of the top edge, which is the one thing this wave exists
+    // to open.
     const dTopo = W * 0.72, dMeio = W * 0.045, alcance = W * 0.34;
     // twelve steps of that grade, built once for the pass, so it is still two cached colour
     // strings per column and not two string builds per column
