@@ -57,27 +57,35 @@
      down the whole frame, and the vignette stacked on the canvas one. Direction C has no
      post-processing anywhere — the look has to hold up on form and colour alone. */
 
-  /* ---- HUD on top of the game ---- */
+  /* ---- HUD on top of the game ----
+     The board's UI CONCEITO puts the counters inside ONE dark rounded rail with a gear
+     sitting apart at its right end, not in three separate floating slabs. That is the
+     grammar copied here: a single pill, chips inside it, rounded corners, cream on deep
+     olive, and the gear as its own square at the end of the row. */
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0;
     top: calc(6px + env(safe-area-inset-top));
-    display: flex; gap: 5px; justify-content: center; padding: 0 6px; pointer-events: none; }
-  .chip { background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
-    border: 2px solid var(--contorno); padding: 5px 8px; flex: 1 1 0;
-    max-width: 170px; min-width: 0; color: var(--chromeT);
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.16);
-    display: flex; align-items: center; gap: 7px; }
+    display: flex; gap: 6px; align-items: stretch; padding: 0 8px; pointer-events: none; }
+  #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; align-items: stretch;
+    background: linear-gradient(180deg, #2b3320, #1b2010);
+    border: 2px solid var(--contorno); border-radius: var(--raio); padding: 4px;
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.10); }
+  .chip { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px;
+    background: #1b1c0f; border-radius: var(--raioSm); padding: 4px 6px; color: var(--chromeT); }
   .cInfo { min-width: 0; flex: 1; }
   .chip .rotulo { font-size: var(--fs-xs); color: var(--chromeS); white-space: nowrap; overflow: hidden;
     letter-spacing: .06em; font-weight: 700; }
-  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1.1; color: var(--chromeT);
-    font-variant-numeric: tabular-nums; text-shadow: 0 1px 0 rgba(0,0,0,.55); }
-  .pi { image-rendering: pixelated; width: 22px; height: 22px; flex: 0 0 auto; }
+  .chip .valor { font-size: var(--fs-md); font-weight: 800; line-height: 1.15; color: var(--chromeT);
+    font-variant-numeric: tabular-nums; }
+  #openConfig { pointer-events: auto; flex: 0 0 auto; width: 44px; border-radius: var(--raio);
+    background: linear-gradient(180deg, #3c4627, #262d18); padding: 0;
+    display: flex; align-items: center; justify-content: center; }
+  .pi { image-rendering: pixelated; width: 20px; height: 20px; flex: 0 0 auto; }
   .pi.big { width: 30px; height: 30px; }
-  #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: #a8bf5c; }
-  .minibar { height: 5px; background: #171b0d; border: 1px solid var(--contorno); margin-top: 3px; }
+  #energia { color: var(--gold); } #poluicao { color: var(--bad); } #worldPct { color: #b7d16a; }
+  .minibar { height: 4px; background: #0f1208; border-radius: 2px; margin-top: 3px; overflow: hidden; }
   .minibar > div { height: 100%; background: var(--bad); transition: width .3s; }
   /* where the team is heading, not just where it is */
-  .chip .tend { margin-top: 4px; font-size: 7px; white-space: nowrap; }
+  .chip .tend { margin-top: 3px; font-size: 7px; white-space: nowrap; }
   .tend.cai { color: #e39176; } .tend.sobe { color: #b7d16a; }
 
   /* the whole frame washes with the rhythm you just chose */
@@ -91,7 +99,7 @@
   .pop { animation: estala .42s ease-out 1; }
   @keyframes estala { 0% { transform: scale(1.14); filter: brightness(1.9) } 100% { transform: scale(1); filter: none } }
 
-  #offline { display: none; position: fixed; z-index: 12; left: 50%; transform: translateX(-50%);
+  #offline { display: none; position: fixed; z-index: 12; border-radius: var(--raio); left: 50%; transform: translateX(-50%);
     top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
     background: #35431f; border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #8aa347;
     color: #dbe7b4; padding: 8px 10px; font-size: var(--fs-xs); line-height: 1.7; }
@@ -100,7 +108,7 @@
      Thresholds are fractions of CFG.metaPrestigio, computed at fire time — nothing here
      freezes the target. Pointer-through on purpose: the whole game is one button and a
      card that eats a swing would be worse than no card at all. */
-  #cartao { display: none; position: fixed; z-index: 12; left: 50%; transform: translateX(-50%);
+  #cartao { display: none; position: fixed; z-index: 12; border-radius: var(--raio); left: 50%; transform: translateX(-50%);
     top: 28%; width: min(420px, 92vw); text-align: center; pointer-events: none;
     background: linear-gradient(180deg, rgba(36,50,92,.96), rgba(18,25,51,.96));
     /* purple, not gold: REAL DATA owns the gold left edge, and a made-up line must never
@@ -138,7 +146,7 @@
     color: #f6ecd5; background: linear-gradient(180deg, #b98a30, #6d4d15); }
 
   /* one line that says what the world wants from you right now */
-  #alerta { display: none; position: fixed; z-index: 11; left: 50%; transform: translateX(-50%);
+  #alerta { display: none; position: fixed; z-index: 11; border-radius: var(--raio); left: 50%; transform: translateX(-50%);
     top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
     border: 3px solid var(--ink); padding: 7px 9px; font-size: var(--fs-xs); line-height: 1.7;
     text-align: center; background: rgba(14,15,26,.9); }
@@ -154,7 +162,7 @@
      to say one sentence; this hands most of that height back to the world.
      Keeps --hControles rather than a fixed 122px: that variable is measured from the real
      control block on load and on resize, and it is what stops this covering the menu bar. */
-  #fato { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
+  #fato { position: fixed; z-index: 9; border-radius: var(--raioSm); left: 50%; transform: translateX(-50%);
     bottom: calc(var(--hControles, 122px) + env(safe-area-inset-bottom)); width: min(520px, 94vw);
     font-size: var(--fs-xs); color: #d9cfae; line-height: 1.45;
     background: linear-gradient(180deg, #2b3320, #232817);
@@ -163,28 +171,45 @@
     max-height: 3.9em; overflow: hidden; }
   #fato b { color: var(--gold); }
 
-  /* ---- bottom controls ---- */
+  /* ---- bottom controls: the board's UI CONCEITO, mapped onto this game's real functions ----
+     The board stacks three things under the scene: a PROGRESS PANEL with a percentage and a
+     bar and a line under it; a row of FOUR ACTION CARDS, each an icon over a name over a
+     value; and a dark BOTTOM RAIL. Nothing is invented to fill them — the progress panel is
+     the street's health, the four cards are the four things this game actually lets you
+     open or toggle (the rhythm, the projects, the upgrades, the torch), and the rail holds
+     the one action the whole prototype is built around.
+     --hControles is still measured off the real block on load and on resize; the rule that
+     no panel may cover this block is what that variable exists for. */
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
-    bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
-  /* Four entries with four different weights instead of four identical slabs.
-     Row 1: the thing you KEEP (small square) beside the RHYTHM you are running (wide
-     readout). Row 2: the things you BUILD with, stacked at the side, beside the main
-     action, which takes the rest of the block. Whatever this row ends up measuring,
-     --hControles is read off the real block on load and on resize — see medirControles(). */
-  #linhaTopo { display: flex; gap: 6px; margin-bottom: 6px; }
-  #linhaMain { display: flex; gap: 6px; align-items: stretch; }
-  #controls button { display: flex; align-items: center; justify-content: center; gap: 6px; }
-  /* the thing you keep: an icon, and only an icon */
-  .btnIcone { flex: 0 0 auto; width: 46px; padding: 8px 0; }
-  /* the things you build with: a stacked pair, named, at the side */
-  #colLado { display: flex; flex-direction: column; gap: 6px; flex: 0 0 37%; max-width: 176px; min-width: 0; }
-  #colLado button { flex: 1 1 0; min-height: 34px; padding: 5px 8px; font-size: var(--fs-sm);
-    justify-content: flex-start; gap: 5px; }
-  #colLado b { font-weight: 700; font-size: var(--fs-sm); }
-  #colLado .rot { font-size: 8px; letter-spacing: .5px; opacity: .8; margin-left: auto; }
-  /* Poster chrome from the estetica pass; the components below it are the jogabilidade
-     pass's new UI, kept because they are structure, not style. */
-  button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno); border-radius: 2px;
+    bottom: calc(8px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
+
+  /* the progress panel — "RUA: 42%" on the board, the street's health here */
+  #painelRua { background: linear-gradient(180deg, #2b3320, #1e2312);
+    border: 2px solid var(--contorno); border-radius: var(--raio); padding: 6px 10px 7px;
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.09); margin-bottom: 6px; }
+  #painelRua .pr1 { display: flex; align-items: center; gap: 8px; }
+  #painelRua .prT { font-size: var(--fs-sm); font-weight: 800; letter-spacing: .08em; color: var(--creme); }
+  #painelRua .prV { font-size: var(--fs-sm); font-weight: 800; color: var(--gold);
+    font-variant-numeric: tabular-nums; }
+  .prBar { flex: 1 1 auto; height: 9px; background: var(--barra); border-radius: 5px; overflow: hidden; }
+  .prBar > div { height: 100%; width: 0%; border-radius: 5px; transition: width .3s;
+    background: linear-gradient(180deg, #f6cf7e, var(--barraOn)); }
+  #ruaSub { font-size: var(--fs-xs); color: var(--sub); line-height: 1.5; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* the four cards — icon over name over value, exactly the board's card */
+  #cartoes { display: flex; gap: 6px; margin-bottom: 6px; }
+  .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 2px; padding: 6px 2px 5px; border-radius: var(--raio);
+    background: linear-gradient(180deg, #46512c, #333c22); }
+  .cartao .cn { font-size: 8px; letter-spacing: .04em; color: var(--creme); white-space: nowrap;
+    overflow: hidden; max-width: 100%; }
+  .cartao .cv { font-size: var(--fs-xs); font-weight: 800; color: var(--gold); white-space: nowrap;
+    font-variant-numeric: tabular-nums; }
+  .cartao.pronto { box-shadow: 0 3px 0 var(--contorno), 0 0 14px rgba(235,167,72,.55); }
+
+  button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno);
+    border-radius: var(--raioSm);
     cursor: pointer; color: var(--chromeT); text-transform: uppercase;
     background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
     box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14);
@@ -192,21 +217,29 @@
   button:disabled { opacity: .5; cursor: default; }
   button:not(:disabled):active { transform: translateY(2px);
     box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14); }
-     this whole prototype exists to measure, so it gets a line of its own */
-  #modeQuick { flex: 1 1 auto; min-width: 0; gap: 6px; padding: 6px 8px; justify-content: flex-start; }
-  #modeQuick .mq { display: flex; flex-direction: column; align-items: flex-start; min-width: 0;
-    line-height: 1.25; overflow: hidden; }
-  #modeQuick .mq b { font-size: 9px; font-weight: normal; }
-  #modeQuick .mq i { font-size: 8px; font-style: normal; opacity: .85; white-space: nowrap; }
-  #modeQuick.fast { background: linear-gradient(180deg, #8a4028, #4a2113) !important; color: #f2d3b0; }
-  #modeQuick.steady { background: linear-gradient(180deg, #5b7a2c, #2c3d16) !important; color: #dbe7b4; }
+  /* the rhythm card: the one decision this prototype exists to measure, so it is the card
+     that is allowed to change colour and to pulse */
+  #modeQuick.fast { background: linear-gradient(180deg, #8a4028, #4a2113) !important; }
+  #modeQuick.fast .cn { color: #f2d3b0; }
+  #modeQuick.steady { background: linear-gradient(180deg, #5b7a2c, #2c3d16) !important; }
+  #modeQuick.steady .cn { color: #dbe7b4; }
   /* it is costing you right now: say so without words */
   #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
-  @keyframes doendo { 0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 16px rgba(255,107,87,.9) } 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } }
-  /* the main action: the rest of the block, and the only thing in it with weight */
-  /* the one action of the game, and it should not be arguable which one it is: the new
-     layout's geometry, wearing the gold the chrome pass reserved for exactly this button */
-  #btnClique { flex: 1 1 auto; min-width: 0; min-height: 74px; padding: 11px 10px;
+  @keyframes doendo { 0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 16px rgba(200,90,50,.9) } 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } }
+  /* the bottom rail, and the one thing standing in it */
+  #rail { background: var(--navBg); border: 2px solid var(--contorno); border-radius: var(--raio);
+    padding: 5px; display: flex; box-shadow: 0 3px 0 var(--contorno); }
+  #btnClique { flex: 1 1 auto; min-width: 0; min-height: 62px; padding: 9px 10px;
+    border-radius: var(--raioSm);
+    font-size: var(--fs-lg); font-weight: 800;
+    background: linear-gradient(180deg, #f8d98f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
+    color: #221806; border-width: 2px; letter-spacing: .02em;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.45);
+    box-shadow: 0 4px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.55),
+      inset 0 -3px 0 rgba(120,60,0,.28); position: relative; }
+  #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
+    color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
     font-size: var(--fs-lg); font-weight: 800;
     background: linear-gradient(180deg, #f8d98f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
     color: #221806; border-width: 3px; letter-spacing: .02em;
@@ -216,7 +249,7 @@
       inset 0 -3px 0 rgba(120,60,0,.28); position: relative; }
   #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
     color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
-  #btnClique.segurando { transform: translateY(4px);
+  #btnClique.segurando { transform: translateY(3px);
     background: linear-gradient(180deg, #fdeec2 0%, #f6cf7e 34%, #e8a244 100%);
     box-shadow: 0 2px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.6); }
   #btnClique.segurando #dicaHold { color: rgba(42,26,6,.85); }
@@ -245,7 +278,7 @@
   .sheet { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%) translateY(110%);
     bottom: calc(var(--hControles, 120px) + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
     background: linear-gradient(180deg, #333c22 0%, #242a16 55%, #1e2312 100%);
-    border: 3px solid var(--contorno); border-radius: 2px;
+    border: 3px solid var(--contorno); border-radius: var(--raio);
     box-shadow: 0 5px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.13);
     /* the menu bar is protected by `bottom`, not by this: max-height only grows upward,
        so the projects sheet can hold its explanation without reaching the buttons below */
@@ -284,7 +317,7 @@
 
   /* the trade, side by side: what you are running now against what switching would do */
   .ritmo { display: flex; gap: 7px; margin-top: 9px; }
-  .rCol { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #232817, #171b0d); border: 2px solid #000; padding: 8px 7px; }
+  .rCol { flex: 1 1 0; min-width: 0; border-radius: var(--raioSm); background: linear-gradient(180deg, #232817, #171b0d); border: 2px solid #000; padding: 8px 7px; }
   .rCol.quente { box-shadow: inset 0 0 0 1px var(--bad); }
   .rCol.fria { box-shadow: inset 0 0 0 1px var(--good); }
   .rTit { font-size: 8px; color: var(--sub); margin-bottom: 6px; white-space: nowrap;
@@ -298,13 +331,13 @@
     color: #f0d4b8; background: #43241a; border: 2px solid var(--bad); }
   .avisoRampa.mostra { display: block; }
 
-  .barra { height: 10px; background: #000; border: 2px solid var(--ink); margin-top: 6px; }
+  .barra { height: 10px; border-radius: 4px; overflow: hidden; background: #000; border: 2px solid var(--ink); margin-top: 6px; }
   .barra > div { height: 100%; transition: width .3s;
     background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.25) 0 2px, transparent 2px 6px); }
   #barRampa { background-color: var(--good); width: 0%; }
   #barPrestigio { background-color: var(--purple); width: 0%; }
 
-  .upgrade { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, #232817, #171b0d);
+  .upgrade { display: flex; align-items: center; gap: 8px; border-radius: var(--raioSm); background: linear-gradient(180deg, #232817, #171b0d);
     border: 2px solid #000; padding: 9px; margin-bottom: 7px; min-height: 54px; }
   .upgrade .info { flex: 1; }
   .upgrade .nome { font-size: var(--fs-sm); }
@@ -322,7 +355,7 @@
   #btnConfirmaNao { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 7px;
     color: #cfc4a4; background: linear-gradient(180deg, #3a4324, #242a16); }
   .placar { display: flex; gap: 7px; margin-bottom: 8px; }
-  .placar > div { flex: 1; background: linear-gradient(180deg, #232817, #171b0d); border: 2px solid #000; padding: 9px; }
+  .placar > div { flex: 1; border-radius: var(--raioSm); background: linear-gradient(180deg, #232817, #171b0d); border: 2px solid #000; padding: 9px; }
   .placar .r { font-size: var(--fs-xs); color: var(--sub); line-height: 1.7; }
   .placar .v { font-size: var(--fs-sm); margin-bottom: 4px; }
   .placar .ganha .v { color: var(--good); }
@@ -348,7 +381,7 @@
   #lore { position: fixed; inset: 0; z-index: 50; background: rgba(10,11,20,.92);
     display: flex; align-items: center; justify-content: center; padding: 16px; }
   #lore.escondido { display: none; }
-  .loreBox { background: var(--panel); border: 4px solid var(--ink);
+  .loreBox { border-radius: var(--raio); background: var(--panel); border: 4px solid var(--ink);
     box-shadow: inset 0 0 0 2px var(--panel2), 6px 6px 0 #000; max-width: 440px; padding: 18px 16px; }
   .loreBox h2 { font-size: var(--fs-lg); color: var(--gold); margin-bottom: 12px; text-shadow: 2px 2px 0 var(--ink); }
   #loreArt { display: block; width: 100%; image-rendering: pixelated; border: 3px solid var(--ink);
@@ -375,15 +408,19 @@
   </div>
 </div>
 
+<!-- The board's top bar: one dark rail of counters, and a gear standing apart at its end. -->
 <div id="hudTop">
-  <div class="chip" id="chipTaxa"><canvas class="pi" data-i="bolt" width="12" height="12"></canvas>
-    <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo"><span id="taxa">0</span>/s</div></div></div>
-  <div class="chip" id="chipTime"><canvas class="pi" data-i="tired" width="12" height="12"></canvas>
-    <div class="cInfo"><div class="valor" id="eficiencia">100%</div>
-      <div class="minibar"><div id="barPoluicao"></div></div>
-      <div class="rotulo tend" id="tendencia"></div><span id="poluicao" style="display:none">0</span></div></div>
-  <div class="chip"><canvas class="pi" data-i="leaf" width="12" height="12"></canvas>
-    <div class="cInfo"><div class="valor" id="worldPct">0%</div><div class="rotulo" id="wisChip"></div></div></div>
+  <div id="barraTopo">
+    <div class="chip" id="chipTaxa"><canvas class="pi" data-i="leaf" width="12" height="12"></canvas>
+      <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo"><span id="taxa">0</span>/s</div></div></div>
+    <div class="chip" id="chipTime"><canvas class="pi" data-i="hands" width="12" height="12"></canvas>
+      <div class="cInfo"><div class="valor" id="eficiencia">100%</div>
+        <div class="minibar"><div id="barPoluicao"></div></div>
+        <div class="rotulo tend" id="tendencia"></div><span id="poluicao" style="display:none">0</span></div></div>
+    <div class="chip"><canvas class="pi" data-i="sun" width="12" height="12"></canvas>
+      <div class="cInfo"><div class="valor" id="worldPct">0%</div><div class="rotulo" id="wisChip"></div></div></div>
+  </div>
+  <button id="openConfig" aria-label="stats"><canvas class="pi" data-i="gear" width="12" height="12"></canvas></button>
 </div>
 
 <div id="offline"></div>
@@ -398,16 +435,22 @@
      button beside it, the two things you BUILD with are a stacked pair at the side, and
      the main action takes the whole rest of the block under your thumb. -->
 <div id="controls">
-  <div id="linhaTopo">
-    <button id="openTorch" class="btnIcone" aria-label="torch"><canvas class="pi" data-i="torch" width="12" height="12"></canvas></button>
-    <button id="modeQuick"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas><span
-      class="mq"><b id="modeNome">FAST</b><i id="modeSub"></i></span></button>
+  <div id="painelRua">
+    <div class="pr1"><span class="prT">STREET</span><span class="prV" id="ruaPct">0%</span>
+      <div class="prBar"><div id="barRua"></div></div></div>
+    <div id="ruaSub"></div>
   </div>
-  <div id="linhaMain">
-    <div id="colLado">
-      <button id="openProjects"><canvas class="pi" data-i="house" width="12" height="12"></canvas><b id="nGeradores">0</b><span class="rot">PROJECTS</span></button>
-      <button id="openUpgrades"><canvas class="pi" data-i="up" width="12" height="12"></canvas><span class="rot">UPGRADES</span></button>
-    </div>
+  <div id="cartoes">
+    <button id="modeQuick" class="cartao"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas>
+      <span class="cn" id="modeNome">FAST</span><span class="cv" id="modeSub"></span></button>
+    <button id="openProjects" class="cartao"><canvas class="pi" data-i="house" width="12" height="12"></canvas>
+      <span class="cn">PROJECTS</span><span class="cv" id="nGeradores">0</span></button>
+    <button id="openUpgrades" class="cartao"><canvas class="pi" data-i="up" width="12" height="12"></canvas>
+      <span class="cn">UPGRADES</span><span class="cv" id="upNota">—</span></button>
+    <button id="openTorch" class="cartao"><canvas class="pi" data-i="torch" width="12" height="12"></canvas>
+      <span class="cn">TORCH</span><span class="cv" id="torchNota">0%</span></button>
+  </div>
+  <div id="rail">
     <button id="btnClique"><div id="foco"></div><span id="cargaSuper" class="cs"></span><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
   </div>
 </div>
@@ -1921,28 +1964,38 @@ function hash01(k) { // deterministic 0..1 per world segment
 
 // ---- pixel icons (no emoji, no text) ----
 const ICONS = {
-  bolt: { pal: { X: "#ffcd75" }, map: [
+  bolt: { pal: { X: "#eba748" }, map: [
     "......XX....", ".....XXX....", "....XXX.....", "...XXXX.....", "..XXXXXXX...", ".....XXX....",
     "....XXX.....", "...XXX......", "..XXX.......", ".XXX........", ".XX.........", "............"] },
-  tired: { pal: { K: "#94b0c2", X: "#b13e53" }, map: [
+  tired: { pal: { K: "#a9a184", X: "#b8503c" }, map: [
     "............", "............", ".KKKKKKKKK..", ".K.......K..", ".K.XX....KK.", ".K.XX....KK.",
     ".K.......K..", ".KKKKKKKKK..", "............", "............", "............", "............"] },
-  leaf: { pal: { X: "#38b764", K: "#1f6e40" }, map: [
+  leaf: { pal: { X: "#767f34", K: "#3e4721" }, map: [
     "............", ".......XXX..", ".....XXXXX..", "....XXXXXX..", "...XXXXXXX..", "..XXXXXXX...",
     "..XXXXXX....", "..XXXXX.....", "...KXX......", "...K........", "..K.........", "............"] },
-  house: { pal: { X: "#c9a86a", K: "#10121c", W: "#ffe08a" }, map: [
+  house: { pal: { X: "#b9732c", K: "#14170c", W: "#fde79d" }, map: [
     "............", ".....KK.....", "....KXXK....", "...KXXXXK...", "..KXXXXXXK..", ".KKKKKKKKKK.",
     ".KXXXXXXXXK.", ".KXWWXXWWXK.", ".KXWWXXWWXK.", ".KXXXXXXXXK.", ".KKKKKKKKKK.", "............"] },
-  up: { pal: { X: "#ffcd75" }, map: [
+  up: { pal: { X: "#eba748" }, map: [
     "............", ".....XX.....", "....XXXX....", "...XXXXXX...", "..XXXXXXXX..", ".XXXXXXXXXX.",
     "....XXXX....", "....XXXX....", "....XXXX....", "....XXXX....", "............", "............"] },
   // A wooden stick with a burning rag on it is a dungeon prop, and this game is a street in
   // 2026. Same meaning — the thing you keep and hand on — as a modern emblem: a flame inside
   // a badge, in the purple the torch sheet and the skills already use.
-  torch: { pal: { X: "#ef7d57", W: "#ffcd75", K: "#2b1f4a", G: "#8d5bd6" }, map: [
+  torch: { pal: { X: "#da7a29", W: "#eba748", K: "#3a2712", G: "#96682f" }, map: [
     "............", "...GGGGGG...", "..GKKKKKKG..", ".GKK.WW.KKG.", ".GK.WWWW.KG.", ".GK.WXXW.KG.",
     ".GKWXXXXWKG.", ".GKWXWWXWKG.", "..GKWXXWKG..", "...GGGGGG...", "............", "............"] },
-  flame: { pal: { X: "#ef7d57", W: "#ffcd75" }, map: [
+  // ---- the board's ÍCONES sheet: a sun, hands over a bowl, a gear ----
+  sun: { pal: { W: "#fde79d", X: "#eba748", O: "#da7a29" }, map: [
+    "............", "....O..O....", "..O.XXXX.O..", "....XWWX....", "..OXWWWWXO..", "..OXWWWWXO..",
+    "....XWWX....", "..O.XXXX.O..", "....O..O....", "............", "............", "............"] },
+  hands: { pal: { S: "#a9743f", s: "#c08a52", G: "#525d2a", W: "#767f34" }, map: [
+    "............", "...SS..ss...", "..SSSS.sss..", "..SSSS.sss..", "...SS...ss..", "..GGGGGGGG..",
+    ".GWGGGGGGWG.", ".GGGGGGGGGG.", ".GGGGGGGGGG.", "..GG....GG..", "..GG....GG..", "............"] },
+  gear: { pal: { X: "#eba748", K: "#3c4627" }, map: [
+    "............", "...X.XX.X...", "...XXXXXX...", ".XXXXKKXXXX.", "..XXXKKXXX..", ".XXKK..KKXX.",
+    ".XXKK..KKXX.", "..XXXKKXXX..", ".XXXXKKXXXX.", "...XXXXXX...", "...X.XX.X...", "............"] },
+  flame: { pal: { X: "#da7a29", W: "#eba748" }, map: [
     "............", ".....X......", "....XX......", "....XXX.....", "...XXXXX....", "...XWXXX....",
     "..XWWXXX....", "..XWWWXX....", "...XWWX.....", "....XX......", "............", "............"] },
   // key stays `sword` because the markup names it; what it draws is the wand. Its star is
@@ -3594,6 +3647,24 @@ function desenhar() {
   $("worldPct").textContent = Math.round(worldHealth() * 100) + "%";
   $("wisChip").textContent = S.inovacao > 0 ? "★ wisdom " + S.inovacao : "";
 
+  // ---- the board's progress panel: a percentage, a bar, and a line under it ----
+  const pctRua = Math.round(worldHealth() * 100);
+  $("ruaPct").textContent = pctRua + "%";
+  $("barRua").style.width = pctRua + "%";
+  $("ruaSub").textContent = pctRua >= 95 ? "the street looks after itself now"
+    : pctRua >= 60 ? "green is coming back — keep going"
+      : pctRua >= 25 ? "it is turning · every small action changes the street"
+        : "nobody is saved alone · start something";
+  // ...and the two cards that carry a number of their own
+  const naoTem = [1, 2, 3, 4, 5, 6, 7].filter(function (n) { return !S["u" + n]; });
+  const podeComprar = naoTem.filter(function (n) { return S.energia >= CFG["custoU" + n]; }).length;
+  $("upNota").textContent = naoTem.length === 0 ? "ALL" : podeComprar > 0 ? podeComprar + " READY" : naoTem.length + " LEFT";
+  $("openUpgrades").className = "cartao" + (podeComprar > 0 ? " pronto" : "");
+  const fracTocha = Math.min(1, S.energiaTotal / CFG.metaPrestigio);
+  $("torchNota").textContent = fracTocha >= 1 ? "READY" : Math.floor(fracTocha * 100) + "%";
+  $("openTorch").className = "cartao" + (fracTocha >= 1 ? " pronto" : "");
+  $("openProjects").className = "cartao" + (quantosCabem(1).n > 0 ? " pronto" : "");
+
   desenharProjetos();
 
   desenharRitmo();
@@ -3732,7 +3803,7 @@ function desenharRitmo() {
     ? (S.geradores > 0 ? "→" + Math.round(saudeFimAtual * 100) + "%" : "3/s each")
     : (descansando ? "→100%" : "×" + rampaAtual().toFixed(1));
   // pulse only while it is actively costing you something
-  mq.className = classe + (cansando && eficiencia() < 0.9 ? " doi" : "");
+  mq.className = "cartao " + classe + (cansando && eficiencia() < 0.9 ? " doi" : "");
 
   // --- where the team is heading, on the team chip ---
   const tend = $("tendencia");
@@ -3929,6 +4000,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnSkillAuto").onclick = comprarSkill;
   $("openProjects").onclick = () => abrir("sheetProjects");
   $("openUpgrades").onclick = () => abrir("sheetUpgrades");
+  // the board puts a gear at the end of the top rail; the only settings-shaped surface this
+  // game has is the three-day-test readout, so that is what it opens
+  $("openConfig").onclick = function () { mostrarRetencao(); abrir("sheetStats"); };
   // tap the torch to pass it; hold it to see whether anyone is still coming back
   const bt = $("openTorch");
   let pressT = null, longo = false;
