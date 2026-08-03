@@ -62,7 +62,7 @@ function chromiumPath() {
           return { cor: k, n: cont[k].n, L: cont[k].L, nome: nome[k] || '?',
             yc: cont[k].sy / cont[k].n, ymin: cont[k].ymin, ymax: cont[k].ymax };
         }).sort(function (a, b) { return b.n - a.n; });
-        quintos.push({ q: q + 1, y0: y0 + ya, y1: y0 + yb, luma: s / n, n: n, top: lista.slice(0, 12),
+        quintos.push({ q: q + 1, y0: y0 + ya, y1: y0 + yb, luma: s / n, n: n, top: lista.slice(0, 30),
           nomeados: lista.filter(function (t) { return t.nome !== '?'; }).reduce(function (a, t) { return a + t.n; }, 0) / n });
       }
       return { ground: GROUND, topo: topo, quintos: quintos };
