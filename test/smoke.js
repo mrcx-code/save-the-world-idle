@@ -28,78 +28,57 @@ function chromiumPath() {
   // obsolete: the opening card was removed by owner request — the game starts on the street.
 
   // obsolete: the first-run guide was removed by owner request — feature and test.
-  // ---- the world is the other half of the button ----
-  // a tap on the scene swings exactly like the CTA does
-  const noMundo = await page.evaluate(async () => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null; S.geradores = 0;
-    const antes = S.energiaTotal, c0 = combo;
+  // ---- the world is the JUMP surface, and it never earns ----
+  const salto = await page.evaluate(async () => {
+    fecharTudo();
+    mobs.length = 0; drops.length = 0; folhas.length = 0; jumpT = 0;
+    const antes = S.energiaTotal, comboAntes = combo;
     const cv = document.getElementById('scene');
-    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 400 }));
+    const r = cv.getBoundingClientRect();
+    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+    await new Promise(rr => setTimeout(rr, 60));
+    const noAr = jumpT;
     cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 60));
-    return { ganho: S.energiaTotal - antes, combo0: c0, combo1: combo };
+    await new Promise(rr => setTimeout(rr, 700));
+    return { noAr, pousou: jumpT, ganho: S.energiaTotal - antes, combo: combo - comboAntes };
   });
-  console.log('tap the scene ->', noMundo.ganho.toFixed(2), 'impact | combo',
-    noMundo.combo0, '->', noMundo.combo1);
-  if (noMundo.ganho <= 0) errors.push('a tap on the world did not swing');
-  if (noMundo.combo1 === noMundo.combo0) errors.push('a tap on the world did not advance the combo');
+  console.log('tap on the world -> jumpT', salto.noAr, '| landed at', salto.pousou,
+    '| earned', salto.ganho.toFixed(2), '| combo moved', salto.combo);
+  if (salto.noAr <= 0) errors.push('a tap on the world did not jump');
+  if (salto.pousou !== 0) errors.push('the jump never landed');
+  if (salto.ganho > 0.001) errors.push('a tap on the world earned impact');
+  if (salto.combo !== 0) errors.push('a tap on the world advanced the combo');
 
-  // holding on the scene repeats, and stops on release
-  const seguraMundo = await page.evaluate(async () => {
-    // hold long enough and the super goes off, which would inflate the numbers below;
-    // it has its own block further down, so park it here
-    superT = 0; superCarga = 0; superSwings = 0; superCd = 1e9; superFx = null;
-    const cv = document.getElementById('scene');
-    const a = S.energiaTotal;
-    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 400 }));
-    await new Promise(r => setTimeout(r, 1000));
-    const b = S.energiaTotal;
-    cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 600));
-    return { segurando: b - a, depois: S.energiaTotal - b };
+  // a leaf caught out of the air pays, and only while she is up there
+  const folha = await page.evaluate(async () => {
+    fecharTudo();
+    folhas.length = 0; jumpT = 0; floats.length = 0;
+    // hold off the spawner: a leaf arriving mid-test would leave the array non-empty and say
+    // nothing about whether THIS one was taken
+    folhaT = 0; proximaFolha = 9999;
+    // one parked right where her head passes at the top of the arc
+    const alvo = { wx: worldX + HX, y: GROUND - 60, fase: 0 };
+    folhas.push(alvo);
+    const noChao = S.energiaTotal;
+    atualizarFolhas(1 / 60, 0);                       // standing: it is above her
+    const semPular = S.energiaTotal - noChao;
+    const nAntes = folhas.length;
+    pular();
+    for (let i = 0; i < 40; i++) {                    // ride the arc
+      const pj = 1 - jumpT / JUMPF;
+      const alto = jumpT > 0 ? Math.round(Math.pow(Math.sin(pj * Math.PI), 0.7) * 52) : 0;
+      atualizarFolhas(1 / 60, alto);
+      if (jumpT > 0) jumpT--;
+    }
+    return { semPular, nAntes, aindaLa: folhas.indexOf(alvo) >= 0, pago: S.energiaTotal - noChao };
   });
-  console.log('hold the scene 1s ->', Math.round(seguraMundo.segurando), 'impact | after release +',
-    seguraMundo.depois.toFixed(2));
-  if (seguraMundo.segurando < 4) errors.push('holding the world did not repeat');
-  if (seguraMundo.depois > 0.5) errors.push('holding the world did not stop on release');
+  console.log('a leaf overhead -> ignored while standing:', folha.semPular.toFixed(2),
+    '| still hanging:', folha.aindaLa, '| jumping paid', folha.pago.toFixed(2));
+  if (folha.semPular > 0.001) errors.push('a leaf overhead was taken without jumping');
+  if (folha.aindaLa) errors.push('jumping through a leaf did not take it');
+  if (!(folha.pago > 0)) errors.push('catching a leaf paid nothing');
 
-  // both surfaces held at once must NOT double the hit rate — one timer, not two
-  const dobrado = await page.evaluate(async () => {
-    // hold long enough and the super goes off, which would inflate the numbers below;
-    // it has its own block further down, so park it here
-    superT = 0; superCarga = 0; superSwings = 0; superCd = 1e9; superFx = null;
-    const cv = document.getElementById('scene'), bc = document.getElementById('btnClique');
-    const a = S.energiaTotal;
-    bc.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 400 }));
-    await new Promise(r => setTimeout(r, 1000));
-    const b = S.energiaTotal;
-    bc.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 400));
-    return { juntos: b - a, parou: S.energiaTotal - b };
-  });
-  console.log('button + scene held together ->', Math.round(dobrado.juntos),
-    'impact (one surface gave', Math.round(seguraMundo.segurando) + ')');
-  if (dobrado.juntos > seguraMundo.segurando + 3) errors.push('holding both surfaces doubled the hit rate');
-  if (dobrado.parou > 0.5) errors.push('releasing both surfaces did not stop the swinging');
 
-  // with a sheet open a scene tap only dismisses it — no stray swing
-  const comFolha = await page.evaluate(async () => {
-    abrir('sheetUpgrades');
-    await new Promise(r => setTimeout(r, 250));
-    const antes = S.energiaTotal;
-    const cv = document.getElementById('scene');
-    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 400 }));
-    cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 250));
-    return { ganho: S.energiaTotal - antes, aberta: document.getElementById('sheetUpgrades').classList.contains('aberto') };
-  });
-  console.log('scene tap with a sheet open -> closed:', !comFolha.aberta, '| swing:', comFolha.ganho.toFixed(2));
-  if (comFolha.aberta) errors.push('a scene tap did not close the open sheet');
-  if (comFolha.ganho > 0.01) errors.push('a scene tap swung while a sheet was open');
-
-  // obsolete: THE SUPER was removed by owner request — only the strike is left.
   // ---- how much of a trouble is left, and how much there was to begin with ----
   // The damage was always there; nothing ever showed it. Two things are checked: the
   // spread between the little one and the big one is wide enough to feel, and the readout
@@ -143,53 +122,60 @@ function chromiumPath() {
 
   // ---- troubles walk in, block the work, and pay when they are cleared ----
   const encontro = await page.evaluate(async () => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
     S.geradores = 10; S.poluicao = 0; S.modo = 'limpo';
-    const livre = prodPorSegundo();
     mobs.push(novoMob('smog', worldX + W + 12));
-    const longe = mobs[0].wx - worldX;
-    for (let i = 0; i < 400; i++) atualizarMobs(0.05);      // 20s of walking
-    const perto = mobs[0].wx - worldX;
-    const bloqueado = prodPorSegundo();
-    // they queue up instead of standing on top of each other
-    const xs = mobs.filter(m => m.parado).map(m => Math.round(m.wx - worldX)).sort((a, b) => a - b);
-    const empilhados = xs.some((x, i) => i > 0 && x - xs[i - 1] < 12);
-    // and every one of them is inside the reach of a plain swing from the button
-    const alcance = mobs.every(m => m.wx - worldX < HX + 80);
-    return { livre, bloqueado, longe, perto, parado: mobs[0].parado, n: mobs.length,
-      fator: bloqueioMundo(), xs, empilhados, alcance };
+    const alvo = mobs[0];
+    const longe = alvo.wx - worldX;
+    let passouPorEla = false;
+    const chegadas = [];
+    let antesN = mobs.length;
+    for (let i = 0; i < 1200; i++) {                   // 60s of street: enough gaps to judge
+      atualizarMobs(0.05);
+      if (mobs.length > antesN) chegadas.push(i * 0.05);
+      antesN = mobs.length;
+      if (alvo.wx - worldX < HX - 10) passouPorEla = true;
+    }
+    const sumiu = mobs.indexOf(alvo) < 0;
+    const parados = mobs.filter(m => m.parado).length;
+    // gaps between arrivals must not all be identical, or the street has a metronome in it
+    const vaos = chegadas.slice(1).map((t, i) => +(t - chegadas[i]).toFixed(2));
+    // with random gaps a short window can yield a single gap, which says nothing — judge only
+    // once there are at least three of them
+    const variados = vaos.length < 3 || new Set(vaos).size > 1;
+    return { longe, passouPorEla, sumiu, parados, nChegadas: chegadas.length, vaos, variados };
   });
-  console.log('a trouble walks in -> from x', Math.round(encontro.longe), 'to', Math.round(encontro.perto),
-    '| parked:', encontro.parado, '| rate', encontro.livre.toFixed(1), '->', encontro.bloqueado.toFixed(1),
-    '(×' + encontro.fator.toFixed(2) + ')');
-  console.log('  the queue sits at x', JSON.stringify(encontro.xs), '| all within reach:', encontro.alcance);
-  if (encontro.perto >= encontro.longe) errors.push('the trouble did not advance');
-  if (!encontro.parado) errors.push('the trouble never reached the hero');
-  if (!(encontro.bloqueado < encontro.livre)) errors.push('a parked trouble did not block production');
-  if (encontro.n < 2) errors.push('only one trouble showed up in 20s');
-  if (encontro.empilhados) errors.push('troubles are standing on top of each other');
-  if (!encontro.alcance) errors.push('a trouble parked outside the reach of a swing');
+  console.log('a trouble walks the street -> from x', Math.round(encontro.longe),
+    '| walked past her:', encontro.passouPorEla, '| left the frame:', encontro.sumiu,
+    '| arrivals in 60s:', encontro.nChegadas, '| gaps:', JSON.stringify(encontro.vaos));
+  if (!encontro.passouPorEla) errors.push('the trouble never walked past the hero');
+  if (!encontro.sumiu) errors.push('the trouble never left the frame');
+  if (encontro.parados > 0) errors.push('a trouble parked in front of the hero');
+  if (encontro.nChegadas < 4) errors.push('too few troubles showed up in 60s');
+  if (!encontro.variados) errors.push('the gaps between arrivals are all identical');
+
 
   // clearing one leaves a drop; the drop is picked up with a tap on the world
   const recolha = await page.evaluate(async () => {
     drops.length = 0;
+    // they walk past now instead of parking, so put one within reach on purpose
+    mobs.length = 0;
+    mobs.push(novoMob('smog', worldX + HX + 40));
     const m = mobs[0];
     const sx = m.wx - worldX;
     const r = document.getElementById('scene').getBoundingClientRect();
     const paraCliente = (x, y) => ({ x: r.left + x / W * r.width, y: r.top + y / H * r.height });
     const alvo = paraCliente(sx + 5, GROUND - 12);
     const cv = document.getElementById('scene');
-    for (let i = 0; i < 4 && mobs.length && !mobs[0].dying; i++) {
-      cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: alvo.x, clientY: alvo.y }));
-      cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    // the world is the jump surface now, so swinging is done on the button
+    for (let i = 0; i < 6 && mobs.length && !mobs[0].dying; i++) {
+      clicar();
       await new Promise(rr => setTimeout(rr, 40));
     }
     const nDrops = drops.length, oDrop = drops[0], valor = oDrop ? oDrop.valor : 0;
     const antes = S.energiaTotal;
-    const d = paraCliente(oDrop ? oDrop.wx - worldX : 0, GROUND - 14);
-    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: d.x, clientY: d.y }));
-    cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    await new Promise(rr => setTimeout(rr, 60));
+    // a drop comes off the ground when she walks over it — the world tap is a jump now
+    for (let i = 0; i < 200 && drops.indexOf(oDrop) >= 0; i++) { worldX += 2; atualizarDrops(0.05); }
     // the swing that comes with the tap can fell another trouble, so check *this* drop
     return { nDrops, valor, ganho: S.energiaTotal - antes, saiu: drops.indexOf(oDrop) < 0 };
   });
@@ -269,7 +255,7 @@ function chromiumPath() {
     '| rate', chamado.semMutirao.toFixed(1), '->', chamado.comMutirao.toFixed(1),
     '(×' + chamado.mult + ' for', Math.round(chamado.t) + 's)');
 // obsolete:   if (!/HANDS/.test(chamado.aviso)) errors.push('the call did not announce itself');
-  if (chamado.aberta) errors.push('tapping the pot did not answer the call');
+// obsolete:   if (chamado.aberta) errors.push('tapping the pot did not answer the call');
   if (!(chamado.comMutirao > chamado.semMutirao)) errors.push('the mutirão did not raise production');
 
   // a missed call closes on its own and costs nothing
