@@ -1638,9 +1638,15 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 // horizon. Grain was standing in for tones we had not authored.
 function mixA(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; }
 function rgbS(c) { return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + ")"; }
-// The horizon colour is light in BOTH states — bleached ochre when sick, pale sky when
-// healed. Everything distant washes toward it, which is the value architecture.
-function horizonC(h) { return mixA([220, 213, 198], [226, 233, 216], h); }
+// Everything distant washes toward this, so it is the single biggest lever on how bright
+// the middle of the picture is. It used to be near-white — L 214 sick, 231 healed, C* under
+// 9 — which meant the ridge, the town and the far treeline all arrived somewhere paler than
+// the sky in front of them and with the colour bleached out of them. The board does neither:
+// its far end of the street measures [132,115,87], L 117 at C* 21, and the haze band over
+// its rooftops is L 144 at C* 16. So: a hazy warm green when healed, a bleached warm ochre
+// when sick, both a value BELOW the top of the sky and both carrying real chroma. Still
+// light relative to the near plane — that is the value architecture — just not white.
+function horizonC(h) { return mixA([182, 168, 138], [138, 160, 132], h); }
 // aerial perspective: dist 0 = at your feet, 1 = dissolved into the horizon
 function longe(c, dist, h) { return rgbS(mixA(c, horizonC(h), dist)); }
 
