@@ -156,20 +156,32 @@
 
   /* ---- bottom controls ---- */
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
-    bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
-  /* Four entries with four different weights instead of four identical slabs.
-     Row 1: the thing you KEEP (small square) beside the RHYTHM you are running (wide
-     readout). Row 2: the things you BUILD with, stacked at the side, beside the main
-     action, which takes the rest of the block. Whatever this row ends up measuring,
-     --hControles is read off the real block on load and on resize — see medirControles(). */
-  #linhaTopo { display: flex; gap: 6px; margin-bottom: 6px; }
-  #linhaMain { display: flex; gap: 6px; align-items: stretch; }
+    bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
+    /* ONE COLUMN OF SECONDARY THINGS, ONE ACTION.
+       The block used to be two flex rows, and the top one read as two little squares
+       floating with dead space beside them — which is what the owner saw and named.
+       (Half of that was a bug: an orphaned comment tail two rules below was eating the
+       `#modeQuick { flex: 1 1 auto }` declaration whole, so the rhythm readout, designed
+       to be the wide thing in the block, was collapsing to its content and sitting there
+       as a square. It is fixed, but the shape it exposed was the real problem.)
+       Now the four secondary controls are a single vertical stack at the side — keep,
+       rhythm, build, build — and the one action takes the whole other column, full
+       height. The markup is untouched: the two row wrappers and the pair wrapper are
+       `display: contents`, so their buttons land directly in this grid. --hControles is
+       still measured off the real block, so the block is free to change height. */
+    display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
+    grid-auto-rows: min-content; gap: 5px; }
+  #linhaTopo, #linhaMain, #colLado { display: contents; }
   #controls button { display: flex; align-items: center; justify-content: center; gap: 6px; }
-  /* the thing you keep: an icon, and only an icon */
-  .btnIcone { flex: 0 0 auto; width: 46px; padding: 8px 0; }
-  /* the things you build with: a stacked pair, named, at the side */
-  #colLado { display: flex; flex-direction: column; gap: 6px; flex: 0 0 37%; max-width: 176px; min-width: 0; }
-  #colLado button { flex: 1 1 0; min-height: 34px; padding: 5px 8px; font-size: var(--fs-sm);
+  /* the thing you keep: an icon, and only an icon — a slim strip at the top of the stack */
+  .btnIcone { grid-column: 1; grid-row: 1; width: auto; padding: 1px 0; min-height: 20px; }
+  .btnIcone .pi { width: 16px; height: 16px; }
+  #modeQuick { grid-column: 1; grid-row: 2; }
+  #openProjects { grid-column: 1; grid-row: 3; }
+  #openUpgrades { grid-column: 1; grid-row: 4; }
+  #btnClique { grid-column: 2; grid-row: 1 / span 4; }
+  /* the things you build with, named */
+  #colLado button { min-height: 27px; padding: 3px 8px; font-size: var(--fs-sm);
     justify-content: flex-start; gap: 5px; }
   #colLado b { font-weight: 700; font-size: var(--fs-sm); }
   #colLado .rot { font-size: 8px; letter-spacing: .5px; opacity: .8; margin-left: auto; }
@@ -183,8 +195,10 @@
   button:disabled { opacity: .5; cursor: default; }
   button:not(:disabled):active { transform: translateY(2px);
     box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14); }
-     this whole prototype exists to measure, so it gets a line of its own */
-  #modeQuick { flex: 1 1 auto; min-width: 0; gap: 6px; padding: 6px 8px; justify-content: flex-start; }
+  /* the RHYTHM you are running: the one decision this whole prototype exists to measure,
+     so it gets a row of its own. This comment used to have no opening `/*`, and the
+     browser swallowed the rule under it — see the note on #controls. */
+  #modeQuick { min-width: 0; gap: 6px; padding: 4px 8px; justify-content: flex-start; }
   #modeQuick .mq { display: flex; flex-direction: column; align-items: flex-start; min-width: 0;
     line-height: 1.25; overflow: hidden; }
   #modeQuick .mq b { font-size: 9px; font-weight: normal; }
