@@ -1625,7 +1625,13 @@ function palMix(cd, cs, hv, tc) {
   const ms = Math.sqrt(sx * sx + sy * sy + sz * sz) || 1e-6;
   const ux = lerp(dx / md, sx / ms, tc), uy = lerp(dy / md, sy / ms, tc), uz = lerp(dz / md, sz / ms, tc);
   const un = Math.sqrt(ux * ux + uy * uy + uz * uz) || 1e-6;
-  const m = lerp(md, ms, tc);
+  // When the two ends point opposite ways in chroma — a beige sky becoming a blue one —
+  // rotating one direction into the other sweeps through the hues in between, and the
+  // midpoint of the arc came out GREEN. Fade the chroma out across the turn instead, so a
+  // half-healed world passes through pale rather than through a colour neither end has.
+  const dot = (dx * sx + dy * sy + dz * sz) / (md * ms);
+  const desb = 1 - Math.max(0, -dot) * 2.8 * tc * (1 - tc);
+  const m = lerp(md, ms, tc) * desb;
   return [cl255(L + ux / un * m), cl255(L + uy / un * m), cl255(L + uz / un * m)];
 }
 // [sick, healed, distance into the haze]
