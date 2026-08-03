@@ -320,7 +320,7 @@ function chromiumPath() {
   if (st.u.some(v => !v)) errors.push('some upgrade did not apply');
 
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-upgrades.png') });
-  await page.tap('[data-close="sheetUpgrades"]');
+  await page.evaluate(() => fecharTudo());   // the close X moved onto the card below
   await page.waitForTimeout(400);
 
   // third hit must be a leap: hero leaves the ground, then a shockwave appears
