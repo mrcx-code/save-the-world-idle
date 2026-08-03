@@ -60,6 +60,9 @@
     image-rendering: auto; z-index: -1; display: none; }
   #scene { position: fixed; inset: 0; width: 100%; height: 100%;
     image-rendering: pixelated; z-index: 0; }
+  /* the hero, at device resolution — see drawHero for why she is not in #scene */
+  #heroHD { position: fixed; inset: 0; width: 100%; height: 100%;
+    image-rendering: auto; z-index: 1; pointer-events: none; }
   /* the CRT scanlines and the CSS vignette are gone: at opacity .34 the scanlines greyed
      down the whole frame, and the vignette stacked on the canvas one. Direction C has no
      post-processing anywhere — the look has to hold up on form and colour alone. */
@@ -384,6 +387,7 @@
 
 <canvas id="fundoHD"></canvas>
 <canvas id="scene" width="320" height="180"></canvas>
+<canvas id="heroHD"></canvas>
 
 <!-- owner: the opening card is gone. The game starts on the street, and the first-run
      guide is what explains it, one line at a time. -->
@@ -484,6 +488,7 @@ const CFG = {
   // --- the world answers back: troubles walk in, drops are picked up by hand,
   // the neighbourhood calls you. None of this touches tiredness: healing the team by
   // tapping is exactly what erased the GO FAST / GO STEADY decision once already.
+  folhaValor: 4,           // impact for catching a leaf out of the air
   mobVel: 34,              // world px/s a trouble advances toward you
   mobIntervalo: 7,         // seconds between arrivals (shorter when the team is worn out)
   // 48 + 2x14 puts the third of three at 76, still inside the 80 px reach of a swing
@@ -709,9 +714,68 @@ function burst(x, y, n, cores) {
   if (parts.length > 190) parts = parts.slice(-190);
 }
 let combo = 0, attackT = 0, attackType = 0;
-let toquesDados = 0;                 // player swings only — the auto-help does not count
-const TOQUES_ANTES_DOS_BICHOS = 5;
 const JUMPF = 20;                 // frames of the leap
+// Leaves hanging over the street. They sit between knee height and the top of the jump arc, so
+// the low ones are free and the high ones cost you a well-timed tap. Nothing else in the game
+// asks for timing, and this is the only thing the jump is for.
+let folhas = [], folhaT = 0, proximaFolha = -1;
+function pular() {
+  if (jumpT > 0) return;          // one jump at a time; no double-tapping into orbit
+  jumpT = JUMPF;
+}
+function sorteiaFolha() { return 0.9 + Math.random() * 2.2; }
+function atualizarFolhas(dt, alto) {
+  folhaT += dt;
+  if (proximaFolha < 0) proximaFolha = sorteiaFolha();
+  if (folhaT >= proximaFolha) {
+    folhaT = 0; proximaFolha = sorteiaFolha();
+    if (folhas.length < 8) {
+      // the arc peaks at 52px, and she is 44 tall, so anything under about 80 is reachable
+      const h = 16 + Math.random() * 62;
+      folhas.push({ wx: worldX + W + 10, y: GROUND - h, fase: Math.random() * 6.283 });
+    }
+  }
+  // her box while airborne: feet at GROUND - alto, head 44 above that
+  const pes = GROUND - alto, cabeca = pes - 44;
+  for (let i = folhas.length - 1; i >= 0; i--) {
+    const f = folhas[i];
+    const sx = f.wx - worldX;
+    if (sx < -16) { folhas.splice(i, 1); continue; }
+    const fy = f.y + Math.sin(animT * 2 + f.fase) * 2;      // a slow drift, so they read as alive
+    if (Math.abs(sx - HX) < 15 && fy > cabeca - 6 && fy < pes + 4) {
+      const g = CFG.folhaValor * bonusDias() * multEspecial("tap");
+      S.energia += g; S.energiaTotal += g;
+      floats.push({ x: Math.round(sx) - 8, y: Math.round(fy) - 12, txt: "+" + g.toFixed(1), life: 34 });
+      burst(Math.round(sx), Math.round(fy), 7, ["#9bd44f", "#6fdd94", "#d8e88a"]);
+      folhas.splice(i, 1);
+    }
+  }
+}
+function desenharFolhas() {
+  const ic = ICONS.leaf; if (!ic) return;
+  folhas.forEach(function (f) {
+    const sx = Math.round(f.wx - worldX);
+    if (sx < -14 || sx > W + 14) return;
+    const fy = Math.round(f.y + Math.sin(animT * 2 + f.fase) * 2);
+    // a 1px dark outline first, the same trick renderIcon uses: against a painted hillside a
+    // bare green leaf simply vanishes
+    cx.fillStyle = "#12242e";
+    ic.map.forEach(function (row, y) {
+      for (let x = 0; x < row.length; x++) {
+        if (row.charAt(x) === ".") continue;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) cx.fillRect(sx - 6 + x + dx, fy - 6 + y + dy, 1, 1);
+      }
+    });
+    ic.map.forEach(function (row, y) {
+      for (let x = 0; x < row.length; x++) {
+        const ch = row.charAt(x);
+        if (ch === ".") continue;
+        cx.fillStyle = ic.pal[ch] || "#767f34";
+        cx.fillRect(sx - 6 + x, fy - 6 + y, 1, 1);
+      }
+    });
+  });
+}
 // NO FOOT SLIP, MEASURED FROM THE ART RATHER THAN GUESSED.
 // At her widest contact pose the two soles are 85.5 sprite px apart, centre to centre. The
 // sprite is drawn at 44/184 scale, so that step is 20.45 canvas px and a full stride — two
@@ -830,38 +894,30 @@ function novoMob(tipo, wx) {
   return { wx: wx, type: tipo, hp: hp, hpMax: hp, flash: 0, dying: 0, parado: false };
 }
 // Movement, spawning and state. Drawing lives in drawMobs() and is not touched here.
+// Between CFG.mobIntervalo x0.45 and x1.4 — wide enough that two arrivals never feel paired.
+function sorteiaEspera() { return CFG.mobIntervalo * (0.45 + Math.random() * 0.95); }
+let proximoMob = -1;
 function atualizarMobs(dt) {
-  // owner: nothing walks in until the player has swung five times. The street opens quiet,
-  // so the first thing anyone does is find out what the button does.
-  if (toquesDados < TOQUES_ANTES_DOS_BICHOS) return;
-  const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
   mobT += dt;
-  const espera = CFG.mobIntervalo / (1 + smog);   // a worn-out team draws more trouble
-  if (mobT >= espera) {
+  // The gap between arrivals is random inside a window, so the street never falls into a
+  // rhythm you can count. proximo is rolled once and held until it is used.
+  if (proximoMob < 0) proximoMob = sorteiaEspera();
+  if (mobT >= proximoMob) {
     mobT = 0;
+    proximoMob = sorteiaEspera();
     if (mobs.filter(function (m) { return !m.dying; }).length < CFG.mobMax) {
       const r = Math.random(), mix = CFG.mobMix[S.modo] || CFG.mobMix.limpo;
       const tipo = r < mix.smog ? "smog" : r < mix.barrel ? "barrel" : "cash";
       mobs.push(novoMob(tipo, worldX + W + 12));
     }
   }
-  // They walk in and queue up in front of the hero instead of standing on each other.
-  // The one in front takes the first slot; whoever is behind stops a body-width back and
-  // shuffles forward when the road clears.
-  // owner: they were stopping right on top of him. 48 px is roughly a body-width of air,
-  // and still well inside the 80 px reach of a swing.
-  let limite = HX + 48;
-  mobs.filter(function (m) { return m.dying <= 0; })
-    .sort(function (a, b) { return a.wx - b.wx; })
-    .forEach(function (m) {
-      const sx = m.wx - worldX;
-      const novo = Math.max(limite, sx - CFG.mobVel * dt);   // it walks in on you
-      m.wx = worldX + novo;
-      if (novo <= limite + 0.001) {
-        if (!m.parado) { m.parado = true; floats.push({ x: novo + 2, y: GROUND - 42, txt: "!", life: 26 }); }
-        limite += CFG.mobFila;
-      }
-    });
+  // They walk the street. They never stop in front of her and they never block anything: swing
+  // at one and you get what it drops, ignore it and it carries on past and out of frame.
+  mobs.forEach(function (m) {
+    if (m.dying > 0) return;
+    m.wx -= CFG.mobVel * dt;      // on top of the world sliding under them
+    m.parado = false;
+  });
   mobs = mobs.filter(function (m) { return m.wx - worldX > -24 && !m.dead; });
 }
 
@@ -944,7 +1000,6 @@ function tocarMundo(px, py) {
 //              out identically; it just cannot charge the super, so a phone on a table
 //              never builds one.
 function clicar(auto, naoConta) {
-  if (!auto) toquesDados++;
   const g = ganhoClique();
   S.energia += g; S.energiaTotal += g;
   // the team recovers while you organise together, not while you burn them out:
@@ -1420,6 +1475,38 @@ const cv = document.getElementById("scene");
 const cx = cv.getContext("2d");
 let tick = 0, animT = 0;
 let W = 320, H = 180, GROUND = 108, HX = 90;
+// The hero's own layer. Its pixel size follows the device, and the world's coordinates are
+// mapped onto it, so a position computed in world px lands in the same place it always did.
+let heroCv = null, heroCx = null;
+function ajustarHeroHD() {
+  heroCv = document.getElementById("heroHD");
+  if (!heroCv) return;
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  heroCv.width = Math.max(1, Math.round(window.innerWidth * dpr));
+  heroCv.height = Math.max(1, Math.round(window.innerHeight * dpr));
+  heroCx = heroCv.getContext("2d");
+}
+function limparHeroHD() {
+  if (heroCx) heroCx.clearRect(0, 0, heroCv.width, heroCv.height);
+}
+function desenharHeroiHD(img, alto) {
+  // Clear here rather than at the top of a world pass: drawHero() runs from a function that
+  // completes BEFORE desenharMundo(), so clearing there wiped her the instant she was drawn.
+  if (heroCx) heroCx.clearRect(0, 0, heroCv.width, heroCv.height);
+  if (!heroCx || !img || !img.complete || !img.naturalWidth) return;
+  if (!heroScale) {
+    const r = HERO_SPR.walk[0];
+    if (r && r.complete && r.naturalHeight) heroScale = HERO_TARGET / r.naturalHeight;
+  }
+  const sc = heroScale || (HERO_TARGET / img.naturalHeight);
+  const kx = heroCv.width / W, ky = heroCv.height / H;      // world px -> device px
+  const dw = img.naturalWidth * sc * kx, dh = img.naturalHeight * sc * ky;
+  const dx = HX * kx - dw / 2, dy = (GROUND - alto) * ky - dh;
+  heroCx.imageSmoothingEnabled = true;
+  heroCx.imageSmoothingQuality = "high";
+  heroCx.drawImage(img, dx, dy, dw, dh);
+}
+
 function fitCanvas() {
   // finer world pixels (hi-bit); hero & mobs are drawn at 2x on top
   const SCALE = 3;
@@ -1429,6 +1516,7 @@ function fitCanvas() {
   HX = Math.round(W * 0.26);
   cv.width = W; cv.height = H;
   cx.imageSmoothingEnabled = false;
+  ajustarHeroHD();
   if (typeof redesenharFundo === "function") redesenharFundo();
 }
 window.addEventListener("resize", fitCanvas);
@@ -3046,17 +3134,12 @@ function drawHero() {
   ultAtkT = attackT; ultAtkTipo = attackType;
   flashCast = Math.max(0, flashCast - 0.11);              // the cast charge burns off
 
-  // Blit the HD frame, feet-anchored: the sprite's bottom-centre sits at (HX, GROUND - lift).
-  // One clean bilinear downscale for the hero only; the world stays crisp (restored after).
-  if (img && img.complete && img.naturalWidth) {
-    if (!heroScale) { const r = HERO_SPR.walk[0]; if (r && r.complete && r.naturalHeight) heroScale = HERO_TARGET / r.naturalHeight; }
-    const sc = heroScale || (HERO_TARGET / img.naturalHeight);
-    const dw = Math.round(img.naturalWidth * sc), dh = Math.round(img.naturalHeight * sc);
-    const dx = Math.round(HX - dw / 2), dy = Math.round(GROUND - alto - dh);
-    cx.imageSmoothingEnabled = true;
-    cx.drawImage(img, dx, dy, dw, dh);
-    cx.imageSmoothingEnabled = false;
-  }
+  // Feet-anchored: the sprite's bottom-centre sits at (HX, GROUND - lift). She is blitted on
+  // her own device-resolution canvas rather than into the low-res world, so the art is scaled
+  // ONCE, straight to its final size, instead of being crushed to 44px and blown back up.
+  desenharHeroiHD(img, alto);
+
+  atualizarFolhas(1 / 60, alto);
 
   // ---- state advance: identical side effects to the old procedural path ----
   if (air) jumpT--;                 // the arc runs down; landing no longer spawns anything
@@ -5593,6 +5676,8 @@ function drawScene() {
 
   // owner: the shockwave field is gone with the slam that made it.
 
+  desenharFolhas();
+
   // monsters of pollution and greed roam ahead
   drawMobs(smog);
 
@@ -6024,16 +6109,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
   }
   const algumaAberta = function () { return SHEETS.some(function (s) { return $(s).classList.contains("aberto"); }); };
+  // The street is the JUMP surface. Swinging belongs to the button and nowhere else, so a
+  // tap out here never earns and never counts as an action — it only gets her off the ground.
   cv.addEventListener("pointerdown", function (e) {
     e.preventDefault();
     if (algumaAberta()) { fecharTudo(); return; }
-    const p = pontoDoMundo(e);
-    tocarMundo(p.x, p.y);
-    clicar();
-    comecarHold("mundo");
-  });
-  ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
-    cv.addEventListener(ev, function () { soltar("mundo"); });
+    pular();
   });
   // owner: the projects sheet is gone, and with it its buy buttons and its copy of the
   // rhythm switch. The rhythm now lives only on the card in the control block.
