@@ -74,17 +74,30 @@ const HW = 22, HH = 34;                       // the hero's own footprint, in wo
 function legibilidade(p) {
   const hx0 = p.hx - 4, hy0 = p.ground - HH;
   const heroi = bloco(p, hx0, hy0, HW, HH);
-  let melhor = 0, ondeX = 0, ondeY = 0, acima = 0, total = 0;
+  const todos = [];
+  let acima = 0, total = 0, acimaP = 0, totalP = 0;
+  // the proscenium: the foliage frame closing both edges is architecture, not a prop
+  // competing for the eye, so it is counted separately rather than quietly excluded
+  const margem = Math.round(p.w * 0.16);
   for (let y = 8; y + HH < p.ground + 16; y += 5) {
     for (let x = 0; x + HW < p.w; x += 5) {
       if (Math.abs(x - hx0) < HW && Math.abs(y - hy0) < HH) continue;  // skip the hero himself
       const v = bloco(p, x, y, HW, HH);
-      total++;
-      if (v > heroi) acima++;
-      if (v > melhor) { melhor = v; ondeX = x; ondeY = y; }
+      const moldura = x < margem || x + HW > p.w - margem;
+      let s = 0, n = 0;
+      for (let yy = y; yy < y + HH; yy++) for (let xx = x; xx < x + HW; xx++) {
+        if (xx < p.w && yy < p.h) { s += p.L[yy * p.w + xx]; n++; }
+      }
+      todos.push({ v: v, x: x, y: y, m: moldura, luma: n ? s / n : 0 });
+      total++; if (v > heroi) acima++;
+      if (!moldura) { totalP++; if (v > heroi) acimaP++; }
     }
   }
-  return { heroi: heroi, rival: melhor, rivalX: ondeX, rivalY: ondeY, posicao: acima + 1, total: total + 1 };
+  todos.sort(function (a, b) { return b.v - a.v; });
+  return { heroi: heroi, topo: todos.slice(0, 3),
+    topoP: todos.filter(function (t) { return !t.m; }).slice(0, 3),
+    posicao: acima + 1, total: total + 1,
+    posicaoP: acimaP + 1, totalP: totalP + 1 };
 }
 
 (async () => {
@@ -131,10 +144,31 @@ function legibilidade(p) {
     }, { st: SAO, frac });
     await page.waitForTimeout(120);
     const p = await page.evaluate(MEDE);
+    await page.screenshot({ path: path.resolve(__dirname, '..', 'medida-pior-' + nome.toLowerCase() + '.png') });
     const r = legibilidade(p);
     console.log('LER  ' + nome.padEnd(9) + ' heroi ' + r.heroi.toFixed(1) +
-      '  maior rival ' + r.rival.toFixed(1) + ' em (' + r.rivalX + ',' + r.rivalY + ')' +
-      '  posicao ' + r.posicao + '/' + r.total);
+      '  posicao ' + r.posicao + '/' + r.total +
+      '  (fora da moldura ' + r.posicaoP + '/' + r.totalP + ')');
+    const fmt = function (t) { return t.v.toFixed(1) + '@(' + t.x + ',' + t.y + ')L' + t.luma.toFixed(0) + (t.m ? 'M' : ''); };
+    console.log('      rivais dentro do quadro: ' + r.topoP.map(fmt).join('  '));
+    console.log('      rivais: ' + r.topo.map(function (t) {
+      return t.v.toFixed(1) + '@(' + t.x + ',' + t.y + ')L' + t.luma.toFixed(0) + (t.m ? 'M' : '');
+    }).join('  '));
   }
+  // ---- (3) the constraint the previous wave set: at NOITE the Cetro must stay the
+  // brightest thing on him. Luma of the lit poncho against the wheel's core, the crystal
+  // and the core while he is casting. If a legibility fix ever inverts this, back it out.
+  const lum = await page.evaluate(() => {
+    relogio = 0.75 * DIA_SEG; heroPasso = -1; heroLuzPasso();
+    const L = function (s) {
+      const c = s.charAt(0) === '#' ? hexA(s) : s.match(/\d+/g).map(Number);
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    return { poncho: L(hc('#f0e6c8')), madeira: L(cc('#6d4620')),
+      cristal: L(CETRO.cristalL), miolo: L('#f3c05c'), conjura: L('#fffbe8') };
+  });
+  console.log('FONTE NOITE  poncho ' + lum.poncho.toFixed(1) +
+    '  |  miolo ' + lum.miolo.toFixed(1) + '  cristal ' + lum.cristal.toFixed(1) +
+    '  conjurando ' + lum.conjura.toFixed(1));
   await browser.close();
 })();

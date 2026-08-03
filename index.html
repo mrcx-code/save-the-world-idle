@@ -2665,6 +2665,22 @@ function itemSprite(tipo) {
 }
 
 let mobs = [];
+// The three of them were the last figures in the world still written in flat hex, and being
+// the biggest saturated shapes on the street they were also the loudest thing standing in
+// daylight at midnight. They take the hour like everyone else — but with a FLOOR, the way
+// the hero has one, because a monster that goes properly dark is a monster you cannot fight.
+// The floor is 0.26 against the hero's 0.34, deliberately: he is the read of the frame and
+// has to keep a margin over the things he is hitting. The white flash on a hit does not go
+// through this at all — that is game signal, not paint.
+let mobPasso = -1, MOB_PAL = {};
+function mobLuz(nome, pal) {
+  const k = horaKey() >> 2;
+  if (k !== mobPasso) { mobPasso = k; MOB_PAL = {}; }
+  const id = nome + ":" + k;
+  let v = MOB_PAL[id];
+  if (!v) { v = MOB_PAL[id] = { _id: id }; for (const c in pal) v[c] = rgbS(luzPersonagem(hexA(pal[c]), 0.26, 1)); }
+  return v;
+}
 function drawMobs(smog) {
   // spawning, walking in and dying are handled by atualizarMobs(dt) on the frame loop
   mobs.forEach(function (m) {
@@ -2679,15 +2695,15 @@ function drawMobs(smog) {
     }
     if (m.type === "smog") {
       sombra(sx + 9, GROUND, 13, 0.13);          // it floats, so its shadow is soft and wide
-      drawMap("smog", SMOG_MOB.map, SMOG_MOB.pal, sx, GROUND - 25 + bob, m.flash > 0);
+      { const mp = mobLuz("smog", SMOG_MOB.pal); drawMap(mp._id, SMOG_MOB.map, mp, sx, GROUND - 25 + bob, m.flash > 0); }
     } else if (m.type === "barrel") {
       // 20 wide now, drawn one px left so it still stands on the same centre as its
       // siblings (sx+9) — the hit test never looked at the sprite, so this is paint only
       sombra(sx + 9, GROUND, 20, 0.26);
-      drawMap("barrel", BARREL_MOB.map, BARREL_MOB.pal, sx - 1, GROUND - 22 + (bob ? 1 : 0), m.flash > 0);
+      { const mp = mobLuz("barrel", BARREL_MOB.pal); drawMap(mp._id, BARREL_MOB.map, mp, sx - 1, GROUND - 22 + (bob ? 1 : 0), m.flash > 0); }
     } else {
       sombra(sx + 9, GROUND, 18, 0.26);
-      drawMap("cash", CASH_MOB.map, CASH_MOB.pal, sx, GROUND - 16 - (bob ? 0 : 1), m.flash > 0);
+      { const mp = mobLuz("cash", CASH_MOB.pal); drawMap(mp._id, CASH_MOB.map, mp, sx, GROUND - 16 - (bob ? 0 : 1), m.flash > 0); }
     }
     cx.globalAlpha = 1;
     cx.restore();
