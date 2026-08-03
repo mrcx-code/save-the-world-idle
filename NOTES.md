@@ -2013,6 +2013,115 @@ toda sessão começa lendo a última entrada.
   dois prédios altos e a nossa não — que é a mesma pergunta de largura que o print recusou
   duas vezes, agora pela vertical.**
 
+- **2026-08-03 · visual — o chão, e a dúvida da onda passada respondida: o quinto 5 é tinta,
+  o quinto 4 é enquadramento, e agora os dois têm número.** Três incrementos que ficaram e
+  três que foram desfeitos, cada um com `node test/smoke.js` verde. **FPS 61 do começo ao
+  fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado — **medido: `node test/sim.js`
+  byte a byte idêntico nos três commits**.
+
+  **O placar, `test/board.js`, quadro inteiro, contra o painel RUA DO BAIRRO:**
+
+  | | luma | C* | topo→chão | C* por quinto |
+  |---|---|---|---|---|
+  | BOARD | 90,1 | 19,5 | 141 101 83 60 66 | 18,7 19,0 20,4 17,7 21,6 |
+  | JOGO MANHÃ antes | 117,0 | 17,6 | 136 125 111 115 99 | 15,5 17,4 15,6 18,9 20,4 |
+  | JOGO MANHÃ depois | **113,7** | **17,8** | **136 125 111 112 85** | 15,5 17,4 15,6 18,9 **21,5** |
+  | JOGO TARDE antes | 122,8 | 23,4 | 132 130 125 122 105 | — |
+  | JOGO TARDE depois | 119,7 | 23,6 | 132 130 125 120 **91** | — |
+  | JOGO NOITE antes | 58,8 | 8,8 | 59 62 63 61 49 | — |
+  | JOGO NOITE depois | 57,8 | 9,0 | 59 62 63 60 **45** | — |
+
+  **O quinto 5 caiu 14 pontos e GANHOU croma no caminho (20,4 → 21,5 contra 21,6 do board),
+  que é a primeira vez nesta série que valor foi comprado sem que a croma pagasse.** O quinto
+  4 andou 3.
+
+  **(0) A atribuição primeiro, porque "de onde vem esse brilho" era palpite outra vez.**
+  `test/quinto.js` é novo: parte a mesma janela que o `board.js` mede nos mesmos cinco
+  quintos e conta cada quinto **por cor exata de pixel**, mapeando a cor de volta para a
+  entrada da paleta que a pintou, com a faixa de `y` em que ela vive. Uma tira não é uma
+  coisa que se pinta; uma entrada da paleta é. **Medido, MANHÃ, linha de base:** o quinto 5
+  (98,5) tem como maior item único **`trilhaL` — o fio de luz no topo de cada pedra —, 13,4%
+  do quinto a L 165, pagando 22,1 dos 98,5 sozinho**; o quinto 4 (114,6) tem **`serraNear`,
+  18,8% a L 141, pagando 26,5**. O `board.js` também aprendeu a dizer C\* e RGB médio por
+  quinto, porque **"mais escuro" e "mais escuro E mais quente" não são a mesma instrução** e
+  só a segunda é o que o board fez: q4 dele é **69,59,35** e q5 é **81,65,35** contra os
+  nossos 115,116,94 e 107,99,67.
+
+  **(1) A rua estava calçada como pedra em sol aberto, as oito fiadas no mesmo valor.** No
+  board a rua **recua para longe do observador em direção à luz** — as fiadas do fundo pegam
+  o horizonte, as do pé estão na sombra de tudo o que está atrás de você, e o calçamento
+  perto dele mede [113,87,48], L 89,5 a C\* 27,5. Agora cada fiada desce um degrau em direção
+  ao pé do quadro, misturada para o escuro de ACENTO e não para o cinza, **com a croma
+  residual reexpandida em torno da luma Rec.709 do resultado** (o movimento neutro em luma
+  das ondas 12, 13 e 15) — a primeira versão sem isso custou C\* 20,4 → 19,8 e **o quinto
+  calçado do board é o MAIS saturado dele, não o menos**. A rampa é gasta nas fiadas que dá
+  para VER: oito são assentadas e as duas últimas caem debaixo da tarja REAL DATA, então
+  indexar a 7 põe a profundidade toda onde ninguém olha. **Medido: quinto 5 99 → 88 com C\*
+  20,4 → 21,4;** e mais tarde, com a rampa mais funda (0,52 → 0,68), **88 → 85 a C\* 21,5**.
+
+  **(2) Uma silhueta mais clara que o céu atrás dela não é distância, é buraco.** `serraNear`
+  resolvia em **L 141 e o céu na mesma linha mede L 136–137**. A onda 13 endireitou a rampa
+  do céu por exatamente esse motivo e deixou as duas serras no valor velho. Mesmo matiz, ~85%
+  da luma, croma reexpandida. **Medido: serraNear 141 → 131, quinto 4 115 → 112, C\* do
+  quadro parado em 17,8 e C\* do quinto 4 parado em 18,9. E o menino MELHORA à MANHÃ
+  (luma 21 → 18 de 485).**
+
+  **(3) O teto, medido em vez de suposto, e é ele a resposta da dúvida da onda 15.**
+  `quinto.js` agora conta também **quanto de cada quinto ainda é céu nu e a que luma**, o que
+  dá um **piso aritmético** para a tira: um quinto que é s% de céu a L não pode descer abaixo
+  de s·L nem que todo pixel desenhado nele vá a zero. **Medido, MANHÃ: quinto 4 é 14,3% de
+  céu a L 136 → piso 19,5; quinto 5 é 0,0% de céu → piso 0.** Ou seja: **o quinto 5, que está
+  em 85 contra 66, é inteiramente pagável com tinta; o quinto 4, em 112 contra 60, exigiria
+  que TODO pixel desenhado nele fosse a L 47** — e é onde o menino tem a cabeça. O board põe
+  60 ali porque a rua dele está entre duas fachadas em sombra e **não tem céu nenhum naquele
+  quinto**; nós temos 14,3%. A pergunta da onda 15 tem resposta: **quinto 5 é tinta, quinto 4
+  é enquadramento.**
+
+  **Tentei e desfiz, os três medidos:**
+  **(a) A faixa separadora, que era o suspeito óbvio.** É a coisa visivelmente mais clara da
+  metade de baixo do quadro. **Desenhada com alfa 0, ela move o quinto 4 de 112 para 111 e o
+  quinto 5 de 88 para 88.** Um ponto. O número ficou escrito ao lado dela no arquivo.
+  **(b) A distância média inteira, 18% de valor abaixo** — `serraFar`, `cidade`, os marcos, o
+  morro, `mataFar`, `mataMid`, `mataNear`, tudo o que fica entre o skyline e a linha de
+  árvores. **Comprou UM ponto do quinto 4 e um do quinto 5**, porque neste trecho de rua essa
+  pilha inteira está ocluída pela banda perto, pelo proscênio e pelos objetos. Desfeita — e a
+  lição é a mesma da onda 13, item (b): mudança que a bancada não mede é mudança que ninguém
+  aprovou.
+  **(c) Um segundo degrau na serra, do mesmo tamanho do primeiro.** Comprou quinto 4
+  **112 → 110** e **custou o menino à NOITE, 57 → 59 de 485** — e a bancada nomeia o
+  mecanismo: os rivais novos dentro do quadro aparecem em **(85..95, 138)**, que é a linha
+  onde a serra encosta no céu. **Escurecer a distância média atrás dele não o enterra; ela
+  FABRICA uma quina de silhueta que disputa com ele.** O primeiro degrau tinha um defeito para
+  consertar (a serra estava mais clara que o próprio céu), este só tinha uma média para
+  perseguir.
+
+  **O que ficou segurado:** poncho **123,4** à NOITE no dígito (miolo 195,6 / cristal 214,7
+  seguem sendo o mais quente do quadro); **céu aberto no visível 30,6% → 30,4%**, ou seja não
+  foi devolvido nada (alvo verdadeiro 23,6%); **C\* do quadro 17,5 → 17,8** contra 19,5 do
+  board; razão C\* dele / do quadro **1,49** à MANHÃ e **1,06** à NOITE; e o arco doente→são
+  segue rodando em saturação com o doente **mais claro** (ARCO DOENTE/MANHÃ 136,0 contra SÃ
+  112,3). **O que NÃO ficou segurado, e é a dívida desta onda:** o menino à NOITE foi de
+  **52 para 57 de 485** na luma, com croma 9 e dE 6 parados no dígito e a razão contra o
+  rival em 0,76 — a atribuição é o degrau da serra do incremento (2), pelo mesmo mecanismo
+  que fez o incremento (c) ser desfeito, só que a um terço do tamanho. À MANHÃ ele melhora
+  (21/89/13 → **18/90/14**).
+
+  **Conferido em três níveis de saúde e quatro horas** (`test/cruz.js`): sem erro de console,
+  rua doente segue **ocre lavada e não escura** — a rampa de sombra do calçamento sai como um
+  degradê empoeirado e quente na rua doente, não como sujeira —, e à NOITE o calçamento perto
+  continua com grão de pedra em vez de virar uma barra preta (conferido num recorte 4× da
+  faixa do chão, MANHÃ e NOITE).
+
+  **Medido no fim:** smoke verde nos três commits, **FPS 61**, `sim.js` idêntico.
+  **Próximo passo: o quinto 5 tem 19 pontos ainda por pagar (85 contra 66) e o piso dele é
+  ZERO, então é tinta e nada mais — mas a atribuição diz que já não há item grande: depois do
+  calçamento o maior é `mataNear` com 9,2% a L 101, que vale 1,4 ponto, e o resto está
+  espalhado em quarenta cores. Dúvida honesta: os quintos 2 e 3 estão em 125 e 111 contra 101
+  e 83, com pisos de céu de 75 e 69 — ou seja lá SOBRA margem (24 e 28 pontos, dos quais 50 e
+  42 são pagáveis) e ninguém olhou para eles porque a onda 15 apontou para baixo. Pode ser que
+  a maior distância medida que resta não esteja no chão, e sim no meio do quadro, onde metade
+  de tudo ainda é céu nu.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the

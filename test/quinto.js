@@ -45,10 +45,25 @@ function chromiumPath() {
         else if (Array.isArray(v)) v.forEach(function (u, i) { por(k + '[' + i + ']', u); });
       };
       Object.keys(P).forEach(function (k) { por(k, P[k]); });
+      // HOW MUCH OF EACH FIFTH IS STILL BARE SKY, and what that sky is worth. The board's
+      // fourth fifth is 60 and contains no sky at all — it is the lower facades of a street
+      // between two buildings. Ours cannot go there by paint however dark the paint is: a
+      // fifth that is s% sky at luma Lc has a floor of s*Lc even if every drawn pixel in it
+      // goes to zero. This is the difference between "we have not painted it dark enough"
+      // and "the board is a different picture", and it is the one thing a strip average
+      // cannot tell you.
+      const sc = skyCanvas(worldHealth());
+      const sd = sc.getContext('2d').getImageData(0, 0, sc.width, sc.height).data;
       const quintos = [];
       for (let q = 0; q < 5; q++) {
         const ya = Math.floor(alt * q / 5), yb = Math.floor(alt * (q + 1) / 5);
-        const cont = {}; let s = 0, n = 0;
+        const cont = {}; let s = 0, n = 0, nCeu = 0, sCeu = 0;
+        for (let y = ya; y < yb; y++) for (let x = 0; x < cv.width; x++) {
+          const i = (y * cv.width + x) * 4, j = ((y + y0) * sc.width + x) * 4;
+          if (y + y0 < sc.height && d[i] === sd[j] && d[i + 1] === sd[j + 1] && d[i + 2] === sd[j + 2]) {
+            nCeu++; sCeu += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+          }
+        }
         for (let y = ya; y < yb; y++) for (let x = 0; x < cv.width; x++) {
           const i = (y * cv.width + x) * 4;
           const key = 'rgb(' + d[i] + ',' + d[i + 1] + ',' + d[i + 2] + ')';
@@ -63,6 +78,7 @@ function chromiumPath() {
             yc: cont[k].sy / cont[k].n, ymin: cont[k].ymin, ymax: cont[k].ymax };
         }).sort(function (a, b) { return b.n - a.n; });
         quintos.push({ q: q + 1, y0: y0 + ya, y1: y0 + yb, luma: s / n, n: n, top: lista.slice(0, 30),
+          ceu: nCeu / n, ceuL: nCeu ? sCeu / nCeu : 0, piso: nCeu ? sCeu / n : 0,
           nomeados: lista.filter(function (t) { return t.nome !== '?'; }).reduce(function (a, t) { return a + t.n; }, 0) / n });
       }
       return { ground: GROUND, topo: topo, quintos: quintos };
@@ -70,7 +86,9 @@ function chromiumPath() {
     console.log('=== ' + nome + '  (janela y' + r.topo + '..' + (r.ground + 22) + ', GROUND ' + r.ground + ') ===');
     for (const q of r.quintos) {
       console.log(' quinto ' + q.q + '  y' + q.y0 + '-' + q.y1 + '  luma ' + q.luma.toFixed(1) +
-        '   nomeados ' + (q.nomeados * 100).toFixed(0) + '%');
+        '   nomeados ' + (q.nomeados * 100).toFixed(0) + '%' +
+        '   ceu aberto ' + (q.ceu * 100).toFixed(1) + '% a L ' + q.ceuL.toFixed(0) +
+        ' -> piso do quinto ' + q.piso.toFixed(1));
       for (const t of q.top) {
         const contrib = t.n / q.n * t.L;
         console.log('    ' + (t.n / q.n * 100).toFixed(1).padStart(5) + '%  L ' + t.L.toFixed(0).padStart(3) +

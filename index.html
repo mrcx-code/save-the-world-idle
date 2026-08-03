@@ -1737,6 +1737,12 @@ const PALETA_BASE = {
   // straightened the sky ramp fixed exactly this for `horizonC` and left the two ridges
   // sitting on the old value. Same hue, ~85% of the luma, chroma re-expanded around it so
   // the ridge goes deeper rather than greyer.
+  // A SECOND STEP OF THE SAME SIZE WAS TRIED AND MEASURED AND BACKED OUT: it bought the
+  // fourth fifth 112 -> 110 and cost the hero 57 -> 59 of 485 at NOITE, and the harness names
+  // the mechanism — the new in-frame rivals appear at (85..95, 138), which is the row where
+  // the ridge meets the sky. Darkening the middle distance behind him does not bury him; it
+  // MANUFACTURES A SILHOUETTE EDGE that competes with him. The first step had a defect to
+  // fix (the ridge was lighter than its own sky) and this one only had an average to chase.
   serraNear:  [[70, 101, 107], 0.25],
   serraNearL: [[101, 132, 130], 0.21],
   cidade:  [[92, 120, 134], 0.24],
