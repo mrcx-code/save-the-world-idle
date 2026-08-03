@@ -447,6 +447,80 @@ function chromiumPath() {
   if (recursos.passou.recurso !== 1) errors.push('pass-over collection left no resource');
   if (!recursos.passou.aindaLa) errors.push('a drop still ahead of the hero was collected too early');
 
+  // ---- special projects: a combo of resources funds a one-time, within-run bonus ----
+  const esp = await page.evaluate(async () => {
+    fecharTudo();
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
+    S.geradores = 20; S.poluicao = 30; S.modo = 'limpo'; S.tempoLimpo = 300; S.especiais = {};
+    const g = CFG.especiais.find(e => e.id === 'garden');   // 12 flowers + 6 water -> +6% production
+    // one short of the water it needs: not affordable, button off
+    S.recursos = { flor: g.custo.flor, agua: g.custo.agua - 1, refeicao: 0 };
+    desenhar();
+    const pobre = { pode: podeEspecial(g), completou: completarEspecial('garden'),
+      botao: document.getElementById('btnEsp_garden').disabled, feito: !!S.especiais.garden };
+    // exactly the right combo: affordable
+    S.recursos = { flor: g.custo.flor, agua: g.custo.agua, refeicao: 3 };
+    desenhar();
+    const prodAntes = prodPorSegundo(), cansacoAntes = S.poluicao;
+    const podeAgora = podeEspecial(g), botaoOn = !document.getElementById('btnEsp_garden').disabled;
+    const ok = completarEspecial('garden');
+    const prodDepois = prodPorSegundo();
+    // spends exactly the cost, leaves the rest, and cannot be built twice
+    const rest = { flor: S.recursos.flor, agua: S.recursos.agua, refeicao: S.recursos.refeicao };
+    const denovo = completarEspecial('garden');
+    // it survives to the sheet as "built", and the multiplier is real and mode-neutral
+    const cardFeito = document.getElementById('esp_garden').classList.contains('feito');
+    S.especiais = {}; S.recursos = { flor: 0, agua: 0, refeicao: 0 }; S.poluicao = 0; S.geradores = 0;
+    return { pobre, podeAgora, botaoOn, ok, denovo, prodAntes, prodDepois, cansacoAntes,
+      cansacoDepois: cansacoAntes, mult: g.prod, rest, custo: g.custo, cardFeito };
+  });
+  console.log('special project (garden) -> one short: affordable', esp.pobre.pode, '| button off', esp.pobre.botao,
+    '| built anyway', esp.pobre.feito);
+  console.log('  right combo -> affordable', esp.podeAgora, '| built', esp.ok, '| twice', esp.denovo,
+    '| prod', esp.prodAntes.toFixed(1), '->', esp.prodDepois.toFixed(1), '(×' + esp.mult + ')',
+    '| resources left', JSON.stringify(esp.rest));
+  if (esp.pobre.pode || esp.pobre.completou || esp.pobre.feito) errors.push('a special project was affordable without its full combo');
+  if (!esp.pobre.botao) errors.push('the build button was enabled without the resources');
+  if (!esp.podeAgora || !esp.botaoOn || !esp.ok) errors.push('the right combo did not fund the special project');
+  if (esp.denovo) errors.push('a one-time special project was built twice');
+  if (Math.abs(esp.prodDepois / esp.prodAntes - esp.mult) > 1e-6) errors.push('the special project bonus did not apply to production');
+  if (esp.rest.flor !== 0 || esp.rest.agua !== 0 || esp.rest.refeicao !== 3) errors.push('completing the project spent the wrong resources');
+  if (!esp.cardFeito) errors.push('a built special project is not marked built on the sheet');
+
+  // THE hard rule: building a special project may never touch tiredness
+  const espCansaco = await page.evaluate(() => {
+    S.geradores = 20; S.poluicao = 100; S.modo = 'limpo'; S.especiais = {};
+    S.recursos = { flor: 50, agua: 50, refeicao: 50 };
+    const antes = S.poluicao;
+    CFG.especiais.forEach(e => completarEspecial(e.id));   // build every one
+    const depois = S.poluicao, feitos = Object.keys(S.especiais).filter(k => S.especiais[k]).length;
+    S.especiais = {}; S.recursos = { flor: 0, agua: 0, refeicao: 0 }; S.poluicao = 0; S.geradores = 0;
+    return { antes, depois, feitos, total: CFG.especiais.length };
+  });
+  console.log('  built all', espCansaco.feitos, 'of', espCansaco.total, '-> tiredness', espCansaco.antes, '->', espCansaco.depois);
+  if (espCansaco.feitos !== espCansaco.total) errors.push('not every special project could be built');
+  if (espCansaco.depois !== espCansaco.antes) errors.push('BUILDING A SPECIAL PROJECT TOUCHED TIREDNESS');
+
+  // the panel opens from the projects sheet, in the sheet language
+  const espPainel = await page.evaluate(async () => {
+    fecharTudo(); abrir('sheetProjects');
+    await new Promise(r => setTimeout(r, 150));
+    document.getElementById('abrirEspeciais').click();
+    await new Promise(r => setTimeout(r, 200));
+    return { aberto: document.getElementById('sheetEspeciais').classList.contains('aberto'),
+      projFechou: !document.getElementById('sheetProjects').classList.contains('aberto'),
+      cards: document.querySelectorAll('#listaEspeciais .especialCard').length,
+      linha: document.getElementById('recursoLinha').textContent };
+  });
+  console.log('  panel opens from projects ->', espPainel.aberto, '| cards', espPainel.cards,
+    '| resource line', JSON.stringify(espPainel.linha));
+  if (!espPainel.aberto) errors.push('the special projects panel did not open');
+  if (espPainel.cards !== espCansaco.total) errors.push('the special projects panel is missing cards');
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-especiais.png') });
+  // hand the next block back the world state it expects (10 projects, GO STEADY, rested)
+  await page.evaluate(() => { fecharTudo(); S.especiais = {}; S.recursos = { flor: 0, agua: 0, refeicao: 0 };
+    S.geradores = 10; S.poluicao = 0; S.modo = 'limpo'; });
+
   // ---- the community call: show up inside the window and the street works with you ----
   await page.evaluate(async () => {
     mobs.length = 0; drops.length = 0; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;

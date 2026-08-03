@@ -310,6 +310,22 @@ function jogar(est, patch = PATCHES.none, S0) {
       while (F.comprarGerador(S)) { /* buy as many as we can afford */ }
     }
 
+    // Special projects spend RESOURCES (a separate currency from impact), so they never
+    // compete with buying generators. Resources now pile up for every run (pass-over), so
+    // the strongest case for balance is to complete each combo the instant it is affordable
+    // — if the tension survives even that, it survives the real player who taps the panel.
+    if (comMundo) for (const e of F.CFG.especiais) {
+      if (S.especiais[e.id]) continue;
+      const c = e.custo;
+      if ((S.recursos.flor || 0) >= (c.flor || 0) && (S.recursos.agua || 0) >= (c.agua || 0)
+        && (S.recursos.refeicao || 0) >= (c.refeicao || 0)) {
+        S.recursos.flor -= (c.flor || 0); S.recursos.agua -= (c.agua || 0); S.recursos.refeicao -= (c.refeicao || 0);
+        S.especiais[e.id] = true;
+        if (!m.especiaisEm) m.especiaisEm = {};
+        m.especiaisEm[e.id] = t;
+      }
+    }
+
     t += DT;
   }
   return {
@@ -317,6 +333,8 @@ function jogar(est, patch = PATCHES.none, S0) {
     geradores: S.geradores, poluicao: S.poluicao, eficiencia: F.eficiencia(S), piorSaude,
     deToque, deProjeto, deMundo, deWand, tempoSegurando, mutiroes: m.atendidas, supers: m.supers,
     canais: m.canais, tiros: m.tiros, skill: S.skillAuto, sabedoria: S.inovacao,
+    recursos: S.recursos, especiaisEm: m.especiaisEm || {},
+    especiais: Object.keys(S.especiais).filter(k => S.especiais[k]),
     upgrades: F.UPGRADES.filter(u => S[u.id]).map(u => u.id).join(' ')
   };
 }
@@ -406,6 +424,10 @@ for (const r of linhas) {
       + ` · wand ${Math.round(r.deWand).toLocaleString('en-US')} (${r.canais} channels)`
       + ` · mutirões ${r.mutiroes} · supers ${r.supers}`
       + ` · held ${hms(r.tempoSegurando)} · bought ${r.upgrades || '(none)'}`);
+    const esp = r.especiais.map(id => `${id}@${hms(r.especiaisEm[id] || 0).trim()}`).join(' ');
+    console.log('    '.padEnd(largura) + `     resources F${Math.round(r.recursos.flor)}`
+      + ` W${Math.round(r.recursos.agua)} M${Math.round(r.recursos.refeicao)} left`
+      + ` · special ${r.especiais.length}/${F.CFG.especiais.length}${esp ? ': ' + esp : ''}`);
   }
 }
 

@@ -43,16 +43,25 @@ const custoGerador = S => Math.ceil(CFG.custoGeradorBase * Math.pow(CFG.custoGer
 const bonusJusto = S => (S.u6 ? CFG.bonusJustoU6 : 1);
 const forcaToque = S => (S.u5 ? CFG.forcaToqueU5 : 1);
 // a trouble that reached you blocks part of the work — a multiplier, never tiredness
-const bloqueioMundo = S => Math.max(0, 1 - Math.min(S.mobsParados || 0, CFG.mobMax) * CFG.bloqueioPorMob);
+const bloqueioMundo = S => Math.max(0, 1 - Math.min(S.mobsParados || 0, CFG.mobMax) * CFG.bloqueioPorMob * multEspecial(S, 'bloq'));
 const bonusMutirao = S => (S.mutirao > 0 ? CFG.mutiraoMult : 1);
 // the super's window: a shorter, smaller mutirão, earned by swinging rather than by being
 // there when the pot came out. Multiplier only — it never touches tiredness.
 const bonusSuper = S => (S.superT > 0 ? CFG.superMult : 1);
 const bonusDias = S => 1 + CFG.bonusDia * Math.min(Math.max(0, (S.dias || 1) - 1), CFG.diasMax);
+// completed special projects, folded into one factor per channel. Mode-neutral multiplier,
+// never a tiredness term — mirrors multEspecial() in index.html.
+const multEspecial = (S, campo) => {
+  let m = 1;
+  const feitos = S.especiais || {};
+  for (const e of (CFG.especiais || [])) if (feitos[e.id] && e[campo]) m *= e[campo];
+  return m;
+};
 const valorDrop = S => (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
-  * bonusInovacao(S) * eficiencia(S) * bonusJusto(S) * bonusMutirao(S) * bonusSuper(S) * bonusDias(S);
+  * bonusInovacao(S) * eficiencia(S) * bonusJusto(S) * bonusMutirao(S) * bonusSuper(S) * bonusDias(S)
+  * multEspecial(S, 'drop');
 const ganhoClique = S => 1 * forcaToque(S) * bonusInovacao(S) * eficiencia(S) * bonusJusto(S)
-  * bonusMutirao(S) * bonusSuper(S) * bonusDias(S);
+  * bonusMutirao(S) * bonusSuper(S) * bonusDias(S) * multEspecial(S, 'tap');
 
 const tetoLimpoAtual = S => (S.u3 ? 4 : CFG.tetoLimpo);
 function rampaAtual(S) {
@@ -64,7 +73,7 @@ function prodPorSegundo(S) {
     ? CFG.prodCarvao * (S.u1 ? 2 : 1)
     : CFG.prodLimpoBase * rampaAtual(S);
   return S.geradores * porGerador * bonusInovacao(S) * eficiencia(S) * bonusJusto(S)
-    * bloqueioMundo(S) * bonusMutirao(S) * bonusSuper(S) * bonusDias(S);
+    * bloqueioMundo(S) * bonusMutirao(S) * bonusSuper(S) * bonusDias(S) * multEspecial(S, 'prod');
 }
 function poluicaoPorSegundo(S) {
   if (S.modo !== 'carvao') return 0;
@@ -146,7 +155,7 @@ const UPGRADES = [
 module.exports = {
   CFG, HOLD_TPS, UPGRADES, novoEstado,
   eficiencia, bonusInovacao, custoGerador, bonusJusto, forcaToque, ganhoClique,
-  bloqueioMundo, bonusMutirao, bonusSuper, bonusDias, valorDrop, hpMedio,
+  bloqueioMundo, bonusMutirao, bonusSuper, bonusDias, valorDrop, hpMedio, multEspecial,
   tetoLimpoAtual, rampaAtual, prodPorSegundo, poluicaoPorSegundo,
   inovacaoAoTransicionar, simular, simularOffline, clicar, comprarGerador, comprar,
   transicionar

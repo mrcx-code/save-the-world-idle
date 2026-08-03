@@ -441,6 +441,18 @@
   .skillNota.travada { color: #f0d4b8; background: #43241a; border: 2px solid var(--bad); padding: 7px 8px; }
   #cardAuto { border-color: var(--purple); }
   #cardAuto.comprado { border-color: var(--purple); box-shadow: inset 0 0 0 1px var(--purple); }
+  /* SPECIAL PROJECTS: same card language as upgrades, but paid in resources not impact */
+  #espNota { color: var(--gold); }
+  .recursoLinha { display: flex; gap: 8px; margin-bottom: 9px; }
+  .recursoLinha > span { flex: 1; text-align: center; font-size: var(--fs-sm);
+    border-radius: var(--raioSm); background: linear-gradient(180deg, #232817, #171b0d);
+    border: 2px solid #000; padding: 8px 4px; }
+  .especialCard .custo { font-size: var(--fs-xs); margin-top: 4px; line-height: 1.7; }
+  .especialCard .custo b.falta { color: var(--bad); }
+  .especialCard .custo b.ok { color: var(--good); }
+  .especialCard.feito { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+  .especialCard.feito button { display: none; }
+  .especialCard button:disabled { filter: grayscale(.7) brightness(.7); }
   #cardAuto .check { color: #e0c47a; }
   .focoBar { height: 8px; margin-top: 7px; }
   #barFoco { background-color: var(--purple); width: 0%; }
@@ -570,6 +582,16 @@
   </div>
   <div class="descModo" id="descModo"></div>
   <div class="barra" id="boxRampa" style="display:none"><div id="barRampa"></div></div>
+  <button id="abrirEspeciais" class="btnSkills">✿ SPECIAL PROJECTS <span id="espNota"></span></button>
+</div>
+
+<div class="sheet" id="sheetEspeciais">
+  <div class="sheetHead"><div class="t">SPECIAL PROJECTS</div>
+    <button class="fechar" data-close="sheetEspeciais">✕</button></div>
+  <div class="recursoLinha" id="recursoLinha"></div>
+  <div id="listaEspeciais"></div>
+  <div class="avisoPrestigio">drops pile up into resources — spend a combo on a project the
+    whole street keeps for this run • one-time each • reset by the torch</div>
 </div>
 
 <div class="sheet" id="sheetUpgrades">
@@ -751,7 +773,25 @@ const CFG = {
   superRecarga: 22,      // seconds before it starts charging again — this is what makes it rare
   superSeg: 4,           // how long the street stays with you afterwards
   superMult: 1.15,        // ...and by how much, on production, drops and taps alike
-  superFxSeg: 1.1        // how long the screen effect runs. Drawing only, no economy.
+  superFxSeg: 1.1,        // how long the screen effect runs. Drawing only, no economy.
+  // --- SPECIAL PROJECTS. The answer to "projects feel too basic": drops now pile up into
+  // three resources (flower/water/meal) and a specific COMBO of them funds a one-time,
+  // within-run project with a permanent-for-the-run bonus. Every bonus is a MULTIPLIER on
+  // output (never tiredness, in either direction) and is mode-neutral, so — exactly like the
+  // world layer — it cannot shift the GO FAST / GO STEADY gap: both modes get the same
+  // factor, and it is still multiplied by team health, so a worn team gets less from it too.
+  // custo carries flor/agua/refeicao counts. prod/tap/drop/bloq default to 1 when absent.
+  // `bloq` scales how hard a parked trouble blocks the work (< 1 = cheaper troubles).
+  especiais: [
+    { id: "garden", nome: "Community Garden", custo: { flor: 12, agua: 6 }, prod: 1.06,
+      efeito: "+6% production" },
+    { id: "kitchen", nome: "Shared Kitchen", custo: { refeicao: 10, flor: 6 }, tap: 1.10, drop: 1.10,
+      efeito: "+10% taps & pickups" },
+    { id: "water", nome: "Clean Water Works", custo: { agua: 12, refeicao: 8 }, bloq: 0.6,
+      efeito: "troubles block 40% less" },
+    { id: "workshop", nome: "Repair Workshop", custo: { flor: 10, agua: 10, refeicao: 10 },
+      prod: 1.05, tap: 1.05, drop: 1.05, efeito: "+5% everything" }
+  ]
 };
 
 let S = {
@@ -787,7 +827,8 @@ const forcaToque = () => (S.u5 ? CFG.forcaToqueU5 : 1);
 function bloqueioMundo() {
   let n = 0;
   for (let i = 0; i < mobs.length; i++) if (mobs[i].parado && mobs[i].dying <= 0) n++;
-  return Math.max(0, 1 - Math.min(n, CFG.mobMax) * CFG.bloqueioPorMob);
+  // Clean Water Works softens how much a parked trouble blocks (bloq < 1), never removes it.
+  return Math.max(0, 1 - Math.min(n, CFG.mobMax) * CFG.bloqueioPorMob * multEspecial("bloq"));
 }
 const bonusMutirao = () => (mutiraoT > 0 ? CFG.mutiraoMult : 1);   // the whole street shows up
 // the super's window: a smaller, shorter mutirão you earned by playing rather than by
@@ -795,8 +836,19 @@ const bonusMutirao = () => (mutiraoT > 0 ? CFG.mutiraoMult : 1);   // the whole 
 const bonusSuper = () => (superT > 0 ? CFG.superMult : 1);
 // coming back on a new day is worth something: the neighbourhood knows you now
 const bonusDias = () => 1 + CFG.bonusDia * Math.min(Math.max(0, R.dias.length - 1), CFG.diasMax);
+// Completed special projects fold into a single multiplier per channel. Same shape as the
+// world bonuses: a factor on output, mode-neutral, never a term in the tiredness equation.
+function multEspecial(campo) {
+  let m = 1;
+  const feitos = S.especiais || {};
+  for (let i = 0; i < CFG.especiais.length; i++) {
+    const e = CFG.especiais[i];
+    if (feitos[e.id] && e[campo]) m *= e[campo];
+  }
+  return m;
+}
 const ganhoClique = () => 1 * forcaToque() * bonusInovacao() * eficiencia() * bonusJusto()
-  * bonusMutirao() * bonusSuper() * bonusDias();
+  * bonusMutirao() * bonusSuper() * bonusDias() * multEspecial("tap");
 
 function tetoLimpoAtual() { return S.u3 ? 4 : CFG.tetoLimpo; }
 function rampaAtual() {
@@ -812,7 +864,7 @@ function prodPorSegundo() {
   if (S.modo === "carvao") porGerador = CFG.prodCarvao * (S.u1 ? 2 : 1);
   else porGerador = CFG.prodLimpoBase * rampaAtual();
   return S.geradores * porGerador * bonusInovacao() * eficiencia() * bonusJusto()
-    * bloqueioMundo() * bonusMutirao() * bonusSuper() * bonusDias();
+    * bloqueioMundo() * bonusMutirao() * bonusSuper() * bonusDias() * multEspecial("prod");
 }
 function poluicaoPorSegundo() {
   if (S.modo !== "carvao") return 0;
@@ -1081,6 +1133,7 @@ function soltarDrop(m, sx) {
     wx: worldX + sx + 5, type: m.type, t: 0,
     valor: (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
       * bonusInovacao() * eficiencia() * bonusJusto() * bonusMutirao() * bonusSuper() * bonusDias()
+      * multEspecial("drop")
   });
   if (drops.length > 8) drops.shift();
 }
@@ -1378,6 +1431,74 @@ function piscar(rapido) {
 }
 function comprar(u, custo) {
   if (!S[u] && S.energia >= custo) { S.energia -= custo; S[u] = true; desenhar(); }
+}
+// ---------- special projects ----------
+const especialPor = id => CFG.especiais.find(e => e.id === id);
+function podeEspecial(e) {
+  if (!e || S.especiais[e.id]) return false;
+  const c = e.custo;
+  return (S.recursos.flor || 0) >= (c.flor || 0)
+    && (S.recursos.agua || 0) >= (c.agua || 0)
+    && (S.recursos.refeicao || 0) >= (c.refeicao || 0);
+}
+function completarEspecial(id) {
+  const e = especialPor(id);
+  if (!podeEspecial(e)) return false;
+  const c = e.custo;
+  S.recursos.flor -= (c.flor || 0);
+  S.recursos.agua -= (c.agua || 0);
+  S.recursos.refeicao -= (c.refeicao || 0);
+  S.especiais[e.id] = true;
+  floats.push({ x: HX, y: GROUND - 60, txt: e.nome.toUpperCase() + "!", life: 55 });
+  burst(HX + 8, GROUND - 20, 20, ["#f2d2dc", "#71a39c", "#f3a03d"]);
+  salvar(); desenhar();
+  return true;
+}
+const EMOJI_REC = { flor: "🌸", agua: "💧", refeicao: "🍲" };
+const NOME_REC = { flor: "flowers", agua: "water", refeicao: "meals" };
+// The panel is built once; desenharEspeciais() refreshes counts/affordability each frame.
+function montarEspeciais() {
+  const lista = $("listaEspeciais");
+  if (!lista || lista.dataset.pronto) return;
+  CFG.especiais.forEach(function (e) {
+    const card = document.createElement("div");
+    card.className = "upgrade especialCard";
+    card.id = "esp_" + e.id;
+    card.innerHTML = '<div class="info"><div class="nome">' + e.nome + '</div>'
+      + '<div class="desc">' + e.efeito + '</div>'
+      + '<div class="custo" id="custo_' + e.id + '"></div></div>'
+      + '<span class="check">✓</span>'
+      + '<button id="btnEsp_' + e.id + '">BUILD</button>';
+    lista.appendChild(card);
+    card.querySelector("button").onclick = function () { completarEspecial(e.id); };
+  });
+  lista.dataset.pronto = "1";
+}
+function desenharEspeciais() {
+  montarEspeciais();
+  const r = S.recursos || { flor: 0, agua: 0, refeicao: 0 };
+  $("recursoLinha").innerHTML = ["flor", "agua", "refeicao"].map(function (k) {
+    return "<span>" + EMOJI_REC[k] + " " + Math.floor(r[k] || 0) + "</span>";
+  }).join("");
+  let prontos = 0, restam = 0;
+  CFG.especiais.forEach(function (e) {
+    const feito = !!S.especiais[e.id];
+    const card = $("esp_" + e.id);
+    if (!card) return;
+    if (!feito) restam++;
+    card.classList.toggle("feito", feito);
+    const partes = ["flor", "agua", "refeicao"].filter(function (k) { return e.custo[k]; }).map(function (k) {
+      const tem = (r[k] || 0) >= e.custo[k];
+      return '<b class="' + (tem ? "ok" : "falta") + '">' + e.custo[k] + EMOJI_REC[k] + "</b>";
+    });
+    $("custo_" + e.id).innerHTML = feito ? "built — kept for this run" : "needs " + partes.join(" + ");
+    const pode = podeEspecial(e);
+    if (pode && !feito) prontos++;
+    const btn = $("btnEsp_" + e.id);
+    if (btn) btn.disabled = !pode;
+  });
+  $("espNota").textContent = restam === 0 ? "ALL BUILT" : prontos > 0 ? prontos + " READY" : restam + " LEFT";
+  $("abrirEspeciais").className = "btnSkills" + (prontos > 0 ? " tem" : "");
 }
 // A browser dialog over a fullscreen pixel game reads as a bug, so the question gets
 // asked in the game's own furniture — and it can show what is kept next to what is not,
@@ -6406,6 +6527,7 @@ function desenhar() {
   $("openProjects").className = "cartao" + (quantosCabem(1).n > 0 ? " pronto" : "");
 
   desenharProjetos();
+  desenharEspeciais();
 
   desenharRitmo();
 
@@ -6696,7 +6818,7 @@ function girarFato() {
 
 // ---------- sheets ----------
 const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch", "sheetStats", "sheetConfirm",
-  "sheetSkills", "sheetMuro", "sheetEpilogo"];
+  "sheetSkills", "sheetMuro", "sheetEpilogo", "sheetEspeciais"];
 function abrir(id) {
   SHEETS.forEach(function (s) { $(s).classList.toggle("aberto", s === id && !$(s).classList.contains("aberto")); });
 }
@@ -6780,6 +6902,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnEpilogo").onclick = function () { fecharTudo(); };
   $("btnSkillAuto").onclick = comprarSkill;
   $("openProjects").onclick = () => { marcarGuia("projects"); abrir("sheetProjects"); };
+  $("abrirEspeciais").onclick = () => abrir("sheetEspeciais");
   $("openUpgrades").onclick = () => { marcarGuia("upgrades"); abrir("sheetUpgrades"); };
   // the board puts a gear at the end of the top rail; the only settings-shaped surface this
   // game has is the three-day-test readout, so that is what it opens
