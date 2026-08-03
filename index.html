@@ -1771,6 +1771,13 @@ const PALETA_BASE = {
   // and a lit sill inside one 22x34 block is a lot of spread. Air between you and a roof eats
   // its saturation before it eats its value, so the roofs come toward the walls in hue and
   // all six carry more `dist`. Same value architecture, less confetti.
+  // TRIED AND BACKED OUT: the same six entries ~12% darker ([104,76,42], [86,66,44],
+  // [54,42,28], [92,58,34], [116,82,50], [38,30,20]), on the argument that our PAINTED third
+  // fifth reads 87 against the board's 82 and a street canyon shades its own fronts. It
+  // bought TWO points — PAINTED 87/103 -> 85/101, profile 105 105 -> 104 103 — and cost the
+  // boy SEVEN ranks at NOITE (40 -> 47 of 485, dE 3 -> 6). Wave 16's mechanism, for the third
+  // time in this series: darkening the middle distance behind him does not bury him, it
+  // manufactures a silhouette edge that competes with him.
   ruaPar:  [[118, 88, 52], 0.20],
   ruaParB: [[98, 78, 54], 0.20],
   ruaSom:  [[64, 52, 38], 0.16],
@@ -3896,7 +3903,13 @@ function drawScene() {
   // so the tree line and the near bushes root it and the proscenium covers its ends.
   {
     const vy = GROUND - 26;                 // the separator band IS the horizon line
-    const vx = Math.round(W * 0.60);        // vanishing point right of centre, as on the board
+    // Vanishing point right of centre, as on the board. TRIED AND BACKED OUT at 0.66·W, on
+    // the theory that a longer left run closes more of the middle: it moved open sky by 0.1
+    // of a point (24.7% -> 24.6%), put the third fifth BACK up (105 -> 106), and took the
+    // boy's MANHÃ luma rank from 19 to 33 of 485 — because sliding the vanishing point right
+    // walks the tall left roofline straight toward his head, which is wave 16's mechanism
+    // arriving by a fourth road.
+    const vx = Math.round(W * 0.60);
     const passo = 21, vel = 0.42;
     const altE = H * 0.46, altD = H * 0.34; // the left run is the taller one, as on the board
     // roof height above the horizon at screen column x, zero at the vanishing point. The
