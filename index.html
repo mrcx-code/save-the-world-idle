@@ -2610,6 +2610,30 @@ function varal(x, gy, larg, alto, k) {
 // one object left in the street speaking the pre-board vocabulary. The glass and its spill do
 // NOT take the hour: a lamp is a light source, and the darker the street gets around it the
 // more of the frame's light it is meant to own.
+// The board's NOITE panel is not a dark street with dots of light in it — it is a street
+// made of POOLS: every lamp lays a warm ellipse on the paving and the dark is what is left
+// between them. That is the largest thing still missing from the night frame, and it costs
+// no new objects: it is light on ground that is already there. It only exists in proportion
+// to how dark it is, so nothing happens at MANHÃ, and it is deliberately weak (peak 0.13) —
+// a pool you notice as light, not as a yellow disc painted on the road.
+function pocaLuz(x, gy, forca) {
+  const esc = escuridao();
+  if (esc < 0.18) return;
+  const a = (esc - 0.18) / 0.82 * forca;
+  if (a < 0.01) return;
+  // The pool has to live in the band you can actually SEE. The ground plane is 30 world px
+  // deep and the REAL DATA banner covers most of it — what is left is roughly the first
+  // seven rows below the ground line, so that is where the light goes, wide and shallow,
+  // which is also what a lamp pool looks like at this grazing an angle.
+  cx.fillStyle = "#fde79d";
+  for (let y = -2; y < 8; y++) {
+    const t = (y + 2) / 9;
+    const w = Math.round(13 + t * 12);
+    cx.globalAlpha = a * (1 - Math.abs(t - 0.25) * 1.1);
+    if (cx.globalAlpha > 0.004) cx.fillRect(Math.round(x - w / 2), gy + y, w, 1);
+  }
+  cx.globalAlpha = 1;
+}
 function posteLuz(x, gy, aceso) {
   const D = dc();
   sombra(x + 3, gy, 9, 0.16);
@@ -2627,6 +2651,7 @@ function posteLuz(x, gy, aceso) {
     cx.fillRect(x - 6, gy - 38, 19, 18); cx.globalAlpha = 1;
     cx.fillStyle = "#fde79d"; cx.fillRect(x, gy - 32, 7, 2);
     cx.fillStyle = "#fffbe8"; cx.fillRect(x + 1, gy - 32, 5, 1);
+    pocaLuz(x + 3, gy, 0.22);
   } else {
     cx.fillStyle = D.apag; cx.fillRect(x, gy - 32, 7, 2);
   }
@@ -4080,7 +4105,10 @@ function drawScene() {
         const on = h > 0.3 || escuridao() > 0.4;
         cx.fillStyle = wc("#2a2b1a"); cx.fillRect(sx + 6 + incl, topA + 4, 4, 2);
         cx.fillStyle = on ? "#fde79d" : wc("#4a4a3a"); cx.fillRect(sx + 7 + incl, topA + 6, 2, 2);
-        if (on) { cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d"; cx.fillRect(sx + 3 + incl, topA + 6, 9, 12); cx.globalAlpha = 1; }
+        if (on) {
+          cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d"; cx.fillRect(sx + 3 + incl, topA + 6, 9, 12); cx.globalAlpha = 1;
+          pocaLuz(sx + 8 + incl, GROUND, 0.19);   // and the pool it throws on the paving
+        }
       }
       if (h > 0.4) {                                    // and something climbing it, of course
         cx.fillStyle = wc("#3e4721");
