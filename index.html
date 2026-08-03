@@ -3890,11 +3890,14 @@ function drawScene() {
     const vy = GROUND - 26;                 // the separator band IS the horizon line
     const vx = Math.round(W * 0.60);        // vanishing point right of centre, as on the board
     const passo = 21, vel = 0.42;
-    const altE = H * 0.38, altD = H * 0.30; // the left run is the taller one, as on the board
-    // roof height above the horizon at screen column x, zero at the vanishing point
+    const altE = H * 0.46, altD = H * 0.34; // the left run is the taller one, as on the board
+    // roof height above the horizon at screen column x, zero at the vanishing point. The
+    // exponent is 1, i.e. a STRAIGHT rake to the vanishing point, which is what perspective
+    // gives a street of roughly equal houses and what the board draws: its left roofline is
+    // one unbroken diagonal from the top corner of the panel down to the far end of the road.
     const teto = function (x) {
       const t = x < vx ? (vx - x) / Math.max(1, vx) : (x - vx) / Math.max(1, W - vx);
-      return (x < vx ? altE : altD) * Math.pow(Math.min(1, Math.max(0, t)), 1.2);
+      return (x < vx ? altE : altD) * Math.min(1, Math.max(0, t));
     };
     const aceso = h > 0.5 || escuridao() > 0.4;
     const k0 = Math.floor(worldX * vel / passo) - 1;
