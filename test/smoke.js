@@ -28,6 +28,111 @@ function chromiumPath() {
   await page.tap('#btnBegin');
   await page.waitForTimeout(300);
 
+  // ---- first-run onboarding guide ----
+  // Light, progressive, tied to state: ONE warm line at a time, it never repeats, it never
+  // replays after the torch, and it never blocks a tap from reaching the game.
+  const guia1 = await page.evaluate(() => {
+    // a fresh save: intro just dismissed, no projects yet, story card not in the way
+    S.guiaVistos = []; S.geradores = 0; S.energia = 0; S.energiaTotal = 0; S.transicoes = 0;
+    cartaoT = 0; esconderGuia(); fecharTudo();
+    desenhar();
+    const el = document.getElementById('guia'), v = document.getElementById('guiaV');
+    return {
+      id: guiaAtual, visivel: el.classList.contains('mostra'),
+      texto: v.innerText, palavras: v.innerText.replace(/^[A-Z]+\s*—\s*/, '').split(/\s+/).filter(Boolean).length,
+      ponteiro: getComputedStyle(el).pointerEvents, passos: GUIA.length,
+      aponta: document.getElementById('btnClique').classList.contains('guiaAlvo')
+    };
+  });
+  console.log('onboarding -> steps:', guia1.passos, '| first hint on a fresh save:', JSON.stringify(guia1.id),
+    '| visible:', guia1.visivel, '| words before first tap:', guia1.palavras, '| pointer-events:', guia1.ponteiro);
+  console.log('           ->', JSON.stringify(guia1.texto));
+  if (!guia1.visivel || guia1.id !== 'tap') errors.push('the first hint did not appear on a fresh save');
+  if (guia1.ponteiro !== 'none') errors.push('the guide bubble is not pointer-through');
+  if (!guia1.aponta) errors.push('the first hint did not point at the attack button');
+  if (guia1.palavras > 16) errors.push('the first hint is not one short line');
+  // a clean frame for the eye: suppress the chapter card, keep only the tap hint up
+  await page.evaluate(() => {
+    S.capVisto = CAPITULOS.length; document.getElementById('cartao').classList.remove('mostra');
+    S.guiaVistos = []; S.geradores = 0; cartaoT = 0; esconderGuia(); desenhar();
+  });
+  await page.waitForTimeout(120);
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-guia.png') });
+
+  // it NEVER blocks a tap: with the hint up, a tap on the world still swings AND dismisses it
+  await page.waitForTimeout(350);   // clear the anti-flicker grace
+  const guiaTap = await page.evaluate(async () => {
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
+    superT = 0; superCarga = 0; superSwings = 0; superCd = 1e9; superFx = null; S.geradores = 0;
+    const antes = S.energiaTotal, cv = document.getElementById('scene');
+    const visivelAntes = document.getElementById('guia').classList.contains('mostra');
+    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 400 }));
+    cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 60));
+    return { visivelAntes, ganho: S.energiaTotal - antes, guiaAtual,
+      aindaVisivel: document.getElementById('guia').classList.contains('mostra'),
+      lembrou: Array.isArray(S.guiaVistos) && S.guiaVistos.indexOf('tap') >= 0 };
+  });
+  console.log('  tap through the hint -> hint up:', guiaTap.visivelAntes, '| swing +' + guiaTap.ganho.toFixed(2),
+    '| hint still up:', guiaTap.aindaVisivel, '| tap remembered:', guiaTap.lembrou);
+  if (!guiaTap.visivelAntes) errors.push('the hint was not up before the tap-through test');
+  if (guiaTap.ganho <= 0) errors.push('the guide bubble blocked a tap from reaching the game');
+  if (guiaTap.aindaVisivel) errors.push('a tap did not dismiss the hint');
+  if (!guiaTap.lembrou) errors.push('the dismissed hint was not remembered');
+
+  // a seen hint does not come back; and "got it" advances to the next step that state allows
+  const guiaAvanca = await page.evaluate(() => {
+    // tap already seen, and now a couple of projects are running: the rhythm step is next
+    S.guiaVistos = ['tap']; S.geradores = 2; S.energia = 0; S.transicoes = 0;
+    esconderGuia(); cartaoT = 0; fecharTudo();
+    desenhar();
+    const primeiro = guiaAtual, apontaRitmo = document.getElementById('modeQuick').classList.contains('guiaAlvo');
+    dispensarGuia();                                   // "got it"
+    const aposOk = { atual: guiaAtual, visto: S.guiaVistos.slice() };
+    // with tap+rhythm seen and no money, nothing else qualifies — the bubble stays down
+    esconderGuia(); S.geradores = 0; desenhar();
+    return { primeiro, apontaRitmo, aposOk, quieto: guiaAtual };
+  });
+  console.log('  advance -> next step:', JSON.stringify(guiaAvanca.primeiro), '| points at rhythm:', guiaAvanca.apontaRitmo,
+    '| after "got it":', JSON.stringify(guiaAvanca.aposOk.atual), '| seen:', JSON.stringify(guiaAvanca.aposOk.visto));
+  if (guiaAvanca.primeiro !== 'rhythm') errors.push('the guide did not advance to the rhythm step');
+  if (!guiaAvanca.apontaRitmo) errors.push('the rhythm hint did not point at the mode control');
+  if (guiaAvanca.aposOk.atual) errors.push('"got it" did not dismiss the step');
+  if (guiaAvanca.aposOk.visto.indexOf('rhythm') < 0) errors.push('the "got it" step was not remembered');
+  if (guiaAvanca.quieto) errors.push('a seen hint reappeared with nothing new to show');
+
+  // passing the torch must NOT replay the tutorial: guiaVistos survives transicionar()
+  const guiaTorch = await page.evaluate(() => {
+    S.guiaVistos = ['tap', 'projects', 'rhythm', 'upgrades', 'torch'];
+    S.energiaTotal = CFG.metaPrestigio + 1000; S.geradores = 3; S.poluicao = 0; cartaoT = 0;
+    transicionar();                                    // wipes the run; must keep guiaVistos
+    const guardado = JSON.parse(localStorage.getItem('proto_savetheworld') || '{}');
+    fecharTudo();
+    // now stand where the fresh run's tap/projects hints would fire, with chapters suppressed
+    S.geradores = 0; S.energia = 0; S.capVisto = CAPITULOS.length; cartaoT = 0; esconderGuia();
+    desenhar();
+    return { sobreviveu: (S.guiaVistos || []).slice(), noSave: (guardado.guiaVistos || []).indexOf('tap') >= 0,
+      reapareceu: guiaAtual };
+  });
+  console.log('  after the torch -> seen steps kept:', JSON.stringify(guiaTorch.sobreviveu),
+    '| persisted in save:', guiaTorch.noSave, '| replayed:', JSON.stringify(guiaTorch.reapareceu));
+  if (guiaTorch.sobreviveu.indexOf('tap') < 0 || guiaTorch.sobreviveu.indexOf('projects') < 0) {
+    errors.push('passing the torch wiped the guide-seen state');
+  }
+  if (!guiaTorch.noSave) errors.push('the guide-seen state was not persisted through the torch');
+  if (guiaTorch.reapareceu === 'tap' || guiaTorch.reapareceu === 'projects') {
+    errors.push('the tutorial replayed after passing the torch');
+  }
+
+  // clean slate for the rest of the suite: every step seen, bubble down, run reset
+  await page.evaluate(() => {
+    GUIA.forEach(g => marcarGuia(g.id)); esconderGuia(); fecharTudo();
+    S.energia = 0; S.energiaTotal = 0; S.geradores = 0; S.poluicao = 0; S.modo = 'carvao';
+    S.tempoLimpo = 0; S.transicoes = 0; S.inovacao = 0; S.capVisto = 0;
+    S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
+    R.tochas = 0; cartaoT = 0; desenhar();
+  });
+
   // hold the attack button: should fire many hits, not one
   const before = await page.evaluate(() => S.energiaTotal);
   await page.mouse.move(195, 800);
@@ -977,6 +1082,7 @@ function chromiumPath() {
     CAPITULOS.forEach(c => { s.push(c.t, c.n === undefined ? '' : ''); c.v.forEach(v => s.push(v[0], v[1])); });
     EPILOGO_VOZ.forEach(v => s.push(v[0], v[1]));
     NOTAS_VOLTA.forEach(v => s.push(v[0], v[1]));
+    GUIA.forEach(g => s.push(g.voz[0], g.voz[1].replace(/<[^>]+>/g, '')));
     ELENCO.forEach(n => s.push(n));
     ORDINAIS.forEach(o => s.push(o));
     [1, 2, 3, 5, 6, 9, 10, 40].forEach(t => s.push(caudaMuro(t)));
