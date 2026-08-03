@@ -881,6 +881,8 @@ function burst(x, y, n, cores) {
 }
 let combo = 0, attackT = 0, attackType = 0;
 const JUMPF = 20;                 // frames of the leap
+const ATKF = 16;                  // frames a cast animation is shown — long enough to READ the
+                                  // 4 sprite frames (was 9 ≈ 0.15s, a flash the owner couldn't follow)
 let jumpT = 0, shocks = [];       // leap timer + ground shockwaves
 function impacto(x) {             // the magic goes into the dirt: wave, dust fan, motes (x is screen space)
   shocks.push({ wx: worldX + x, t: 0 });
@@ -1199,7 +1201,7 @@ function clicar(auto, naoConta) {
   const passo = combo; combo = (combo + 1) % 3;
   if (!auto) {
     attackType = passo;
-    attackT = passo === 2 ? JUMPF : 9;
+    attackT = passo === 2 ? JUMPF : ATKF;
     if (passo === 2 && jumpT <= 0) jumpT = JUMPF;   // third hit: leap and slam
   }
   // reach covers the whole queue (three troubles, one body-width apart) — otherwise the
@@ -3589,13 +3591,13 @@ function drawHero() {
     fi = Math.max(0, Math.min(5, Math.floor((1 - jumpT / JUMPF) * 6)));
   } else if (attackT > 0 && attackType === 0) {
     frames = HERO_SPR.atk1;
-    fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / 9) * 4)));   // attackT starts at 9
+    fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / ATKF) * 4)));   // attackT starts at 9
   } else if (attackT > 0 && attackType === 1) {
     frames = HERO_SPR.atk2;
-    fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / 9) * 4)));
+    fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / ATKF) * 4)));
   } else {
     frames = HERO_SPR.walk;                               // he is always running through the world
-    fi = ((Math.floor(animT * 9) % 6) + 6) % 6;           // ~9 fps, 6-frame cycle
+    fi = ((Math.floor(animT * 13) % 6) + 6) % 6;           // ~9 fps, 6-frame cycle
   }
   const img = frames[fi];
 
