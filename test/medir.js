@@ -63,7 +63,25 @@ const MEDE = function () {
     Ls[i] = 116 * fy - 16; A[i] = 500 * (fx - fy); B[i] = 200 * (fy - fz);
   }
   const q = function (a) { const o = new Array(n); for (let i = 0; i < n; i++) o[i] = Math.round(a[i] * 10) / 10; return o; };
-  return { w: cv.width, h: cv.height, L: q(L), Ls: q(Ls), A: q(A), B: q(B), ground: GROUND, hx: HX };
+  // OPEN SKY. Band dE answers "how much event is in this strip"; it cannot answer "is the
+  // frame composed", because a wall filling the top of the picture is a flat mass and a flat
+  // mass scores near zero — closing the frame LOWERS the band score while making the picture
+  // more like the board. So: the sky pass is baked into one canvas and painted first, and
+  // everything else in the world is painted over it. A pixel that still carries exactly the
+  // colour `skyCanvas` put there is bare sky and nothing has been drawn on it. Counting those
+  // gives the one number the board can actually be compared on — the board's street panels
+  // give open sky about a quarter of the picture.
+  const sc = skyCanvas(worldHealth());
+  const sd = sc.getContext('2d').getImageData(0, 0, sc.width, sc.height).data;
+  const nu = new Uint8Array(n);
+  for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+    const i = y * cv.width + x;
+    if (y >= sc.height) continue;
+    const j = (y * sc.width + x) * 4;
+    nu[i] = (d[i * 4] === sd[j] && d[i * 4 + 1] === sd[j + 1] && d[i * 4 + 2] === sd[j + 2]) ? 1 : 0;
+  }
+  return { w: cv.width, h: cv.height, L: q(L), Ls: q(Ls), A: q(A), B: q(B),
+    ground: GROUND, hx: HX, nu: Array.from(nu) };
 };
 
 function estat(p, y0, y1) {
@@ -254,6 +272,20 @@ function legibilidade(p) {
       sub.push('y' + y0 + '-' + y1 + ' dE ' + (n ? s / n : 0).toFixed(1));
     }
     console.log('  CEU baixo por terco: ' + sub.join('  |  '));
+    // and the framing itself: how much of the picture is still bare sky. Two windows, because
+    // the top of the canvas is not picture — the HUD bar sits on it — and a frame that closes
+    // only where nobody can see it has closed nothing.
+    const topo = await page.evaluate(() => Math.round(
+      document.getElementById('barraTopo').getBoundingClientRect().bottom / (window.innerWidth / W)));
+    const nu = function (y0, y1) {
+      let s = 0, n = 0;
+      for (let y = Math.max(0, y0); y < y1; y++) for (let x = 0; x < p.w; x++) { s += p.nu[y * p.w + x]; n++; }
+      return n ? s / n * 100 : 0;
+    };
+    console.log('  CEU ABERTO ' + nome + ': quadro inteiro ' + nu(0, p.ground + 22).toFixed(1) +
+      '%  |  so o visivel (abaixo da barra, y' + topo + ') ' + nu(topo, p.ground + 22).toFixed(1) +
+      '%  |  CEU alto ' + nu(4, Math.round(p.ground * 0.45)).toFixed(1) +
+      '%  CEU baixo ' + nu(Math.round(p.ground * 0.45), p.ground - 42).toFixed(1) + '%');
   }
 
   // ---- (2) the worst-case frame ----
