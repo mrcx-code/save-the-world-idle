@@ -1579,9 +1579,6 @@ function fitCanvas() {
 window.addEventListener("resize", fitCanvas);
 
 function lerp(a, b, t) { return a + (b - a) * t; }
-function lerpC(c1, c2, t) {
-  return "rgb(" + Math.round(lerp(c1[0], c2[0], t)) + "," + Math.round(lerp(c1[1], c2[1], t)) + "," + Math.round(lerp(c1[2], c2[2], t)) + ")";
-}
 // ---------- colour ----------
 // The ordered dither that used to live here is gone with the rest of the post-processing.
 // Reference art in this genre carries no dithering at all: what buys fidelity is three to
@@ -1594,6 +1591,115 @@ function rgbS(c) { return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "
 function horizonC(h) { return mixA([220, 213, 198], [208, 242, 255], h); }
 // aerial perspective: dist 0 = at your feet, 1 = dissolved into the horizon
 function longe(c, dist, h) { return rgbS(mixA(c, horizonC(h), dist)); }
+
+// ---------- THE TWO AUTHORED PALETTES ----------
+// Every colour in the world used to be a `lerpC(sickPair, healedPair, h)` written at the
+// point of use — about forty of them, scattered. Each pair was authored at its two ENDS and
+// nobody ever authored the middle, so an intermediate world was forty unrelated straight
+// lines through RGB space arriving wherever they arrived. And a straight RGB line between a
+// bleached ochre and a saturated green passes through grey: that is literally where the mud
+// came from.
+//
+// Two named palettes now, one sick and one healed, resolved once per health step. The
+// interpolation is not a straight line — it is split into the two channels the direction
+// actually cares about:
+//   · VALUE moves linearly, because the parallax planes are separated by value and that
+//     separation has to hold at every t, not just at the ends;
+//   · CHROMA is carried on the HEALED hue the whole way and only its amount ramps, so a
+//     half-healed world is a faded photograph of the healed one — never a third colour that
+//     nobody drew. That is "the arc runs on saturation" made literal.
+// Aerial perspective is folded in here too (each entry carries its own distance), so a
+// drawing call is one string lookup instead of a mix plus a haze plus a format.
+function lumaOf(c) { return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]; }
+function cl255(v) { return v < 0 ? 0 : v > 255 ? 255 : v; }
+// Direction and amount are separated, not blended together as one vector. Blending the raw
+// chroma vectors made the world go momentarily GREYER than fully sick around h≈0.1, because
+// the warm ochre offset and the green offset partly cancel while the hue swings across —
+// measured as a dip from 21.8 to 18.2 mean chroma. Rotating the direction while ramping the
+// magnitude separately makes the saturation arc monotonic by construction.
+function palMix(cd, cs, hv, tc) {
+  const Ld = lumaOf(cd), Ls = lumaOf(cs), L = lerp(Ld, Ls, hv);
+  const dx = cd[0] - Ld, dy = cd[1] - Ld, dz = cd[2] - Ld;
+  const sx = cs[0] - Ls, sy = cs[1] - Ls, sz = cs[2] - Ls;
+  const md = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6;
+  const ms = Math.sqrt(sx * sx + sy * sy + sz * sz) || 1e-6;
+  const ux = lerp(dx / md, sx / ms, tc), uy = lerp(dy / md, sy / ms, tc), uz = lerp(dz / md, sz / ms, tc);
+  const un = Math.sqrt(ux * ux + uy * uy + uz * uz) || 1e-6;
+  const m = lerp(md, ms, tc);
+  return [cl255(L + ux / un * m), cl255(L + uy / un * m), cl255(L + uz / un * m)];
+}
+// [sick, healed, distance into the haze]
+const PALETA = {
+  nuvB:  [[198, 192, 178], [184, 232, 251], 0],
+  nuvT:  [[224, 218, 205], [255, 255, 255], 0],
+  nuvD:  [[172, 166, 152], [127, 196, 232], 0],
+  serraFar:  [[182, 176, 162], [147, 185, 212], 0.44],
+  serraFarL: [[202, 196, 182], [178, 216, 238], 0.40],
+  serraNear:  [[158, 151, 137], [102, 152, 186], 0.25],
+  serraNearL: [[186, 179, 164], [142, 190, 220], 0.21],
+  cidade:  [[93, 88, 80], [63, 111, 158], 0.24],
+  marcoC:  [[102, 97, 88], [70, 112, 156], 0.19],
+  marcoL:  [[136, 130, 118], [122, 168, 208], 0.15],
+  marcoE:  [[74, 70, 64], [44, 78, 116], 0.25],
+  marcoR:  [[140, 132, 120], [198, 62, 50], 0.18],
+  morro:   [[132, 126, 112], [58, 118, 72], 0.20],
+  traco:   [[118, 112, 100], [82, 62, 52], 0.18],
+  caixa:   [[150, 145, 132], [72, 148, 184], 0.12],
+  // the three green planes, still separated by value at every t
+  mataFar:  [[99, 95, 72], [99, 201, 119], 0.42],
+  mataFarL: [[141, 133, 105], [143, 221, 152], 0.36],
+  mataFarK: [[76, 74, 60], [46, 118, 82], 0.21],
+  mataMid:  [[74, 72, 56], [47, 156, 92], 0.20],
+  mataMidL: [[123, 117, 92], [104, 190, 127], 0.17],
+  mataMidK: [[48, 47, 40], [24, 76, 56], 0.10],
+  mataNear:  [[58, 56, 44], [28, 107, 66], 0.04],
+  mataNearL: [[109, 103, 80], [90, 160, 105], 0.03],
+  mataNearK: [[34, 33, 28], [14, 50, 38], 0.02],
+  rodape:  [[70, 66, 52], [18, 74, 46], 0],
+  trilha:  [[168, 156, 128], [216, 184, 120], 0],
+  trilhaL: [[196, 186, 158], [244, 216, 150], 0],
+  sulcoA:  [[136, 126, 102], [176, 142, 88], 0],
+  sulcoB:  [[222, 214, 192], [255, 238, 194], 0],
+  gramaA:  [[99, 78, 56], [66, 158, 100], 0],
+  gramaB:  [[84, 65, 46], [52, 132, 84], 0],
+  folha:   [[70, 54, 40], [46, 155, 84], 0],
+  agua:    [[68, 64, 58], [58, 168, 216], 0],
+  aguaFundo: [[52, 43, 33], [44, 80, 50], 0],
+  aguaRef: [[50, 46, 52], [38, 104, 72], 0.10],
+  brilho:  [[126, 122, 114], [176, 220, 255], 0],
+  junco:   [[60, 50, 36], [34, 106, 60], 0],
+  frenteC: [[74, 68, 52], [20, 68, 44], 0],
+  frenteL: [[104, 96, 74], [44, 110, 62], 0]
+};
+// the hillside is authored as families, so it keeps its own loop
+const MORRO_PAREDE = [[226, 162, 56], [58, 176, 202], [226, 108, 76], [236, 214, 172], [136, 196, 70], [206, 96, 146]];
+const MORRO_LUZ = [[252, 200, 108], [110, 216, 236], [252, 156, 122], [255, 244, 214], [186, 232, 118], [240, 152, 190]];
+const MORRO_TELHA = [[184, 74, 48], [162, 88, 58], [154, 68, 50]];
+const MORRO_TELHAL = [[222, 110, 74], [204, 126, 88], [198, 102, 78]];
+const MORRO_CINZA = [154, 148, 132], MORRO_CINZAT = [140, 133, 118];
+let palCache = null, palKey = -1;
+function pal(h) {
+  const key = Math.round(h * 96);
+  if (palCache && palKey === key) return palCache;
+  palKey = key;
+  const hv = key / 96, tc = Math.pow(hv, 0.78);   // chroma leads value a little: colour is the reward
+  const horiz = horizonC(hv);
+  const P = { _h: hv };
+  const resolva = function (e) { return mixA(palMix(e[0], e[1], hv, tc), horiz, e[2]); };
+  for (const k in PALETA) { const c = resolva(PALETA[k]); P[k + "A"] = c; P[k] = rgbS(c); }
+  P.faixa = rgbS(mixA(horiz, [255, 255, 255], 0.30));
+  // the hillside families, sick end shared so a bleached favela is one grey mass with the
+  // faintest memory of paint in it — which is exactly what a bleached photograph looks like
+  const fam = function (arr, cinza, dist) {
+    return arr.map(function (c) { return rgbS(mixA(palMix(cinza, c, hv, tc), horiz, dist)); });
+  };
+  P.parede = fam(MORRO_PAREDE, MORRO_CINZA, 0.14);
+  P.paredeL = fam(MORRO_LUZ, MORRO_CINZA, 0.12);
+  P.telha = fam(MORRO_TELHA, MORRO_CINZAT, 0.17);
+  P.telhaL = fam(MORRO_TELHAL, MORRO_CINZAT, 0.14);
+  palCache = P;
+  return P;
+}
 // a solid sitting on the ground casts a little weight under itself
 function sombra(cxp, y, w, a) {
   cx.globalAlpha = a === undefined ? 0.22 : a;
@@ -1615,8 +1721,8 @@ const CEU_SAO = [[31, 143, 216], [63, 171, 230], [108, 203, 240], [168, 228, 248
 const CEU_DOENTE = [[154, 148, 136], [170, 164, 151], [187, 181, 167], [203, 197, 182], [220, 213, 198]];
 function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the horizon
   const f = Math.min(0.999, Math.max(0, t)) * (CEU_SAO.length - 1);
-  const i = Math.floor(f), k = f - i;
-  return mixA(mixA(CEU_DOENTE[i], CEU_SAO[i], h), mixA(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h), k);
+  const i = Math.floor(f), k = f - i, tc = Math.pow(h, 0.78);
+  return mixA(palMix(CEU_DOENTE[i], CEU_SAO[i], h, tc), palMix(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h, tc), k);
 }
 // The sky is baked and rebuilt only when world health moves a step, so a normal frame is
 // one drawImage. Without the dither it is also two thirds cheaper to bake.
@@ -1663,8 +1769,9 @@ function chaoCanvas(h) {
   chaoCv.width = W; chaoCv.height = alt;
   chaoKey = key;
   const g = chaoCv.getContext("2d");
-  const perto = mixA([90, 80, 64], [23, 84, 55], h);     // at your feet
-  const longeC = mixA([138, 128, 104], [55, 151, 90], h); // where it meets the path
+  const tc = Math.pow(h, 0.78);
+  const perto = palMix([90, 80, 64], [23, 84, 55], h, tc);     // at your feet
+  const longeC = palMix([138, 128, 104], [55, 151, 90], h, tc); // where it meets the path
   for (let y = 0; y < alt; y++) {
     g.fillStyle = rgbS(mixA(longeC, perto, Math.pow(y / alt, 0.62)));
     g.fillRect(0, y, W, 1);
@@ -2448,15 +2555,14 @@ function drawHero() {
 
 function drawScene() {
   const h = worldHealth();
+  const P = pal(h);                 // the whole world's colour, resolved once per health step
   const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
   // sky, sun and glow: dithered gradient baked once per health step
   cx.drawImage(skyCanvas(h), 0, 0);
   // Clouds. They were three flat rectangles of one grey — the crudest thing in the sky and
   // the sky is most of the frame. Now lobes with a sunlit crown and a shaded belly, and the
   // lower they hang the smaller and hazier they get, which puts distance in the sky too.
-  const nubB = lerpC([198, 192, 178], [184, 232, 251], h);
-  const nubT = lerpC([222, 216, 202], [255, 255, 255], h);
-  const nubD = lerpC([176, 170, 156], [127, 196, 232], h);
+  const nubB = P.nuvB, nubT = P.nuvT, nubD = P.nuvD;
   const ck0 = Math.floor(worldX * 0.12 / 34) - 1;
   for (let k = ck0; k < ck0 + Math.ceil(W / 34) + 2; k++) {
     const sx = Math.round(k * 34 - worldX * 0.12);
@@ -2520,19 +2626,15 @@ function drawScene() {
     }
   }
   // aerial perspective: the far ridge is hazier and lower, the near one darker and taller
-  serra(0.09, Math.round(H * 0.045), Math.round(H * 0.085), 0,
-    longe(mixA([182, 176, 162], [143, 182, 210], h), 0.44, h),
-    longe(mixA([200, 194, 180], [176, 214, 236], h), 0.40, h));
-  serra(0.20, Math.round(H * 0.055), Math.round(H * 0.115), 320,
-    longe(mixA([158, 151, 137], [102, 152, 186], h), 0.25, h),
-    longe(mixA([184, 177, 162], [140, 188, 218], h), 0.21, h));
+  serra(0.09, Math.round(H * 0.045), Math.round(H * 0.085), 0, P.serraFar, P.serraFarL);
+  serra(0.20, Math.round(H * 0.055), Math.round(H * 0.115), 320, P.serraNear, P.serraNearL);
   // THE SEPARATOR BAND. The one cheap trick that carries the whole value architecture:
   // light sky, mid background, a bright strip exactly on the horizon line, dark ground.
   // Everything in front of it now reads as a silhouette against light, and the character
   // straddles the boundary — dark against light above the waist, light against dark below.
   // Local contrast tricks stop being necessary once this band is there.
   cx.globalAlpha = 0.55;
-  cx.fillStyle = rgbS(mixA(horizonC(h), [255, 255, 255], 0.30));
+  cx.fillStyle = P.faixa;
   cx.fillRect(0, GROUND - 26, W, 18);
   cx.globalAlpha = 0.85;
   cx.fillRect(0, GROUND - 12, W, 5);
@@ -2542,7 +2644,7 @@ function drawScene() {
     // the skyline used to be the darkest, highest-contrast thing on screen while standing
     // furthest away — it fought the hero for the eye. More haze, and its windows are a
     // texture on a mass now instead of black holes punched through it.
-    const cityC = longe(mixA([93, 88, 80], [63, 111, 158], h), 0.24, h);
+    const cityC = P.cidade;
     const spacing = 420, speed = 0.16;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
@@ -2598,9 +2700,7 @@ function drawScene() {
     // they were simply eaten by the tree line — distant things belong higher on the picture
     // plane, and a silhouette whose feet sit on the light strip is the value architecture.
     const spacing = 460, speed = 0.15, base = GROUND - 29;
-    const corpo = longe(mixA([102, 97, 88], [70, 112, 156], h), 0.19, h);
-    const claro = longe(mixA([136, 130, 118], [122, 168, 208], h), 0.15, h);
-    const escuro = longe(mixA([74, 70, 64], [44, 78, 116], h), 0.25, h);
+    const corpo = P.marcoC, claro = P.marcoL, escuro = P.marcoE;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed);
@@ -2638,7 +2738,7 @@ function drawScene() {
           break;
         }
         case 2: {   // the museum: a box hung under two portal frames, the span clear beneath
-          const vermelho = longe(mixA([140, 132, 120], [198, 62, 50], h), 0.18, h);
+          const vermelho = P.marcoR;
           px(corpo, 8, 12, 56, 18); px(claro, 8, 28, 56, 2); px(escuro, 8, 12, 56, 1);
           for (let i = 0; i < 5; i++) px(escuro, 13 + i * 10, 16, 6, 9);
           px(vermelho, 4, 0, 4, 40); px(vermelho, 64, 0, 4, 40); px(vermelho, 4, 36, 64, 4);
@@ -2677,18 +2777,8 @@ function drawScene() {
   // on. Warm, ordinary, and the thing the whole game is asking you to save.
   {
     const speed = 0.21, spacing = 340, base = GROUND - 27;
-    const cinza = [154, 148, 132], cinzaT = [140, 133, 118];
-    const paredes = [[226, 162, 56], [58, 176, 202], [226, 108, 76], [236, 214, 172], [136, 196, 70], [206, 96, 146]]
-      .map(function (c) { return longe(mixA(cinza, c, h), 0.14, h); });
-    const luzP = [[252, 200, 108], [110, 216, 236], [252, 156, 122], [255, 244, 214], [186, 232, 118], [240, 152, 190]]
-      .map(function (c) { return longe(mixA(cinza, c, h), 0.12, h); });
-    const telha = [[184, 74, 48], [162, 88, 58], [154, 68, 50]]
-      .map(function (c) { return longe(mixA(cinzaT, c, h), 0.17, h); });
-    const telhaL = [[222, 110, 74], [204, 126, 88], [198, 102, 78]]
-      .map(function (c) { return longe(mixA(cinzaT, c, h), 0.14, h); });
-    const traco = longe(mixA([118, 112, 100], [82, 62, 52], h), 0.18, h);
-    const caixa = longe(mixA([150, 145, 132], [72, 148, 184], h), 0.12, h);
-    const morro = longe(mixA([132, 126, 112], [58, 118, 72], h), 0.20, h);
+    const paredes = P.parede, luzP = P.paredeL, telha = P.telha, telhaL = P.telhaL;
+    const traco = P.traco, caixa = P.caixa, morro = P.morro;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed);
@@ -2729,11 +2819,7 @@ function drawScene() {
   // band gets a hard dark edge, the middle one a softer one, and the far ridge none at all.
   // A silhouette that keeps its outline at every depth flattens the frame; one that loses
   // it as it recedes is what actually reads as air.
-  function faixaVerde(speed, passo, larg, hMin, hMax, doente, sadio, dist, sem, tinta) {
-    const base = mixA(doente, sadio, h);
-    const corpo = longe(base, dist, h);
-    const topo = longe(mixA(base, [255, 244, 200], 0.26), dist * 0.85, h);
-    const linha = tinta ? longe(mixA(base, [18, 36, 46], 0.72), dist * 0.5, h) : null;
+  function faixaVerde(speed, passo, larg, hMin, hMax, corpo, topo, linha, sem) {
     const q0 = Math.floor(worldX * speed / passo) - 1;
     const n = Math.ceil(W / passo) + 2;
     for (let k = q0; k < q0 + n; k++) {
@@ -2755,22 +2841,22 @@ function drawScene() {
       cx.fillRect(c0 + cw - 3, GROUND - th - 5, 3, 4);
     }
   }
-  faixaVerde(0.26, 18, 18, 10, 21, [99, 95, 72], [99, 201, 119], 0.42, 41, false); // far ridge forest
-  faixaVerde(0.44, 22, 22, 8, 17, [74, 72, 56], [47, 156, 92], 0.20, 11, true);    // mid tree line
-  faixaVerde(0.66, 30, 30, 6, 14, [58, 56, 44], [28, 107, 66], 0.04, 23, true);    // near bushes
+  faixaVerde(0.26, 18, 18, 10, 21, P.mataFar, P.mataFarL, null, 41);            // far ridge forest
+  faixaVerde(0.44, 22, 22, 8, 17, P.mataMid, P.mataMidL, P.mataMidK, 11);       // mid tree line
+  faixaVerde(0.66, 30, 30, 6, 14, P.mataNear, P.mataNearL, P.mataNearK, 23);    // near bushes
   // the bushes sit down onto the ground instead of floating on it
-  cx.fillStyle = lerpC([70, 66, 52], [18, 74, 46], h);
+  cx.fillStyle = P.rodape;
   cx.fillRect(0, GROUND - 2, W, 2);
   // ground: dithered gradient, lit at the horizon and falling into shadow toward the viewer
   cx.drawImage(chaoCanvas(h), 0, GROUND);
   // The dirt path he runs on: it used to be one flat 5px band straight across the widest
   // part of the frame. Now a sunlit crown, ruts and pebbles that scroll with the world, and
   // a shadow where the grass leans over the edge.
-  cx.fillStyle = lerpC([168, 156, 128], [216, 184, 120], h);
+  cx.fillStyle = P.trilha;
   cx.fillRect(0, GROUND, W, 8);
-  cx.fillStyle = lerpC([196, 186, 158], [244, 216, 150], h);
+  cx.fillStyle = P.trilhaL;
   cx.fillRect(0, GROUND, W, 2);
-  const rutA = lerpC([136, 126, 102], [176, 142, 88], h), rutB = lerpC([222, 214, 192], [255, 238, 194], h);
+  const rutA = P.sulcoA, rutB = P.sulcoB;
   const rk0 = Math.floor(worldX / 9) - 1;
   for (let k = rk0; k < rk0 + Math.ceil(W / 9) + 2; k++) {
     const gx = Math.round(k * 9 - worldX), r2 = hash01(k * 31 + 7);
@@ -2791,7 +2877,7 @@ function drawScene() {
     if (hash01(k * 5 + 8) > 0.6) cx.fillRect(gx + 3, gy + 2, 1, 1);
     const gr2 = hash01(k * 13 + 11);
     if (gr2 < 0.4) { // lighter/darker grass dashes
-      cx.fillStyle = gr2 < 0.2 ? lerpC([99, 78, 56], [66, 158, 100], h) : lerpC([84, 65, 46], [52, 132, 84], h);
+      cx.fillStyle = gr2 < 0.2 ? P.gramaA : P.gramaB;
       cx.fillRect(gx + 2, GROUND + 8 + Math.floor(hash01(k * 19 + 2) * (H - GROUND - 10)), 4, 2);
     }
   }
@@ -2802,7 +2888,7 @@ function drawScene() {
     const gr = hash01(k * 17 + 9);
     if (gr < 0.5) { // grass blades wave in the wind
       const gw = (Math.floor(tick / 14) + k) % 2;
-      cx.fillStyle = lerpC([70, 54, 40], [46, 155, 84], h);
+      cx.fillStyle = P.folha;
       cx.fillRect(gx + gw, GROUND - 2, 1, 2); cx.fillRect(gx + 2 - gw, GROUND - 3, 1, 3);
     } else if (gr < 0.62 && h > 0.35) { // flower
       cx.fillStyle = "#2e9b54"; cx.fillRect(gx + 1, GROUND - 3, 1, 3);
@@ -2895,23 +2981,22 @@ function drawScene() {
       cx.fillStyle = "#2a1c12";
       cx.fillRect(sx + 15, GROUND - 15, 1, 7); cx.fillRect(sx + 12, GROUND - 12, 7, 1);
     } else if (kind < 8) { // pond: muddy bank, the sky reflected in it, drifting shimmer
-      const agua = mixA([68, 64, 58], [38, 100, 156], h);
-      cx.fillStyle = lerpC([52, 43, 33], [44, 80, 50], h);
+      cx.fillStyle = P.aguaFundo;
       cx.fillRect(sx + 5, GROUND + 2, 36, 13);
-      cx.fillStyle = rgbS(agua);
+      cx.fillStyle = P.agua;
       cx.fillRect(sx + 7, GROUND + 4, 32, 10);
-      cx.fillStyle = rgbS(mixA(agua, horizonC(h), 0.55));      // the far edge takes the sky
+      cx.fillStyle = rgbS(mixA(P.aguaA, horizonC(h), 0.55));   // the far edge takes the sky
       cx.fillRect(sx + 8, GROUND + 4, 30, 3);
       cx.globalAlpha = 0.4;                                    // the tree line, upside down
-      cx.fillStyle = longe(mixA([50, 46, 52], [38, 104, 72], h), 0.10, h);
+      cx.fillStyle = P.aguaRef;
       cx.fillRect(sx + 10, GROUND + 5, 9, 3); cx.fillRect(sx + 24, GROUND + 5, 7, 2);
       cx.globalAlpha = 1;
-      cx.fillStyle = lerpC([126, 122, 114], [176, 220, 255], h);  // shimmer drifting across
+      cx.fillStyle = P.brilho;                                 // shimmer drifting across
       const dr = Math.floor(tick / 14) % 4;
       cx.fillRect(sx + 11 + dr, GROUND + 9, 7, 1);
       cx.fillRect(sx + 23 - dr, GROUND + 11, 6, 1);
       if (h > 0.45) { cx.fillStyle = "rgba(255,255,255,.85)"; cx.fillRect(sx + 15 + (tick % 40 > 20 ? 8 : 0), GROUND + 7, 4, 1); }
-      cx.fillStyle = lerpC([60, 50, 36], [34, 106, 60], h);    // reeds on the near bank
+      cx.fillStyle = P.junco;                                  // reeds on the near bank
       cx.fillRect(sx + 4, GROUND + 5, 1, 6); cx.fillRect(sx + 6, GROUND + 8, 1, 4); cx.fillRect(sx + 40, GROUND + 6, 1, 6);
       if (h > 0.5) {                                           // vitória-régia, rims turned up
         [[10, 7], [21, 10], [30, 6]].forEach(function (p, i) {
@@ -3176,8 +3261,7 @@ function drawScene() {
   // a row of identical blocks with a hard straight top — a picket fence. Same idea, but the
   // edge is now broken up by clumps and blades of varying height, and the very top catches
   // a thread of light so the band reads as grass close to the camera, not as a black bar.
-  const fgC = lerpC([74, 68, 52], [20, 68, 44], h);
-  const fgL = lerpC([104, 96, 74], [44, 110, 62], h);
+  const fgC = P.frenteC, fgL = P.frenteL;
   const fgTop = Math.min(H - 8, GROUND + 20);
   const fk0 = Math.floor(worldX * 1.45 / 34) - 1;
   for (let k = fk0; k < fk0 + Math.ceil(W / 34) + 2; k++) {
