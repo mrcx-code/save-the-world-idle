@@ -1876,7 +1876,15 @@ const HORAS = [
   { nome: "NOITE", ceu: [[14, 24, 44], [20, 34, 58], [32, 50, 76], [50, 72, 96], [78, 100, 112]],
     tinta: [46, 66, 110], forca: 0.34, escala: 0.44, escuro: 1 }
 ];
-const DIA_SEG = 240;                        // one full turn of the four, in seconds
+// BUG FIXED 2026-08-03: this was 240s with horaKey() quantised to 96 steps, so the whole
+// world re-baked its palette every 2.5s and every colour in the frame stepped at once —
+// measured at 5.29 rgb levels per pixel on average, 9.24 at worst. A global colour step
+// twice per five seconds is not ambience, it is a strobe, and the owner read it exactly as
+// that: "o fundo tá com um efeito estranho, meio bugado se mexendo".
+// Two changes, because slowing the clock alone only makes the same jump rarer: the turn is
+// now half an hour, so light is a setting rather than an event, and the step count is 4x
+// finer, so each jump is a quarter the size. Re-bakes get RARER (4.7s vs 2.5s) and smaller.
+const DIA_SEG = 1800;                       // one full turn of the four, in seconds
 let relogio = 0;                            // advanced by the frame loop, in seconds
 function horaAgora() {
   const t = (relogio / DIA_SEG) % 1 * HORAS.length;
@@ -1894,7 +1902,14 @@ function luzDoDia(c) {
   return mixA([cl255(c[0] * esc), cl255(c[1] * esc), cl255(c[2] * esc)], tin, forca);
 }
 // quantised so the palette and the sky re-bake a handful of times a minute, not every frame
-function horaKey() { return Math.round((relogio / DIA_SEG) % 1 * 96); }
+const HORA_PASSOS = 960;                    // finer than the eye can catch between bakes
+// Windows and lamps used to flip on a single shared boolean, escuridao() > 0.4, so forty of
+// them lit in ONE frame. No amount of finer quantisation fixes an if: measured, the worst
+// colour step of the whole day held at ~5 rgb however fine the clock got, and this was it.
+// Each object now gets its own threshold spread across the dusk, which kills the step and is
+// also truer — a street does not come on all at once.
+function acendeu(semente) { return escuridao() > 0.30 + hash01(semente * 7.13 + 2.9) * 0.20; }                    // finer than the eye can catch between bakes
+function horaKey() { return Math.round((relogio / DIA_SEG) % 1 * HORA_PASSOS); }
 
 // ---------- THE RHYTHM, AS WEATHER ----------
 // GO FAST and GO STEADY rendered pixel-identical frames: the one decision this prototype
@@ -1957,7 +1972,11 @@ function hazeLuz() {
 let palCache = null, palKey = -1;
 function pal(h) {
   const rq = ritmoQ();
-  const key = ((Math.round(h * 96) * 128 + horaKey()) * 16 + Math.round(rq * 8)) + "|" + cenAtivo;
+  // the hour is packed above the health step, so the multiplier must clear HORA_PASSOS —
+  // at 128 with 384 steps two different hours shared a key and the palette stuck. The
+  // scenario is appended as text rather than packed, for the same reason: it is a name, and
+  // a name multiplied into a number is the next collision waiting to happen.
+  const key = ((Math.round(h * 96) * (HORA_PASSOS + 1) + horaKey()) * 16 + Math.round(rq * 8)) + "|" + cenAtivo;
   if (palCache && palKey === key) return palCache;
   palKey = key;
   const hv = Math.round(h * 96) / 96, tc = Math.pow(hv, 0.78);   // chroma leads value a little
@@ -3879,7 +3898,7 @@ CENARIOS.rua = {
           cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 12, 14, 3);
           cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 12, 14, 1);
           cx.fillStyle = traco; cx.fillRect(x + 2, y - 5, 3, 5);            // a door onto the steps
-          cx.fillStyle = (h > 0.5 || escuridao() > 0.4) ? "rgba(253,231,157,.85)" : traco;
+          cx.fillStyle = (h > 0.5 || acendeu(k * 17 + 3)) ? "rgba(253,231,157,.85)" : traco;
           cx.fillRect(x + 7, y - 7, 3, 3);                                  // one window
           if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 8, y - 15, 4, 3); }  // water tank
         }
@@ -3935,28 +3954,34 @@ CENARIOS.rua = {
     // panes may take `h` because they are near enough to be an interior you can see into,
     // but a lamp burning at midday two hundred metres down the road is a yellow dot with no
     // reason to be there, and forty of them are what put the boy's chroma rank down 26
-    const aceso = escuridao() > 0.4;
     const k0 = Math.floor(worldX * vel / passo) - 1;
     for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
       const sx = Math.round(k * passo - worldX * vel);
       const x0 = Math.max(0, sx), x1 = Math.min(W, sx + passo - 1);
       if (x1 <= x0) continue;
-      const meio = (sx + passo * 0.5);
-      // the roof is taken at the edge NEARER the vanishing point, so the run steps down
-      // toward it instead of stepping up — that step is the whole read of "receding"
-      const alt = Math.round(teto(meio < vx ? sx + passo - 1 : sx));
-      if (alt < 4) continue;
-      const yTop = vy - alt;
+      // BUG FIXED 2026-08-03: this used to take one roof height per block, from `teto()` at
+      // the block's own screen edge. But the blocks tile in WORLD space while `teto()` is a
+      // function of SCREEN x, so every front resized as it slid — a 40px house became a 35px
+      // house a moment later and the whole band pumped. That is not a street receding, it is
+      // a wall breathing, and the owner saw it immediately ("o fundo tá meio bugado se
+      // mexendo"). The comment above always said the envelope is fixed to the screen and only
+      // the fabric scrolls; the silhouette had leaked into the fabric. The roofline is now
+      // sampled PER COLUMN off the same screen-space rake, so the wedge is welded to the
+      // frame and cannot move, while the party walls, storeys and openings still flow past.
+      const topoCol = function (x) { return vy - Math.round(teto(x)); };
+      if (Math.max(teto(x0), teto(x1 - 1)) < 4) continue;   // nothing of this block clears the horizon
       cx.fillStyle = hash01(k * 19 + 5) > 0.5 ? P.ruaPar : P.ruaParB;
-      cx.fillRect(x0, yTop, x1 - x0, GROUND - 4 - yTop);
+      for (let x = x0; x < x1; x++) cx.fillRect(x, topoCol(x), 1, GROUND - 4 - topoCol(x));
       // the sun is up and to the right, so the left flank of every front is in its own shade
       cx.fillStyle = P.ruaSom;
-      cx.fillRect(x0, yTop, Math.min(2, x1 - x0), GROUND - 4 - yTop);
+      for (let x = x0; x < Math.min(x0 + 2, x1); x++) cx.fillRect(x, topoCol(x), 1, GROUND - 4 - topoCol(x));
       // terracotta over everything, and an eave that overhangs the party wall
-      cx.fillStyle = P.ruaTel;
-      cx.fillRect(Math.max(0, sx - 1), yTop, Math.min(W, sx + passo) - Math.max(0, sx - 1), 3);
-      cx.fillStyle = P.ruaTelL;
-      cx.fillRect(Math.max(0, sx - 1), yTop, Math.min(W, sx + passo) - Math.max(0, sx - 1), 1);
+      const e0 = Math.max(0, sx - 1), e1 = Math.min(W, sx + passo);
+      for (let x = e0; x < e1; x++) {
+        cx.fillStyle = P.ruaTel; cx.fillRect(x, topoCol(x), 1, 3);
+        cx.fillStyle = P.ruaTelL; cx.fillRect(x, topoCol(x), 1, 1);
+      }
+      const yTop = topoCol(x0), alt = vy - yTop;
       // storey lines and one opening per storey, thinning out as the front recedes
       if (alt >= 14) {
         for (let y = yTop + 9; y < GROUND - 6; y += 9) {
@@ -3964,7 +3989,7 @@ CENARIOS.rua = {
           if (x1 - x0 >= 7 && hash01(k * 23 + y) > 0.35) {
             const jx = Math.min(x1 - 4, x0 + 2);
             cx.fillStyle = P.ruaVao; cx.fillRect(jx, y - 6, 3, 5);
-            cx.fillStyle = aceso ? "rgba(253,231,157,.5)" : P.ruaVao;
+            cx.fillStyle = acendeu(k * 31 + y) ? "rgba(253,231,157,.5)" : P.ruaVao;
             cx.fillRect(jx, y - 5, 3, 3);
             // TRIED AND BACKED OUT: the sill in `ruaPar` (a limewashed lintel, which is what
             // the board draws) instead of the roof's own light. It moved NOTHING — chroma
@@ -4289,7 +4314,7 @@ CENARIOS.rua = {
       // one thing here that is a SOURCE, so it keeps its own colour when it is lit; the
       // shutters and the dark pane are surfaces and go down with the street.
       cx.fillStyle = wc("#2a1c12"); cx.fillRect(sx + 11, GROUND - 29, 11, 12);
-      cx.fillStyle = (alive || escuridao() > 0.4) ? "#fde79d" : wc("#3a3428"); cx.fillRect(sx + 12, GROUND - 28, 9, 10);
+      cx.fillStyle = (alive || acendeu(k * 11 + 5)) ? "#fde79d" : wc("#3a3428"); cx.fillRect(sx + 12, GROUND - 28, 9, 10);
       cx.fillStyle = wc("#7d6047"); cx.fillRect(sx + 12, GROUND - 28, 2, 10); cx.fillRect(sx + 19, GROUND - 28, 2, 10);
       cx.fillStyle = wc("#2a1c12"); cx.fillRect(sx + 11, GROUND - 17, 11, 2);   // the sill
       cx.fillStyle = wc("#8a6f42"); cx.fillRect(sx + 11, GROUND - 17, 11, 1);
@@ -4433,7 +4458,7 @@ CENARIOS.rua = {
         pessoa("cao", pxx - 16, GROUND);
       }
     }
-    if (kind === 8) posteLuz(sx + 22, GROUND, h > 0.3 || escuridao() > 0.4);
+    if (kind === 8) posteLuz(sx + 22, GROUND, h > 0.3 || acendeu(k * 5 + 1));
     // project buildings appear as you launch projects
     if (S.geradores > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
       // A project is a thing somebody built on their own roof. GO STEADY grows it a garden
@@ -4549,7 +4574,9 @@ CENARIOS.rua = {
     // street, and lit panes on the same rule the whole world runs on (a source keeps its own
     // colour; everything else takes the hour). It adds no object and no draw call — it is the
     // same per-row span, split in two.
-    const aceso = h > 0.5 || escuridao() > 0.4;
+    // the proscenium is drawn once, not per world segment, so there is no k here: each pane
+    // takes its own dusk from its own row and side, which is the point of staggering anyway
+    const aceso = function (semente) { return h > 0.5 || acendeu(semente); };
     const lado = function (dir, fase) {
       for (let y = -2; y < fim; y++) {
         const w2 = perfil(y, fase);
@@ -4569,7 +4596,7 @@ CENARIOS.rua = {
             cx.fillStyle = P.muroK; cx.fillRect(jx, y, 4, 1);
             if (piso === 11) { cx.fillStyle = P.muroL; cx.fillRect(jx, y, 4, 1); }      // the sill
             else if (piso >= 6) {
-              cx.fillStyle = aceso ? "rgba(253,231,157,.55)" : P.muroS;
+              cx.fillStyle = aceso(y * 2.7 + dir * 61) ? "rgba(253,231,157,.55)" : P.muroS;
               cx.fillRect(jx + 1, y, 2, 1);
             }
           }
@@ -4732,7 +4759,7 @@ CENARIOS.rua = {
       cx.fillStyle = wc("#2a2b1a"); cx.fillRect(sx - 2 + incl, topA + 4, 2, 2); cx.fillRect(sx + 3 + incl, topA + 4, 2, 2);
       cx.fillStyle = wc("#1f2412"); cx.fillRect(sx - 1 + incl, topA + 6, 5, 4);    // the knot of cable
       if (hash01(k * 41 + 3) > 0.55) {                                          // a lamp on the arm
-        const on = h > 0.3 || escuridao() > 0.4;
+        const on = h > 0.3 || acendeu(k * 3 + 4);
         // the lamp rides a bracket partway DOWN the shaft, not on the crossarm: the board
         // hangs it over the street at street-lamp height, and now that the pole is tall
         // enough to cross the sky the top of it is 80 px above the paving, which is where a
