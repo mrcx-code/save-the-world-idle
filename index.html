@@ -1791,11 +1791,14 @@ const MORRO_CINZA = [154, 148, 132], MORRO_CINZAT = [140, 133, 118];
 // arc already runs on saturation and hanging a second meaning on the same pixels would make
 // both unreadable. One full day is CFG-free scenery, four minutes long.
 const HORAS = [
-  { nome: "MANHÃ", ceu: [[92, 138, 166], [122, 164, 182], [158, 190, 190], [196, 214, 198], [228, 232, 214]],
+  // Every daylight ramp now falls from the top of the frame down to the rooftops, which is
+  // what the board's own panel does. NOITE keeps its horizon glow: at night the light comes
+  // from the street's own lamps, so there the value really does climb toward the skyline.
+  { nome: "MANHÃ", ceu: [[152, 198, 224], [130, 180, 206], [114, 158, 180], [104, 140, 156], [104, 134, 124]],
     tinta: [232, 236, 214], forca: 0.05, escala: 1.02, escuro: 0 },
-  { nome: "TARDE", ceu: [[104, 110, 150], [168, 126, 124], [214, 154, 96], [236, 190, 124], [246, 222, 176]],
+  { nome: "TARDE", ceu: [[126, 132, 168], [168, 132, 132], [196, 150, 104], [208, 164, 110], [216, 178, 132]],
     tinta: [246, 168, 84], forca: 0.24, escala: 0.95, escuro: 0.10 },
-  { nome: "PÓS-CHUVA", ceu: [[46, 72, 96], [70, 100, 120], [96, 128, 140], [140, 166, 168], [186, 204, 196]],
+  { nome: "PÓS-CHUVA", ceu: [[88, 118, 138], [96, 126, 142], [100, 128, 138], [104, 128, 134], [112, 132, 130]],
     tinta: [150, 180, 196], forca: 0.18, escala: 0.86, escuro: 0.45 },
   { nome: "NOITE", ceu: [[14, 24, 44], [20, 34, 58], [32, 50, 76], [50, 72, 96], [78, 100, 112]],
     tinta: [46, 66, 110], forca: 0.34, escala: 0.44, escuro: 1 }
@@ -1925,9 +1928,14 @@ function sombra(cxp, y, w, a) {
 // works on a phone at 30% brightness, outdoors, in half a second. No dithering, no bloom,
 // no colour grade, no vignette: fidelity here comes from form and chroma, and every one of
 // those effects was working against it.
-// The board's CÉU: a medium slate-blue at the zenith washing down to a warm pale band at
-// the rooftops. Not the poster's electric cyan — the street is lit by afternoon, not neon.
-const CEU_SAO = [[70, 118, 156], [92, 143, 172], [130, 172, 186], [180, 205, 202], [226, 233, 216]];
+// The board's CÉU, measured off the RUA DO BAIRRO panel instead of remembered: the sky
+// there is [149,186,201] at the top of the frame and [128,149,142] where it meets the
+// rooftops — it gets DARKER and no paler as it comes down, because the light is above and
+// the street is receding into shade. This ramp used to run the other way, 115 at the zenith
+// to 231 at the horizon, and that single inversion was most of why our vertical profile was
+// an upside-down U against the board's 141 101 83 60 66. Brightest at the top; the light
+// separator over the rooftops is `P.faixa`, drawn as its own strip, not the whole sky.
+const CEU_SAO = [[148, 192, 218], [128, 176, 202], [112, 156, 178], [104, 140, 158], [106, 136, 132]];
 const CEU_DOENTE = CEU_SAO.map(desbotar);
 function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the horizon
   const f = Math.min(0.999, Math.max(0, t)) * (CEU_SAO.length - 1);
