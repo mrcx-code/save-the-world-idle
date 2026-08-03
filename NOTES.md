@@ -1108,6 +1108,95 @@ toda sessão começa lendo a última entrada.
   demais para quem joga em sessões de dois minutos, e não medi isso — pode ser que a hora
   deva andar com o relógio real do aparelho em vez de com o tempo de sessão.**
 
+
+- **2026-08-02 · visual — o ritmo virou clima outra vez, o tambor entrou na família, e o
+  menino finalmente recebe a hora.** Quatro incrementos, todos com `node test/smoke.js`
+  verde e **FPS 61 do começo ao fim**. Nada de `CFG`, `S`, fórmula ou economia foi tocado —
+  **medido: `node test/sim.js` dá saída byte a byte idêntica à do merge anterior** (`diff`
+  vazio nas 17 linhas da tabela).
+
+  **(1) A camada de ritmo-como-clima, reconstruída — não colada de volta.** O merge tinha
+  derrubado a versão original porque a paleta foi reescrita por baixo dela: hoje a ponta
+  doente sai de `desbotar()` sobre uma `PALETA` só-sã e tudo passa pelo relógio de quatro
+  horas. Então ela foi reautorada **dentro** dessa estrutura. A bruma é misturada nas cores
+  do próprio mundo **antes** do `luzDoDia()`, de modo que uma noite queimando é fumaça
+  iluminada pelos postes e não um filme laranja por cima do escuro; o céu é a exceção
+  (já vem resolvido na rampa da hora), então ele usa `hazeLuz()`, com um quarto do ocre cru
+  segurado dentro, porque cidade sob fumaça brilha quente das próprias luzes. Cada entrada
+  da paleta toma bruma **na proporção da distância que já carrega** (6% no pé, ~38% na
+  serra), o chão quase não se move (12% → 3%), a faixa do horizonte escurece em vez de
+  mudar, o sol incha numa corona laranja, a fumaça ganha uma parcela que não espera o time
+  cansar, e entra um banco baixo correndo ao contrário na linha do horizonte. GO FAST levanta
+  cinzas ocres foscas da rua (nunca laranja de fogo: em quadro doente o Cetro é a única coisa
+  quente e saturada da tela); GO STEADY dobra folhas e motes, põe cinco pássaros no lugar de
+  dois e mantém as borboletas. A virada joga uma rajada pelo campo de partículas — no mundo
+  e atrás do herói, não no vidro à frente dele.
+
+  **A fraqueza conhecida da versão original foi o que eu vim consertar.** Ela lia só
+  `S.modo`, então dez segundos de GO FAST ficavam idênticos a dez minutos. O peso da bruma
+  agora é `ritmoV × (0,34 + 0,66 × ritmoCusto)`, onde `ritmoCusto` é o quanto a escolha está
+  custando, lido de `eficiencia()` (só leitura). **Medido**, cor média do quadro inteiro a
+  76% de saúde do mundo: time descansado, steady (112,4 · 127,9 · 114,9) contra fast
+  (118,2 · 129,3 · 112,9) = **6,4 rgb** — dá pra ver no segundo em que você troca; time
+  gasto, o mesmo par = **15,8 rgb**. E o arco continua mandando: doente 6% contra são 96% =
+  **47,1 rgb** em steady e **43,1 rgb** sob bruma cheia, ou seja o arco vale ~3× o ritmo, e
+  os dois extremos continuam lendo certo (doente em GO FAST lê doente; são em GO FAST lê
+  são). À noite a camada é mais discreta por construção, **5,9 rgb**, que é o que uma luz
+  que já foi embora deve fazer com ela.
+
+  **(2) O tambor tóxico entrou na família.** Era o único retângulo de 90° entre três sólidos
+  arredondados, tinha **um** verde chapado onde os irmãos têm rampa de seis tons, e era o
+  **menor** dos três sendo o mais pesado. Refeito na mesma construção — silhueta chanfrada,
+  contorno escuro contínuo, a mesma rampa da esquerda escura para a direita acesa, olhos 2×2
+  e a barra da boca recortados nela — e **maior: 20×22**, mais alto que qualquer irmão. A
+  identidade dele fica onde nomeia o objeto: dois aros de aço sombreados na mesma rampa,
+  tampa acesa e a divisa de perigo, único lugar onde o amarelo ácido pode sentar. Reconstruído
+  na paleta de hoje, não colado: a rampa do corpo foi puxada meio caminho do verde de pôster
+  antigo para as FOLHAS do board (`#26401a` … `#bcd47e`). `hp`, spawn e hitbox intocados — o
+  teste de acerto lê `m.wx + 5`, nunca o sprite. Só a tinta mudou: offset, largura da sombra
+  (18 → 20) e `VIDA_TOPO` (23 → 27).
+
+  **(3) O menino recebe a hora.** Ele era a única coisa do quadro desenhada em cor fixa —
+  à meia-noite ficava aceso como se fosse meio-dia. Agora passa por `luzPersonagem()`, com
+  **dose diferente da do mundo**, porque duas coisas tinham de sobreviver. Legibilidade a
+  tamanho de celular: o escurecimento dele tem **piso** (um terço do caminho de volta ao
+  cheio) e a tinta da hora chega a 80%, então a noite move muito o matiz e pouco o valor —
+  ele fica frio e quieto, nunca vira silhueta. E o Cetro: a madeira toma dose ainda mais
+  suave (piso passado da metade, tinta a 45%) e o miolo aceso, o cristal e tudo que o `luz()`
+  desenha **não tomam a hora**. **Medido**, luma do tom aceso do poncho nas quatro horas:
+  **232,6 / 214,3 / 203,5 / 123,5** contra **229,6 fixo** antes. À NOITE isso o põe **72 de
+  luma abaixo** do miolo do Cetro em repouso (195,8), 90 abaixo do cristal (213,9) e 126
+  abaixo do miolo enquanto ele conjura (250) — antes o poncho **ganhava** do miolo em
+  repouso por 34, e a coisa mais brilhante de uma rua noturna era a camisa dele. Ele ainda
+  fica ~61 de luma acima da média do próprio quadro noturno (62), que é o que segura a
+  silhueta. Herói, `CETRO` e a assadura da roda são resolvidos em 24 degraus do dia.
+
+  **(4) Os marcos distantes.** Eram a última coisa falando o vocabulário pré-board:
+  parlamento modernista de cúpula-e-disco, museu pendurado em dois pórticos vermelhos, cúpula
+  de concerto, tudo na ardósia fria do skyline. Primeiro a paleta (`marcoC/L/E/R` saíram do
+  azul-ardósia para pedra caiada, guarnição quase branca, marrom quente nos vãos e telha
+  TERRA, mais um tom de telha acesa), depois os três: **a MATRIZ** (nave entre duas torres
+  sineiras, janelas e porta em arco, telhado de telha, cordão, câmara do sino, coruchéu
+  piramidal e cruz em cada torre, e um relógio numa delas quando o mundo já está são o
+  bastante para alguém ter dado corda), **o MERCADO** (bloco colonial sobre arcada de cinco
+  arcos, janelas de veneziana em cima, telhado tacaniço, frontão com relógio) e **o TEATRO**
+  (colunata sob frontão, com cúpula de telha e lanternim atrás). Dois auxiliares fazem o
+  trabalho: `arco()` — todo vão daquela cidade tem cabeça em meia-volta, e buraco quadrado
+  lê como prédio moderno — e `telhado()`. O maciço e o elevador do penhasco ficaram como
+  estavam: aqueles dois já eram do lugar. A `cupula()` virou código morto e saiu.
+
+  **Peguei no ato, e refiz:** a primeira versão do mercado e do teatro pôs a arcada e a
+  colunata nos quinze pixels de baixo, que é exatamente a faixa que a linha de árvores come
+  naquela profundidade — os dois liam como telhado flutuando no nada. Os dois foram
+  reempilhados para cima no plano do quadro.
+
+  **Medido no fim:** smoke verde, **FPS 61**, `sim.js` idêntico. **Próximo passo: as folhas
+  de NPCs, ITENS & RECURSOS e ÍCONES do board continuam quase todas por usar — os vizinhos e
+  os drops seguem com o desenho antigo, e a cadeira de rodas e o cachorro do board não existem
+  no jogo. Dúvida honesta: amarrei a bruma a `eficiencia()`, que é a mesma quantidade que já
+  move o `smog` — não medi se as duas juntas fazem o cansaço pesar visualmente duas vezes e
+  roubar leitura do arco doente→são num quadro já sujo.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
