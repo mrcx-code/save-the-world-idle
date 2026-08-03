@@ -1496,42 +1496,17 @@ function desenharEspeciais() {
 // asked in the game's own furniture — and it can show what is kept next to what is not,
 // which confirm() never could.
 function pedirTransicao() {
-  if (S.energiaTotal < CFG.metaPrestigio) return;
-  const ganho = inovacaoAoTransicionar();
-  $("confirmaGanha").textContent = "+" + ganho + " WISDOM";
-  $("confirmaPerde").textContent = S.geradores + (S.geradores === 1 ? " project" : " projects");
-  $("confirmaNota").textContent = eficiencia() < 0.9
-    ? "a rested team passes on more — yours is at " + Math.round(eficiencia() * 100) + "%"
-    : "the world starts over, but nobody starts from zero";
-  abrir("sheetConfirm");
+  // owner: cut the torch / prestige loop. Neutered: never opens sheetConfirm, so the run
+  // never ends and the world never resets. The torch button and sheetTorch still open and
+  // read exactly as before; the button inside it is simply inert. sheetConfirm, sheetEpilogo
+  // and sheetMuro all stay in the DOM, untouched.
 }
 // Everything the epilogue says about the run has to be read BEFORE the wipe: the projects
 // count, the year, who was carrying it. Two lines later S.geradores is zero.
 function transicionar() {
-  if (S.energiaTotal < CFG.metaPrestigio) return;
-  const ganho = inovacaoAoTransicionar();
-  const epi = {
-    spark: spark(S.transicoes), prox: spark(S.transicoes + 1),
-    ano: (S.transicoes | 0) + 1, anoIdx: Math.min(S.transicoes | 0, 2),
-    projetos: S.geradores, sabedoria: S.inovacao + ganho
-  };
-  S.inovacao += ganho; S.transicoes++;
-  S.capVisto = 0;                     // the next street gets its chapters read to it too
-  S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
-  S.geradores = 0; S.modo = "carvao"; S.tempoLimpo = 0;
-  S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
-  // resources and the special projects they bought are within-run, like the upgrades
-  S.recursos = { flor: 0, agua: 0, refeicao: 0 }; S.especiais = {};
-  // the road starts clear — but the skill is kept: that is what makes it a skill
-  drops = []; mobs = []; chamada = null; chamadaT = 0; mutiraoT = 0;
-  foco = 0; canalizando = 0; autoFogoAcc = 0;
-  superCarga = 0; superSwings = 0; superCd = 0; superT = 0; superFx = null;
-  R.tochas++; salvarRetencao();
-  // the wall and the epilogue first, then the redraw: the chapter check inside desenhar()
-  // steps aside while the epilogue is up, and it can only do that once it is up
-  escreverNoMuro(epi.spark, epi.prox, epi.projetos, S.transicoes);
-  mostrarEpilogo(epi);
-  salvar(); desenhar();
+  // owner: cut the torch / prestige loop. Neutered: nothing is wiped, no WISDOM is granted,
+  // the wall is never written to and the epilogue never shows. The game has no end of run —
+  // it just keeps going. Every sheet involved stays in the DOM exactly as it is.
 }
 
 // Offline used to bill one frozen rate for the whole night: efficiency was read at save
