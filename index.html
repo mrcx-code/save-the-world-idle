@@ -3027,7 +3027,7 @@ function luzPersonagem(c, piso, forcaF, recupC) {
   const forca = lerp(q.a.forca, q.b.forca, q.f) * forcaF;
   const tin = mixA(q.a.tinta, q.b.tinta, q.f);
   const m = mixA([cl255(c[0] * esc), cl255(c[1] * esc), cl255(c[2] * esc)], tin, forca);
-  if (!recupC || forca <= 0) return m;
+  if (!recupC) return m;
   // THE TINT DOES NOT ONLY COOL HIM, IT FLATTENS HIM. Mixing every pigment he owns toward
   // ONE colour pulls them all to the same point in a*b*, so at NOITE, tinted 80%, he ended
   // up at C* 7.4 against 9.9 for the street around him — measured in wave 9, and the frame
@@ -3046,7 +3046,15 @@ function luzPersonagem(c, piso, forcaF, recupC) {
   // the expansion is luma-neutral only while nothing clamps — changed the number by 0.0, so
   // it is not clipping, and the same point was lost at 0.65 as at 1.05. Kept anyway, because
   // dE is what the eye actually gets and dE goes 45 → 34 while croma goes 63 → 32.
-  const y = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2], k = 1 + recupC * forca;
+  // ...and a FLOOR under it, which is this wave's correction. The expansion above only ever
+  // fired where the tint bit, so at MANHÃ (forca 0.04) it did nothing at all and his chroma
+  // was whatever the raw palette gave: C* 23.5, fixed, while the street around him went from
+  // C* 15.8 to 18.0 as this wave gave the sky, the haze and the stone back their colour. He
+  // did not get duller; the field caught up, and his chroma rank fell 83 -> 201 of 485 for it.
+  // The direction has said from the first line that HE DOES NOT DESATURATE WITH THE WORLD, so
+  // the floor is the direction written down: a constant 1.15 about his own luma, in every
+  // hour, luma-neutral by the same argument as the term beside it.
+  const y = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2], k = 1.32 + recupC * forca;
   return [cl255(y + (m[0] - y) * k), cl255(y + (m[1] - y) * k), cl255(y + (m[2] - y) * k)];
 }
 let heroPasso = -1, heroCor = {}, cetroCor = {}, HERO_HORA = HERO_COLORS, CETRO_H = null;
