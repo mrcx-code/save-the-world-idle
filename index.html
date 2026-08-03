@@ -2991,7 +2991,10 @@ function drawMobs(smog) {
     const key = MOB_KEY[m.type];
     const img = mobFrame(m);
     const bob = (Math.floor(tick / 8) % 2) * 1;
-    const lift = MOB_LIFT[m.type] + bob;
+    // the smog is a cloud — it FLIES: it rides higher off the ground and drifts up and down
+    // on a smooth sine, while its shadow stays on the road, which is what sells "airborne"
+    const voa = key === "smog" ? Math.round(Math.sin(tick / 13 + m.wx * 0.04) * 3.5) : 0;
+    const lift = MOB_LIFT[m.type] + bob + voa;
     // contact shadow like the hero: soft and wide for the floating smoke, firmer for the two
     // that stand on the road
     sombra(cxm, GROUND, key === "smog" ? 14 : (key === "drum" ? 20 : 18), key === "smog" ? 0.13 : 0.26);
@@ -3182,7 +3185,7 @@ for (const k in MOB_B64) MOB_B64[k].forEach(function (d, i) { const im = new Ima
 // VIDA_TOPO, which stays untouched); a small lift so the smoke hovers off the ground.
 const MOB_KEY = { smog: "smog", barrel: "drum", cash: "cash" };
 const MOB_TARGET = { smog: 30, drum: 30, cash: 26 };
-const MOB_LIFT = { smog: 5, barrel: 0, cash: 0 };
+const MOB_LIFT = { smog: 16, barrel: 0, cash: 0 };   // smog rides high off the ground: it flies
 const mobScale = {};
 function mobScaleFor(key) {
   if (mobScale[key]) return mobScale[key];
