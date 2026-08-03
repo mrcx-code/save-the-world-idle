@@ -23,13 +23,15 @@ function chromiumPath() {
   const file = 'file://' + path.resolve(RAIZ, 'index.html');
   const browser = await chromium.launch({ executablePath: chromiumPath() });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  // CEN=<id> stands the whole harness in another scenario; unset means RUA DO BAIRRO.
+  await page.addInitScript(function (c) { window.__CEN = c; }, process.env.CEN || '');
   const errs = [];
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE: ' + m.text()); });
   await page.goto(file);
   await page.waitForTimeout(700);
   await page.evaluate(() => {
-    S.introSeen = true; document.getElementById('lore').classList.add('escondido');
+    S.introSeen = true; document.getElementById('lore').classList.add('escondido'); if (window.setCenario && window.__CEN) setCenario(window.__CEN);
     window.QUADRO = function () { drawScene(); desenharMundo(); desenhar(); };
     window.requestAnimationFrame = function () { return 0; };
   });
@@ -48,7 +50,7 @@ function chromiumPath() {
       });
       QUADRO();
     }, { st, frac });
-    await page.screenshot({ path: path.resolve(RAIZ, 'cruz-' + nn + '-' + hn + '.png') });
+    await page.screenshot({ path: path.resolve(RAIZ, 'cruz-' + (process.env.CEN ? process.env.CEN + '-' : '') + nn + '-' + hn + '.png') });
   }
   console.log(errs.length ? errs.join('\n') : 'sem erros de console');
   await browser.close();

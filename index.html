@@ -3592,6 +3592,56 @@ function drawHero() {
   lastFi = fi;
 }
 
+// ---------- SHARED SCENERY GRAMMAR ----------
+// Two loops every place on that strip needs, so they belong to the vocabulary and not to
+// one scenario: a continuous skyline whose height comes from three sines (never tiles, and
+// runs of equal height are merged so a layer is ~40 rects and not 195), and a band of
+// vegetation rooted below the horizon line with a sunlit crown and a distance-graded
+// outline. Both were written for RUA DO BAIRRO and are unchanged — they are here so that
+// PRAÇA COMUNITÁRIA gets the same silhouette language rather than a second copy of it.
+function serra(speed, amp, alturaBase, semente, cor, corLuz) {
+  let x = 0, alt = -1, ini = 0;
+  const altura = function (xx) {
+    const wx = (xx + worldX * speed) * 0.6 + semente;
+    return Math.max(2, Math.round(alturaBase + amp * (
+      0.54 * Math.sin(wx * 0.029) + 0.29 * Math.sin(wx * 0.073 + 1.7) + 0.17 * Math.sin(wx * 0.013 + 4.1))));
+  };
+  for (x = 0; x <= W; x++) {
+    const a = x < W ? altura(x) : -1;
+    if (a !== alt) {
+      if (alt > 0) {
+        cx.fillStyle = cor;
+        cx.fillRect(ini, GROUND - 12 - alt, x - ini, alt + 12);
+        if (a >= 0 && a < alt) { cx.fillStyle = corLuz; cx.fillRect(ini, GROUND - 12 - alt, x - ini, 2); }
+      }
+      alt = a; ini = x;
+    }
+  }
+}
+// aerial perspective: the far ridge is hazier and lower, the near one darker and taller
+function faixaVerde(speed, passo, larg, hMin, hMax, corpo, topo, linha, sem) {
+  const q0 = Math.floor(worldX * speed / passo) - 1;
+  const n = Math.ceil(W / passo) + 2;
+  for (let k = q0; k < q0 + n; k++) {
+    const sx = Math.round(k * passo - worldX * speed);
+    const th = hMin + Math.floor(hash01(k * sem + 6) * (hMax - hMin));
+    const cw = Math.round(larg * 0.7), c0 = sx + ((larg - cw) >> 1);
+    if (linha) {                                           // silhouette, one pixel larger
+      cx.fillStyle = linha;
+      cx.fillRect(sx - 1, GROUND - th - 1, larg + 2, th + 7);
+      cx.fillRect(c0 - 1, GROUND - th - 5, cw + 2, 7);
+      cx.fillRect(c0 + 1, GROUND - th - 8, cw - 2, 5);
+    }
+    cx.fillStyle = corpo;
+    cx.fillRect(sx, GROUND - th, larg, th + 6);            // the mass, rooted below the line
+    cx.fillRect(c0, GROUND - th - 4, cw, 6);               // canopy
+    cx.fillRect(c0 + 2, GROUND - th - 7, cw - 4, 4);
+    cx.fillStyle = topo;                                   // the sun only reaches the crowns
+    cx.fillRect(c0 + 2, GROUND - th - 7, cw - 4, 2);
+    cx.fillRect(c0 + cw - 3, GROUND - th - 5, 3, 4);
+  }
+}
+
 // ---------- CENÁRIOS: THE PLACE YOU ARE IN ----------
 // The board's CENÁRIOS strip shows SEVEN places — RUA DO BAIRRO, PRAÇA COMUNITÁRIA, ORLA,
 // MATA ATLÂNTICA, CERRADO, CENTRO HISTÓRICO, VILA DA SERRA — and this game had exactly one
@@ -3646,6 +3696,9 @@ function paletaCen() {
 CENARIOS.rua = {
   id: "rua", nome: "RUA DO BAIRRO",
   paleta: null, chaoCor: null,
+  // how far down the frame's own mass reaches at a given column — the street's proscenium is
+  // two side columns and a fringe that lives behind the HUD bar, so sixteen rows is all of it
+  molduraAte: function () { return 16; },
   // the skyline: two ridges, the separator band, the town, one landmark per stretch
   // and the painted hillside — everything between the sky and the tree line
   fundo: function (A) {
@@ -3655,26 +3708,6 @@ CENARIOS.rua = {
   // Now it is a real skyline: a height per column from three sines at different periods,
   // continuous across the whole world so it never tiles, with the sun catching the flanks
   // that face right. Runs of equal height are merged, so a layer is ~40 rects, not 195.
-  function serra(speed, amp, alturaBase, semente, cor, corLuz) {
-    let x = 0, alt = -1, ini = 0;
-    const altura = function (xx) {
-      const wx = (xx + worldX * speed) * 0.6 + semente;
-      return Math.max(2, Math.round(alturaBase + amp * (
-        0.54 * Math.sin(wx * 0.029) + 0.29 * Math.sin(wx * 0.073 + 1.7) + 0.17 * Math.sin(wx * 0.013 + 4.1))));
-    };
-    for (x = 0; x <= W; x++) {
-      const a = x < W ? altura(x) : -1;
-      if (a !== alt) {
-        if (alt > 0) {
-          cx.fillStyle = cor;
-          cx.fillRect(ini, GROUND - 12 - alt, x - ini, alt + 12);
-          if (a >= 0 && a < alt) { cx.fillStyle = corLuz; cx.fillRect(ini, GROUND - 12 - alt, x - ini, 2); }
-        }
-        alt = a; ini = x;
-      }
-    }
-  }
-  // aerial perspective: the far ridge is hazier and lower, the near one darker and taller
   serra(0.09, Math.round(H * 0.045), Math.round(H * 0.085), 0, P.serraFar, P.serraFarL);
   serra(0.20, Math.round(H * 0.055), Math.round(H * 0.115), 320, P.serraNear, P.serraNearL);
   // THE SEPARATOR BAND. The one cheap trick that carries the whole value architecture:
@@ -4016,28 +4049,6 @@ CENARIOS.rua = {
   // band gets a hard dark edge, the middle one a softer one, and the far ridge none at all.
   // A silhouette that keeps its outline at every depth flattens the frame; one that loses
   // it as it recedes is what actually reads as air.
-  function faixaVerde(speed, passo, larg, hMin, hMax, corpo, topo, linha, sem) {
-    const q0 = Math.floor(worldX * speed / passo) - 1;
-    const n = Math.ceil(W / passo) + 2;
-    for (let k = q0; k < q0 + n; k++) {
-      const sx = Math.round(k * passo - worldX * speed);
-      const th = hMin + Math.floor(hash01(k * sem + 6) * (hMax - hMin));
-      const cw = Math.round(larg * 0.7), c0 = sx + ((larg - cw) >> 1);
-      if (linha) {                                           // silhouette, one pixel larger
-        cx.fillStyle = linha;
-        cx.fillRect(sx - 1, GROUND - th - 1, larg + 2, th + 7);
-        cx.fillRect(c0 - 1, GROUND - th - 5, cw + 2, 7);
-        cx.fillRect(c0 + 1, GROUND - th - 8, cw - 2, 5);
-      }
-      cx.fillStyle = corpo;
-      cx.fillRect(sx, GROUND - th, larg, th + 6);            // the mass, rooted below the line
-      cx.fillRect(c0, GROUND - th - 4, cw, 6);               // canopy
-      cx.fillRect(c0 + 2, GROUND - th - 7, cw - 4, 4);
-      cx.fillStyle = topo;                                   // the sun only reaches the crowns
-      cx.fillRect(c0 + 2, GROUND - th - 7, cw - 4, 2);
-      cx.fillRect(c0 + cw - 3, GROUND - th - 5, 3, 4);
-    }
-  }
   faixaVerde(0.26, 18, 18, 10, 21, P.mataFar, P.mataFarL, null, 41);            // far ridge forest
   faixaVerde(0.44, 22, 22, 8, 17, P.mataMid, P.mataMidL, P.mataMidK, 11);       // mid tree line
   faixaVerde(0.66, 30, 30, 6, 14, P.mataNear, P.mataNearL, P.mataNearK, 23);    // near bushes
@@ -4791,6 +4802,508 @@ CENARIOS.rua = {
   }
   }
 };
+
+// ---------- PRAÇA COMUNITÁRIA — scenario #2 ----------
+// Read off its own panel on the board's CENÁRIOS strip, measured rather than remembered:
+// whole panel luma 76.1 at C* 19.3 against RUA DO BAIRRO's 90.1 at 19.5, vertical profile
+// 93 75 77 65 72 against the street's 141 101 83 60 66, and left->right 87 92 80 64 58
+// against 63 86 115 125 61. Three things fall out of those numbers and they are the whole
+// brief: the square is DARKER at the top than the street is (one enormous canopy over it
+// instead of an open slot of sky — 12% of its top fifth is sky against the street panel's
+// 35%), its chroma CLIMBS toward the ground (16.6 -> 24.3 by fifths, warm earth and fruit),
+// and it is lit from the LEFT with the tree mass on the right, where the street is a
+// symmetric corridor. Same neighbourhood, same palette families, same light, same hero.
+//
+// It is scenery and nothing else. No new resource, no new mechanic, no CFG: the stalls are
+// stalls, the crowd is drawn the way the street's neighbours are drawn (a pure function of
+// the segment index, no entity, no hitbox), and the world's own layer — troubles, drops,
+// the pot — is untouched because it is drawn by `desenharMundo()`, which no scenario sees.
+CENARIOS.praca = {
+  id: "praca", nome: "PRAÇA COMUNITÁRIA",
+  // The square is packed earth walked flat, not cobble: same TERRA family, a step lighter
+  // and drier than the street's stone, because what the board paints here is dust with
+  // worn flags let into it. The fronts around it are lower and stand further back, so they
+  // carry more `dist` than the street's do.
+  paleta: {
+    trilha:  [[150, 120, 78], 0],
+    trilhaL: [[184, 156, 108], 0],
+    sulcoA:  [[110, 86, 54], 0],
+    sulcoB:  [[202, 180, 134], 0],
+    ruaPar:  [[118, 92, 56], 0.24],
+    ruaParB: [[100, 82, 56], 0.24],
+    ruaSom:  [[62, 50, 36], 0.20],
+    ruaTel:  [[98, 64, 40], 0.26],
+    ruaTelL: [[124, 90, 58], 0.24],
+    ruaVao:  [[40, 32, 24], 0.16],
+    // A SQUARE UNDER A CANOPY IS IN THE CANOPY'S SHADE, and that is the difference the
+    // measurement found between the two panels. With the street's own greens under here our
+    // PAINTED fifths came out 96 / 112 / 115 against the board panel's 65 / 75 / 65 — our
+    // praça was reading BRIGHTER than our own street, which is backwards for a picture whose
+    // whole top is leaves. The same nine entries, ~15% down in value, mixed toward the warm
+    // dark rather than toward grey and with the chroma carried through, because shade under
+    // leaves is deeper and warmer and not greyer — the move waves 13 to 19 measured.
+    mataFar:  [[100, 124, 54], 0.42],
+    mataFarL: [[136, 152, 74], 0.36],
+    mataFarK: [[56, 76, 36], 0.21],
+    mataMid:  [[72, 96, 40], 0.20],
+    mataMidL: [[106, 128, 54], 0.17],
+    mataMidK: [[36, 50, 26], 0.10],
+    mataNear:  [[48, 72, 32], 0.04],
+    mataNearL: [[84, 108, 44], 0.03],
+    mataNearK: [[22, 34, 20], 0.02],
+    // THE FRAME'S GREENS ARE THE TREE'S, because here the frame IS the tree. The street's
+    // proscenium is authored at about two thirds of the foliage luma so that dark corners
+    // can be bought without buying a tunnel; a canopy read as a ceiling has to be lighter
+    // than that or it stops being leaves and becomes a lid — and a lid is the one thing no
+    // panel on that board has. Same three-step ramp, one step up, widened between channels
+    // as it comes down so the dark end goes deeper rather than greyer.
+    colunaC: [[28, 44, 17], 0],
+    colunaL: [[52, 76, 25], 0],
+    colunaB: [[82, 110, 40], 0.03]
+  },
+  chaoCor: [[94, 72, 44], [140, 114, 76]],
+
+  // the skyline: a square sits INSIDE a neighbourhood and does not look out over it, so the
+  // ridge is a third of the street's amplitude and the only landmark is the parish belfry
+  fundo: function (A) {
+    const h = A.h, P = A.P;
+    serra(0.07, Math.round(H * 0.032), Math.round(H * 0.072), 140, P.serraFar, P.serraFarL);
+    // the separator band is the direction's value architecture, not the street's furniture:
+    // light sky, mid background, a light strip on the horizon, dark ground, hero across it
+    cx.globalAlpha = 0.55; cx.fillStyle = P.faixa; cx.fillRect(0, GROUND - 26, W, 18);
+    cx.globalAlpha = 0.85; cx.fillRect(0, GROUND - 12, W, 5);
+    cx.globalAlpha = 1;
+    const spacing = 430, speed = 0.15, base = GROUND - 29;
+    const q0 = Math.floor(worldX * speed / spacing) - 1;
+    for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
+      const sx = Math.round(k * spacing - worldX * speed);
+      if (sx > W + 20 || sx < -30) continue;
+      const px = function (c, x, y, w2, h2) { cx.fillStyle = c; cx.fillRect(sx + x, base - y - h2, w2, h2); };
+      px(P.marcoC, 0, 0, 14, 40); px(P.marcoL, 10, 0, 4, 40); px(P.marcoE, 0, 0, 2, 40);
+      px(P.marcoE, 4, 26, 6, 9);                                   // the bell opening
+      px(P.marcoL, -1, 40, 16, 2);
+      for (let i = 0; i < 7; i++) px(i > 3 ? P.marcoRL : P.marcoR, i, 42 + i, 14 - i * 2, 1);
+      px(P.marcoL, 6, 49, 1, 5); px(P.marcoL, 4, 51, 5, 1);        // the cross
+    }
+  },
+
+  // THE BUILT EDGE OF A SQUARE IS NOT A STREET RECEDING. The street's fronts rake toward a
+  // vanishing point because you are standing in the road; here you are standing in the open
+  // and the buildings are a low wall around it. So the band is flat, it tiles in WORLD space,
+  // and every height comes off the block's own hash and never off where the block happens to
+  // be on screen — which is also the only way a band like this cannot breathe as it scrolls.
+  meio: function (A) {
+    const h = A.h, P = A.P;
+    // THE RING OF TREES ROUND THE SQUARE, and it is the piece that makes this a praça rather
+    // than a street with one tree in it. Measured first, on our own frame against the panel:
+    // with the fronts alone the third fifth of the picture came out 74% bare sky against the
+    // board's 0.9%, because the street closes its middle with façades raking to a vanishing
+    // point and a square has no such thing. What the board puts there is the crowns of the
+    // OTHER trees — a green band above the rooftops, under the big canopy, with the market
+    // running along underneath it. One crown per world block, mid-distance palette so it sits
+    // behind the near foliage in air as well as in draw order, and rooted in world space so
+    // nothing about it reads its size off the screen.
+    {
+      const passo2 = 21, vel2 = 0.36;
+      const q0 = Math.floor(worldX * vel2 / passo2) - 1;
+      for (let k = q0; k < q0 + Math.ceil(W / passo2) + 2; k++) {
+        const sx = Math.round(k * passo2 - worldX * vel2);
+        const s = hash01(k * 47 + 9);
+        if (s > 0.90) continue;                       // a gap, so the ring is not a hedge
+        const larg = 15 + Math.round(hash01(k * 23 + 4) * 12);
+        const alt = 11 + Math.round(hash01(k * 59 + 2) * 9);
+        const topo = GROUND - 44 - Math.round(hash01(k * 31 + 6) * 22) - alt;
+        const meia = larg >> 1;
+        // TRIED AND BACKED OUT: filling every column from the crown all the way down to a
+        // fixed line at GROUND-30. It closed the band, and the screenshot called it what it
+        // was — a hedge with a straight hem, not a ring of trees. The crown is the crown and
+        // the trunk carries it down, which is also how you see a row of trees from a square.
+        const fundoY = topo + alt + 3 + Math.round(hash01(k * 13 + 5) * 4);
+        const perto = hash01(k * 71 + 3) > 0.55;      // two depths, so the ring has air in it
+        const cC = perto ? P.mataMid : P.mataFar, cL = perto ? P.mataMidL : P.mataFarL;
+        for (let x = 0; x < larg; x++) {
+          const u = (x - meia) / (meia + 0.5);
+          const d = Math.round(Math.sqrt(Math.max(0, 1 - u * u)) * alt);
+          if (d < 1) continue;
+          const nt = topo + alt - d - Math.round(Math.sin(x * 0.8 + k) * 1.2);
+          const nb = Math.min(fundoY, topo + alt + Math.round(d * 0.45));
+          cx.fillStyle = P.mataMidK; cx.fillRect(sx + x, nt - 1, 1, nb - nt + 2);
+          cx.fillStyle = cC; cx.fillRect(sx + x, nt, 1, nb - nt);
+          cx.fillStyle = x > larg * 0.55 ? cL : cC;
+          cx.fillRect(sx + x, nt, 1, 2);              // one sun, up and to the right
+        }
+        // the trunk under it, short and thin at this distance
+        cx.fillStyle = P.mataMidK;
+        cx.fillRect(sx + meia - 1, fundoY - 2, 2, GROUND - 24 - fundoY);
+      }
+    }
+    const passo = 26, vel = 0.42, pe = GROUND - 5;
+    const k0 = Math.floor(worldX * vel / passo) - 1;
+    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+      const sx = Math.round(k * passo - worldX * vel);
+      const s = hash01(k * 13 + 2);
+      if (s > 0.84) continue;                       // a gap: the square breathes between fronts
+      const alt = 24 + Math.round(hash01(k * 29 + 5) * 20);
+      const yTop = pe - alt;
+      cx.fillStyle = s > 0.42 ? P.ruaPar : P.ruaParB;
+      cx.fillRect(sx, yTop, passo - 1, pe - yTop);
+      cx.fillStyle = P.ruaSom; cx.fillRect(sx, yTop, 2, pe - yTop);   // the sun is up and right
+      cx.fillStyle = P.ruaTel; cx.fillRect(sx - 2, yTop, passo + 3, 3);
+      cx.fillStyle = P.ruaTelL; cx.fillRect(sx - 2, yTop, passo + 3, 1);
+      for (let y = yTop + 10; y < pe - 4; y += 10) {
+        cx.fillStyle = P.ruaSom; cx.fillRect(sx + 1, y, passo - 3, 1);
+        if (hash01(k * 31 + y) > 0.42) {
+          const jx = sx + 3 + Math.round(hash01(k * 7 + y) * (passo - 11));
+          cx.fillStyle = P.ruaVao; cx.fillRect(jx, y - 6, 3, 5);
+          // one pane at a time across the dusk, never forty in a frame
+          cx.fillStyle = acendeu(k * 37 + y) ? "rgba(253,231,157,.5)" : P.ruaVao;
+          cx.fillRect(jx, y - 5, 3, 3);
+        }
+      }
+      if (hash01(k * 43 + 1) > 0.42) {              // a veranda: deep eave on two posts
+        const vy = pe - 12;
+        cx.fillStyle = P.ruaTel; cx.fillRect(sx - 1, vy, passo + 1, 2);
+        cx.fillStyle = P.ruaTelL; cx.fillRect(sx - 1, vy, passo + 1, 1);
+        cx.fillStyle = P.ruaSom;
+        cx.fillRect(sx + 1, vy + 2, 1, 10); cx.fillRect(sx + passo - 5, vy + 2, 1, 10);
+      }
+    }
+  },
+
+  // a square is greener than a street: the far band closes the gaps between the fronts and
+  // the near one is the planted bed that runs round the edge of the paving
+  veg: function (A) {
+    const P = A.P;
+    faixaVerde(0.30, 16, 17, 12, 24, P.mataFar, P.mataFarL, null, 41);
+    faixaVerde(0.48, 20, 21, 10, 19, P.mataMid, P.mataMidL, P.mataMidK, 11);
+    faixaVerde(0.70, 26, 28, 7, 15, P.mataNear, P.mataNearL, P.mataNearK, 23);
+    cx.fillStyle = P.rodape; cx.fillRect(0, GROUND - 2, W, 2);
+  },
+
+  // PACKED EARTH, NOT PAVING. The construction is the street's — eight courses, each one
+  // stepping down in value toward the viewer, mixed toward the ACENTO dark rather than toward
+  // grey, with the residual chroma re-expanded around the result's own Rec.709 luma so the
+  // value is bought without spending saturation (the move that took the street's bottom fifth
+  // to 85 at C* 22.3). What changes is the surface: no joint, no stone grain, but dust with
+  // worn flags let into it where the square is walked and green coming up where it is not.
+  chao: function (A) {
+    const h = A.h, P = A.P;
+    cx.drawImage(chaoCanvas(h), 0, GROUND);
+    const SOMBRA_PRACA = [38, 24, 10];
+    let y = GROUND;
+    for (let i = 0; i < 8 && y < H; i++) {
+      const alt = 3 + (i >> 1), larg = 12 + i * 3, vel = 0.55 + i * 0.075;
+      const t = Math.min(0.68, 0.68 * i / 5);
+      const nS = function (c) {
+        const m = mixA(c, SOMBRA_PRACA, t), g = 1 + 0.85 * t;
+        const yy = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2];
+        return [cl255(yy + (m[0] - yy) * g), cl255(yy + (m[1] - yy) * g), cl255(yy + (m[2] - yy) * g)];
+      };
+      const terra = rgbS(nS(P.trilhaA)), poeira = rgbS(nS(P.trilhaLA));
+      const escuro = rgbS(nS(mixA(P.trilhaA, P.sulcoAA, 0.55)));
+      const laje = rgbS(nS(mixA(P.trilhaA, P.sulcoBA, 0.30)));
+      const lajeK = rgbS(nS(mixA(P.trilhaA, P.sulcoAA, 0.80)));
+      cx.fillStyle = terra; cx.fillRect(0, y, W, alt);
+      const desl = worldX * vel, k0 = Math.floor(desl / larg) - 1;
+      for (let k = k0; k < k0 + Math.ceil(W / larg) + 2; k++) {
+        const gx = Math.round(k * larg - desl);
+        const r2 = hash01(k * 31 + i * 7);
+        if (r2 > 0.66) {                                   // a worn flag let into the dirt
+          const lw = larg - 3 - Math.round(r2 * 3);
+          cx.fillStyle = lajeK; cx.fillRect(gx, y, lw + 1, alt);
+          cx.fillStyle = laje; cx.fillRect(gx, y, lw, alt - (alt > 2 ? 1 : 0));
+          cx.fillStyle = poeira; cx.fillRect(gx, y, lw, 1);
+        } else if (r2 > 0.34) {                            // a scuff of darker earth
+          cx.fillStyle = escuro; cx.fillRect(gx + 2, y + (alt > 2 ? 1 : 0), Math.max(2, larg >> 2), 1);
+        }
+        if (hash01(k * 17 + i * 5) > 0.82) { cx.fillStyle = poeira; cx.fillRect(gx + 3, y, 2, 1); }
+        // and the plants are winning here too, but in the earth rather than in a joint
+        if (h > 0.4 && i > 1 && hash01(k * 53 + i * 11) > 0.86) {
+          cx.fillStyle = wc("#3e4721"); cx.fillRect(gx + 4, y - 1, 2, 2);
+          cx.fillStyle = wc("#525d2a"); cx.fillRect(gx + 5, y - 2, 1, 2);
+        }
+      }
+      y += alt;
+    }
+  },
+
+  // what stands on the square, one draw per 48px world segment. A square is a place people
+  // are IN, so the mix is different from the street's: the big tree is the thing it is built
+  // around, the market row is what a `praça comunitária` is for, and the crowd is denser.
+  segmentos: function (A) {
+    const h = A.h, P = A.P;
+    const seg = 48;
+    const k0 = Math.floor(worldX / seg) - 1;
+    for (let k = k0; k < k0 + Math.ceil(W / seg) + 2; k++) {
+      const sx = Math.round(k * seg - worldX);
+      const r = hash01(k);
+      const alive = r < h * 0.95 + 0.02;
+      const kind = Math.floor(hash01(k * 7 + 3) * 10);
+      const sway = ((Math.floor(tick / 18) + k) % 2);
+      // THE TREE THE SQUARE IS BUILT AROUND. The same union-of-lobes construction the street
+      // uses for its one big tree in eight — resolved to a top and a bottom per column so the
+      // silhouette bulges and notches like a canopy, with the dark keyline drawn ONCE around
+      // the whole mass (four stamps of a small canopy is four lollipops on a pole, which the
+      // screenshot threw out when the street tried it). Here it is bigger, it carries fruit,
+      // and it is the frame as much as it is a prop, so the crown is drawn wide.
+      // THE TREE STANDS EVEN WHEN IT IS BARE, and that is the arc doing its job rather than
+      // an absence doing it: the street's ipê already carries the whole sick->healed story on
+      // one object (dry grey skeleton, then buds, then alight), and the square's tree is the
+      // thing the square is built around — take it away below h 0.3 and a sick praça is not a
+      // sick praça, it is an empty lot. Trunk, roots and limbs always; the crown when the
+      // square is coming back.
+      if (kind < 3) {
+        const cheia = alive && h > 0.3;
+        const cxT = sx + 24, cyT = GROUND - 104;
+        sombra(cxT, GROUND, 46);
+        cx.fillStyle = wc("#2b1b0d");
+        cx.fillRect(cxT - 8, GROUND - 74, 16, 74);                       // the trunk
+        cx.fillStyle = wc("#5f3a24"); cx.fillRect(cxT - 5, GROUND - 74, 11, 74);
+        cx.fillStyle = wc("#7d5030"); cx.fillRect(cxT + 4, GROUND - 74, 2, 74);
+        cx.fillStyle = wc("#2b1b0d");                                    // roots and two limbs
+        cx.fillRect(cxT - 13, GROUND - 6, 6, 6); cx.fillRect(cxT + 7, GROUND - 5, 6, 5);
+        // TRIED AND BACKED OUT: two horizontal limbs at GROUND-60 and -68, which is how the
+        // street's smaller tree does it. At this trunk width the screenshot read them as the
+        // crossarms of a utility pole — the street already has poles and this is not one.
+        // Four limbs climbing into the crown instead, drawn before the leaves so the leaves take
+        // their ends: a canopy with no wood under it hangs in the air
+        for (let b = 0; b < 4; b++) {
+          const dir = b & 1 ? 1 : -1, esp = b < 2 ? 1 : 0;
+          const n = [22, 17, 19, 14][b];
+          for (let i = 0; i < n; i++) {
+            // they drift outward faster the higher they get, and no two are the same length:
+            // four straight spokes of equal length is a rake, which is what the first cut was
+            const bx2 = cxT + dir * Math.round(i * (0.42 + b * 0.20) + i * i * 0.012 * (b + 1));
+            const by2 = GROUND - 70 - Math.round(i * (1.5 - b * 0.16));
+            cx.fillStyle = wc("#2b1b0d"); cx.fillRect(bx2, by2, 2 + esp, 2);
+            cx.fillStyle = wc("#5f3a24"); cx.fillRect(bx2 + (dir > 0 ? 1 : 0), by2, 1, 1);
+          }
+        }
+        const lob = [[0, 2, 34, 20], [-24, 12, 20, 14], [24, 13, 21, 14], [-11, -12, 21, 14], [15, -10, 21, 14]];
+        const K = wc(COPA_ALTA[0]), D = wc(COPA_ALTA[1]), B = wc(COPA_ALTA[2]),
+              Hh = wc(COPA_ALTA[3]), Wl = wc(COPA_ALTA[4]);
+        const fruta = h > 0.6 ? wc("#da7a29") : null;
+        for (let dx = -46; cheia && dx <= 46; dx++) {
+          let t0 = 1e9, b0 = -1e9;
+          for (let l = 0; l < 5; l++) {
+            const rx = lob[l][2], ry = lob[l][3], u = (dx - lob[l][0]) / rx;
+            if (Math.abs(u) >= 1) continue;
+            const hh = ry * Math.sqrt(1 - u * u);
+            t0 = Math.min(t0, lob[l][1] - hh); b0 = Math.max(b0, lob[l][1] + hh);
+          }
+          if (b0 < t0) continue;
+          const nt = Math.round(t0 - Math.sin(dx * 0.9) * 1.4 - Math.sin(dx * 0.31 + 2) * 2.4);
+          const nb = Math.round(b0 + Math.sin(dx * 0.7 + 1) * 1.8);
+          const x = cxT + dx + sway * (dx > 0 ? 1 : 0);
+          // A CANOPY YOU CANNOT SEE THROUGH IS A CLOUD. The first cut of this filled every
+          // column solid and the screenshot read it as one flat green slab on two poles —
+          // the board's tree is a mass of clumps with the sky coming through between them,
+          // and every leaf shape in that panel is defined by a hole and not by an outline.
+          // So a fifth of the columns are cut in two, and the keyline follows the cut, which
+          // is what makes each half read as its own clump.
+          const vao = (hash01(k * 131 + dx * 5 + 7) > 0.80 && nb - nt > 10)
+            ? nt + 4 + Math.round(hash01(k * 17 + dx * 3) * (nb - nt - 9)) : -1;
+          const tiras = vao < 0 ? [[nt, nb]] : [[nt, vao], [vao + 3, nb]];
+          // the tone is picked per column off its own hash as well as its side, because one
+          // band of each tone across ninety pixels is a gradient, not foliage
+          const t2 = hash01(k * 71 + dx * 11 + 3);
+          const base = dx < -16 ? (t2 > 0.7 ? B : D) : dx < 12 ? (t2 > 0.75 ? Hh : t2 > 0.25 ? B : D) : (t2 > 0.4 ? Hh : B);
+          for (let s = 0; s < tiras.length; s++) {
+            const a2 = tiras[s][0], b2 = tiras[s][1];
+            if (b2 - a2 < 1) continue;
+            cx.fillStyle = K; cx.fillRect(x, cyT + a2 - 1, 1, b2 - a2 + 2);
+            cx.fillStyle = base; cx.fillRect(x, cyT + a2, 1, b2 - a2);
+            cx.fillStyle = dx > 8 ? Wl : Hh;                     // one sun, up and to the right
+            cx.fillRect(x, cyT + a2, 1, s === 0 ? (dx > 20 ? 3 : 2) : 1);
+          }
+          // the fruit the board hangs all through this canopy — one pixel, on a hash, so it
+          // is a scatter and not a pattern, and only on a square that is already coming back
+          if (fruta && hash01(k * 97 + dx * 3 + 11) > 0.93) {
+            cx.fillStyle = fruta; cx.fillRect(x, cyT + nt + 3 + Math.round(hash01(k * 61 + dx) * (nb - nt - 5)), 1, 1);
+          }
+        }
+      } else if (kind < 7) {
+        // THE MARKET ROW. A stall is a canvas awning on two poles over a plank counter with
+        // crates under it — the board's own furniture, in the board's own families: ÁGUA for
+        // the blue canvas, TERRA for the timber, ACENTO for the fruit. Nothing here is a
+        // resource: what you can pick up in this game is what a trouble drops, and that is
+        // drawn by the world layer, which no scenario touches.
+        const azul = hash01(k * 19 + 7) > 0.45;
+        const lonaC = wc(azul ? "#54827d" : "#9d561c"), lonaL = wc(azul ? "#71a39c" : "#b9732c");
+        const bx = sx + 8, by = GROUND - 4;
+        sombra(bx + 15, GROUND, 30);
+        cx.fillStyle = wc("#3a2718");                                     // the two poles
+        cx.fillRect(bx + 1, by - 26, 2, 26); cx.fillRect(bx + 27, by - 26, 2, 26);
+        cx.fillStyle = wc("#22190d"); cx.fillRect(bx - 2, by - 30, 34, 2);
+        for (let i = 0; i < 32; i++) {                                    // the canvas, scalloped
+          const d = Math.round(Math.sin(i * 0.9) * 0.5 + 1);
+          cx.fillStyle = (i >> 2) & 1 ? lonaC : lonaL;
+          cx.fillRect(bx - 2 + i, by - 29, 1, 4 + d);
+        }
+        cx.fillStyle = lonaL; cx.fillRect(bx - 2, by - 29, 34, 1);
+        cx.fillStyle = wc("#5c3b1f"); cx.fillRect(bx, by - 12, 30, 3);    // the counter
+        cx.fillStyle = wc("#804411"); cx.fillRect(bx, by - 12, 30, 1);
+        cx.fillStyle = wc("#3a2718"); cx.fillRect(bx + 2, by - 9, 2, 9); cx.fillRect(bx + 25, by - 9, 2, 9);
+        if (h > 0.35) {                                                   // what is on it
+          for (let i = 0; i < 5; i++) {
+            const fx = bx + 3 + i * 6, alto = hash01(k * 23 + i) > 0.5;
+            cx.fillStyle = wc("#5c3b1f"); cx.fillRect(fx, by - 16, 5, 4);
+            cx.fillStyle = wc(alto ? "#da7a29" : "#f3a03d"); cx.fillRect(fx + 1, by - 17, 3, 2);
+            cx.fillStyle = wc(alto ? "#f3a03d" : "#fde79d"); cx.fillRect(fx + 1, by - 17, 1, 1);
+          }
+          // crates stacked at the end of it
+          cx.fillStyle = wc("#6d4620"); cx.fillRect(bx + 30, by - 8, 8, 8);
+          cx.fillStyle = wc("#96682f"); cx.fillRect(bx + 30, by - 8, 8, 1); cx.fillRect(bx + 30, by - 4, 8, 1);
+        }
+        // whoever is behind it, and whoever is in front of it
+        if (h > 0.5) {
+          pessoa(hash01(k * 11 + 2) > 0.5 ? "avental" : "chapeu", bx + 12, GROUND - 13);
+          if (hash01(k * 29 + 4) > 0.4) pessoa(hash01(k * 31 + 6) > 0.5 ? "avo" : "bone", bx + 30, GROUND);
+        }
+      } else if (kind === 7) {
+        // the bench under the tree, and the people on the square around it
+        banco(sx + 10, GROUND);
+        if (h > 0.5) {
+          pessoa("cadeira", sx + 30, GROUND);
+          if (hash01(k * 37 + 2) > 0.45) pessoa("crianca", sx + 2, GROUND);
+          if (hash01(k * 41 + 5) > 0.60) pessoa("cao", sx + 40, GROUND);
+        }
+      } else if (kind === 8) {
+        posteLuz(sx + 20, GROUND, h > 0.3 || acendeu(k * 5 + 1));
+        if (h > 0.45) vaso(sx + 34, GROUND);
+      } else {
+        // the planted bed: pots and a low wall of plants, which is what the board fills the
+        // gaps of its square with
+        if (h > 0.3) { vaso(sx + 6, GROUND); if (hash01(k * 43 + 9) > 0.4) vaso(sx + 26, GROUND); }
+        else { cx.fillStyle = wc("#5c3b1f"); cx.fillRect(sx + 6, GROUND - 4, 10, 4); }
+        if (h > 0.55 && hash01(k * 47 + 3) > 0.5) cadeira(sx + 36, GROUND);
+      }
+      // A PROJECT IS SOMETHING SOMEBODY BUILT, and on a square it is built on the square: a
+      // raised bed with a water butt when the rhythm is GO STEADY, a generator smoking beside
+      // it when it is GO FAST. Same two states, same mechanic, no new anything.
+      if (S.geradores > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
+        const px0 = sx + 14, py = GROUND - 3;
+        cx.fillStyle = wc("#4a3524"); cx.fillRect(px0, py - 7, 22, 7);
+        cx.fillStyle = wc("#6d4620"); cx.fillRect(px0, py - 7, 22, 1);
+        if (S.modo === "carvao") {
+          cx.fillStyle = wc("#585c4b"); cx.fillRect(px0 + 6, py - 15, 10, 8);
+          cx.fillStyle = wc("#787d66"); cx.fillRect(px0 + 6, py - 15, 10, 1);
+          cx.fillStyle = wc("#2a2b1a"); cx.fillRect(px0 + 8, py - 21, 3, 7);
+          cx.fillStyle = "rgba(150,145,130,.62)";
+          const p = (tick % 36) / 36;
+          cx.fillRect(px0 + 8 + p * 6, py - 24 - p * 14, 4 - p * 2, 3);
+        } else {
+          cx.fillStyle = wc("#3e4721"); cx.fillRect(px0 + 2, py - 11, 18, 4);
+          cx.fillStyle = wc("#767f34"); cx.fillRect(px0 + 4, py - 13, 3, 3); cx.fillRect(px0 + 12, py - 12, 3, 2);
+          cx.fillStyle = wc("#f3a03d"); cx.fillRect(px0 + 9, py - 13, 2, 2);
+          cx.fillStyle = wc("#71a39c"); cx.fillRect(px0 + 17, py - 16, 6, 9);
+          cx.fillStyle = wc("#dad8c0"); cx.fillRect(px0 + 17, py - 16, 6, 1);
+        }
+      }
+    }
+  },
+
+  // THE FRAME OF A SQUARE IS THE TREE OVER IT. The street's proscenium is two dark masonry
+  // columns because a street is a corridor between two buildings; the board's PRAÇA panel is
+  // composed under one canopy that fills the whole top of the picture and comes down both
+  // corners, with the light kept in a band across the middle. Measured on the panel: its top
+  // fifth reads 93 against the street panel's 141, and 12% of it is sky against 35%. So the
+  // mass goes overhead rather than up the sides, and the sides keep only what a planted edge
+  // would put there. It is the same construction as the street's: one span per row, an
+  // envelope fixed to the screen, and the leaf notch — the fabric — the only thing that moves.
+  // the canopy's envelope, declared once: the drawing uses it and so does the bench, which
+  // is how the rival ranking knows that the mass over the boy's head is architecture here
+  copaY: function (x) {
+    const u = x / (W - 1);
+    // deep in both corners, thinning to a fringe across the middle: an arch, which is how
+    // every street and square panel on that board is composed
+    const quina = Math.pow(Math.abs(u - 0.46) * 2, 1.7);
+    const meioT = Math.round(GROUND * 0.20), fundoT = Math.round(GROUND * 0.40);
+    return meioT + (fundoT - meioT) * Math.min(1, quina);
+  },
+  molduraAte: function (x) { return Math.round(this.copaY(x)) - 6; },
+  moldura: function (A) {
+    const h = A.h, P = A.P;
+    const desl = worldX * 0.03;
+    const cor = [P.colunaC, P.colunaL, P.colunaB];
+    for (let x = 0; x < W; x++) {
+      const u = x / (W - 1);
+      const quina = Math.pow(Math.abs(u - 0.46) * 2, 1.7);
+      const base = this.copaY(x);
+      // THE HEM HAS TO BE BITTEN, NOT WAVED. Three sines give a smooth edge, and a smooth
+      // edge a hundred pixels long is one long straight silhouette against open sky — the
+      // bench put the three strongest in-frame blocks of the whole picture on it, at y33-38.
+      // A tooth per column off its own hash breaks the same mass into leaves: the paint does
+      // not move, the edge stops being a line.
+      const dente = hash01(Math.floor(x + desl) * 3.7 + 11) * 5 - 1;
+      const folha = Math.sin((x + desl) * 0.55) * 2.6 + Math.sin((x + desl) * 0.21 + 1.3) * 3.4
+        + Math.sin((x + desl) * 0.9 + 2.6) * 1.4 + dente;
+      const d = Math.round(base + folha);
+      if (d <= 0) continue;
+      cx.fillStyle = cor[0]; cx.fillRect(x, 0, 1, d);
+      cx.fillStyle = cor[1]; cx.fillRect(x, d - 4, 1, 3);            // the leaf under-mass
+      // THE LIT HEM ONLY WHERE THE CANOPY IS DEEP. Run it all the way across and the thin
+      // middle of the fringe becomes a bright line against open sky, which is the strongest
+      // block in the frame and it is 150 px above the boy's head — the same silhouette-edge
+      // mechanism waves 16 and 18 booked twice. In the corners the mass behind it earns it.
+      if (quina > 0.30) { cx.fillStyle = cor[2]; cx.fillRect(x, d - 1, 1, 1); }
+    }
+    // and three clumps hanging OFF that hem rather than floating below it — the first cut
+    // drew them at a fixed depth and the screenshot showed three dark blobs in the sky with
+    // daylight between them and the canopy they were supposed to belong to
+    for (let c = 0; c < 3; c++) {
+      const cx0 = Math.round(W * (0.14 + c * 0.33) + Math.sin((worldX * 0.03 + c * 40) * 0.02) * 3);
+      const larg = 9 + c * 2;
+      for (let x = -larg; x <= larg; x++) {
+        const u2 = x / larg;
+        const prof = Math.round(Math.sqrt(Math.max(0, 1 - u2 * u2)) * (9 + c * 3));
+        if (prof < 1) continue;
+        // where the hem already is at this column, so the clump grows out of it
+        const xx = cx0 + x;
+        if (xx < 0 || xx >= W) continue;
+        const d0 = Math.round(this.copaY(xx)) - 2;
+        cx.fillStyle = cor[0]; cx.fillRect(xx, d0, 1, prof + 2);
+        cx.fillStyle = cor[1]; cx.fillRect(xx, d0 + prof - 2, 1, 2);
+        cx.fillStyle = cor[2]; cx.fillRect(xx, d0 + prof, 1, 1);
+      }
+    }
+  },
+
+  // THE WIRES OVER A SQUARE ARE ITS LIGHTS. The street has poles and cable because that is
+  // what says "this street" fastest; a praça strings festoon bulbs from the trees to the
+  // fronts for whatever is on this weekend, and the board draws them in the panel's own
+  // middle band. A catenary, and one bulb at a time across the dusk.
+  fios: function (A) {
+    const h = A.h, P = A.P;
+    const passo = 74, vel = 0.62;
+    const k0 = Math.floor(worldX * vel / passo) - 1;
+    const fio = wc("#2a2b1a");
+    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+      const x0 = Math.round(k * passo - worldX * vel), x1 = x0 + passo;
+      const y0 = GROUND - 58 - Math.round(hash01(k * 17 + 3) * 8);
+      const y1 = GROUND - 58 - Math.round(hash01((k + 1) * 17 + 3) * 8);
+      const barriga = 13 + Math.round(hash01(k * 23 + 5) * 5);
+      for (let x = Math.max(-1, x0); x <= Math.min(W, x1); x++) {
+        const t = (x - x0) / passo;
+        const y = Math.round(lerp(y0, y1, t) + Math.sin(t * Math.PI) * barriga);
+        cx.fillStyle = fio; cx.fillRect(x, y, 1, 1);
+        // A BULB EVERY TEN PIXELS, EACH WITH ITS OWN DUSK — and dimmer than the Cetro, which
+        // is a rule this file has held since the light pass: at NOITE the wand is the warmest
+        // and brightest thing in the frame. The first cut lit them at `#fde79d` (L 226), which
+        // put forty points ABOVE the Cetro's core at 195.6 and its crystal at 214.7, and the
+        // night frame's 99.5th percentile went to 183.6 against the street's 140.3. At L 168
+        // they are unmistakably lamps and they are still under the wand.
+        if (((x - x0) % 10) === 5) {
+          const on = h > 0.4 && acendeu(k * 13 + x);
+          cx.fillStyle = on ? "#c9a563" : wc("#4a4535");
+          cx.fillRect(x, y + 1, 1, 2);
+          if (on && escuridao() > 0.35) luz(x, y + 2, 0.34 * escuridao(), 0.34);
+        }
+      }
+    }
+  }
+};
+
 
 function drawScene() {
   const h = worldHealth();

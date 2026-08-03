@@ -19,9 +19,15 @@ function chromiumPath() {
 }
 const BOARD = process.env.BOARD || path.resolve(
   'C:/Users/User/AppData/Local/Temp/claude/C--Users-User-OneDrive-Documentos-game/9e48b8f1-799a-446d-ab30-84fa6af2e465/scratchpad/design/board.png');
-// the CENÁRIOS strip, first panel, in board pixels — cropped and saved so the crop itself
-// can be looked at rather than trusted
-const CROP = { x: 18, y: 724, w: 228, h: 106 };
+// the CENÁRIOS strip, in board pixels — the panel is cropped and saved so the crop itself
+// can be looked at rather than trusted. The strip's panels are not equal widths: the gaps
+// between them measure at x 16, 248, 466, 682, 876, 1064, 1285 and 1518.
+const PAINEIS = {
+  rua: { nome: 'RUA DO BAIRRO', x: 18, y: 724, w: 228, h: 106 },
+  praca: { nome: 'PRACA COMUNITARIA', x: 252, y: 724, w: 212, h: 106 }
+};
+const PAINEL = PAINEIS[process.env.CEN || 'rua'] || PAINEIS.rua;
+const CROP = { x: PAINEL.x, y: PAINEL.y, w: PAINEL.w, h: PAINEL.h };
 
 const ANALISE = function (d, w, h) {
   const lin = function (u) { u /= 255; return u <= 0.04045 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4); };
@@ -107,6 +113,8 @@ function linha(nome, a, ceu) {
 (async () => {
   const browser = await chromium.launch({ executablePath: chromiumPath() });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  // CEN=<id> stands the whole harness in another scenario; unset means RUA DO BAIRRO.
+  await page.addInitScript(function (c) { window.__CEN = c; }, process.env.CEN || '');
 
   // ---- the board panel ----
   const b64 = fs.readFileSync(BOARD).toString('base64');
@@ -121,18 +129,18 @@ function linha(nome, a, ceu) {
     return { d: Array.from(g.getImageData(0, 0, CROP.w, CROP.h).data), w: CROP.w, h: CROP.h,
       full: [img.width, img.height], png: c.toDataURL('image/png') };
   }, { b64, CROP });
-  fs.writeFileSync(path.resolve(__dirname, '..', 'board-rua.png'),
+  fs.writeFileSync(path.resolve(__dirname, '..', 'board-' + (process.env.CEN || 'rua') + '.png'),
     Buffer.from(alvo.png.split(',')[1], 'base64'));
-  console.log('board ' + alvo.full[0] + 'x' + alvo.full[1] + ', recorte RUA DO BAIRRO ' +
-    CROP.w + 'x' + CROP.h + ' -> board-rua.png');
-  linha('BOARD RUA DO BAIRRO', ANALISE(Uint8ClampedArray.from(alvo.d), alvo.w, alvo.h), true);
+  console.log('board ' + alvo.full[0] + 'x' + alvo.full[1] + ', recorte ' + PAINEL.nome + ' ' +
+    CROP.w + 'x' + CROP.h + ' -> board-' + (process.env.CEN || 'rua') + '.png');
+  linha('BOARD ' + PAINEL.nome, ANALISE(Uint8ClampedArray.from(alvo.d), alvo.w, alvo.h), true);
 
   // ---- the game, same treatment: only the picture, i.e. the world band down to the ground
   // plane, and only below the HUD bar, because the bar is chrome and not the picture ----
   const file = 'file://' + path.resolve(__dirname, '..', 'index.html');
   await page.goto(file);
   await page.waitForTimeout(700);
-  await page.evaluate(() => { S.introSeen = true; document.getElementById('lore').classList.add('escondido'); });
+  await page.evaluate(() => { S.introSeen = true; document.getElementById('lore').classList.add('escondido'); if (window.setCenario && window.__CEN) setCenario(window.__CEN); });
   await page.evaluate(() => {
     window.FIXO_X = 4000; window.FIXO_T = 100;
     window.QUADRO = function () { drawScene(); desenharMundo(); desenhar(); };

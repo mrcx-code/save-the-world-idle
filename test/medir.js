@@ -81,7 +81,14 @@ const MEDE = function () {
     nu[i] = (d[i * 4] === sd[j] && d[i * 4 + 1] === sd[j + 1] && d[i * 4 + 2] === sd[j + 2]) ? 1 : 0;
   }
   return { w: cv.width, h: cv.height, L: q(L), Ls: q(Ls), A: q(A), B: q(B),
-    ground: GROUND, hx: HX, nu: Array.from(nu) };
+    ground: GROUND, hx: HX, nu: Array.from(nu),
+    // WHERE THIS SCENARIO'S FRAME ACTUALLY IS. The proscenium was excluded from the rival
+    // ranking by a positional rule written for a street: two side columns and sixteen rows at
+    // the top. PRAÇA COMUNITÁRIA is framed OVERHEAD — its mass is a canopy that comes down
+    // the middle of the picture, so the same rule would have counted the frame as a prop
+    // competing with the boy. The scenario declares its own depth per column and the harness
+    // reads it; for the street the function returns the same 16 it always assumed.
+    moldura: (function () { const a = []; for (let x = 0; x < cv.width; x++) a.push(CEN().molduraAte(x)); return a; })() };
 };
 
 function estat(p, y0, y1) {
@@ -159,7 +166,8 @@ function legibilidade(p) {
       // positional rule and it applies to whatever happens to be up there — before the
       // canopy the top-of-frame block at (100,8) was already the strongest rival in the
       // picture, at 64.0, because that is where the sun's corona sits.
-      v.x = x; v.y = y; v.m = x < margem || x + HW > p.w - margem || y < 16;
+      const fundo = p.moldura ? p.moldura[Math.min(p.w - 1, x + (HW >> 1))] : 16;
+      v.x = x; v.y = y; v.m = x < margem || x + HW > p.w - margem || y < fundo;
       todos.push(v);
     }
   }
@@ -183,9 +191,11 @@ function legibilidade(p) {
   const file = 'file://' + path.resolve(__dirname, '..', 'index.html');
   const browser = await chromium.launch({ executablePath: chromiumPath() });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  // CEN=<id> stands the whole harness in another scenario; unset means RUA DO BAIRRO.
+  await page.addInitScript(function (c) { window.__CEN = c; }, process.env.CEN || '');
   await page.goto(file);
   await page.waitForTimeout(700);
-  await page.evaluate(() => { S.introSeen = true; document.getElementById('lore').classList.add('escondido'); });
+  await page.evaluate(() => { S.introSeen = true; document.getElementById('lore').classList.add('escondido'); if (window.setCenario && window.__CEN) setCenario(window.__CEN); });
 
   // The street scrolls and the props sway, so two runs of this harness never framed quite
   // the same picture and the before/after numbers were never quite comparable. Pinned:

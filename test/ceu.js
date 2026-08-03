@@ -143,6 +143,8 @@ const PAINEIS = [
 (async () => {
   const b = await chromium.launch({ executablePath: chromiumPath() });
   const page = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  // CEN=<id> stands the whole harness in another scenario; unset means RUA DO BAIRRO.
+  await page.addInitScript(function (c) { window.__CEN = c; }, process.env.CEN || '');
   const b64 = fs.readFileSync(BOARD).toString('base64');
   await page.goto('about:blank');
   await page.evaluate('window.ANA = ' + ANA.toString());
@@ -163,7 +165,7 @@ const PAINEIS = [
   const IDX = 'file://' + path.resolve(__dirname, '..', 'index.html');
   await page.goto(IDX);
   await page.waitForTimeout(700);
-  await page.evaluate(() => { S.introSeen = true; document.getElementById('lore').classList.add('escondido');
+  await page.evaluate(() => { S.introSeen = true; document.getElementById('lore').classList.add('escondido'); if (window.setCenario && window.__CEN) setCenario(window.__CEN);
     window.QUADRO = function () { drawScene(); desenharMundo(); desenhar(); };
     window.requestAnimationFrame = function () { return 0; }; });
   await page.evaluate('window.ANA = ' + ANA.toString());
