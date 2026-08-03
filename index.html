@@ -997,8 +997,8 @@ function coletarDrop(d, auto) {
   floats.push({ x: sx - 10, y: GROUND - 30, txt: "+" + Math.round(v), life: 38 });
   if (!auto) floats.push({ x: sx - 18, y: GROUND - 46,
     txt: d.type === "cash" ? "SHARED!" : d.type === "barrel" ? "CLEAN!" : "CLEAR!", life: 30 });
-  burst(sx, GROUND - 16, auto ? 5 : 10, d.type === "cash" ? ["#ffcd75", "#ffe9b0"]
-    : d.type === "barrel" ? ["#6fdd94", "#b5e08c"] : ["#e8edf6", "#8d5bd6"]);
+  burst(sx, GROUND - 16, auto ? 5 : 10, d.type === "cash" ? ["#f3a03d", "#dcbb84"]
+    : d.type === "barrel" ? ["#71a39c", "#dad8c0"] : ["#f2d2dc", "#cf7d92"]);
   d.morto = true;
 }
 
@@ -2122,15 +2122,18 @@ const ICONS = {
   house: { pal: { X: "#b9732c", K: "#14170c", W: "#fde79d" }, map: [
     "............", ".....KK.....", "....KXXK....", "...KXXXXK...", "..KXXXXXXK..", ".KKKKKKKKKK.",
     ".KXXXXXXXXK.", ".KXWWXXWWXK.", ".KXWWXXWWXK.", ".KXXXXXXXXK.", ".KKKKKKKKKK.", "............"] },
-  up: { pal: { X: "#eba748" }, map: [
-    "............", ".....XX.....", "....XXXX....", "...XXXXXX...", "..XXXXXXXX..", ".XXXXXXXXXX.",
-    "....XXXX....", "....XXXX....", "....XXXX....", "....XXXX....", "............", "............"] },
+  // UPGRADES is "better tools for all" and four siblings — so it is the board's FERRAMENTA,
+  // a hammer with a wooden handle, and not a generic arrow pointing up. An arrow says
+  // "number goes up"; the board says what the number buys.
+  up: { pal: { S: "#a9a184", W: "#dad8c0", D: "#6f6a55", H: "#96682f", h: "#6d4620" }, map: [
+    "............", "..DDDDDDD...", ".DSSSSSSSD..", ".DSWWSSSSD..", ".DSSSSSSSD..", "..DDSSSDD...",
+    "....DHHD....", "....DHhD....", "....DHhD....", "....DHhD....", "....DDDD....", "............"] },
   // A wooden stick with a burning rag on it is a dungeon prop, and this game is a street in
-  // 2026. Same meaning — the thing you keep and hand on — as a modern emblem: a flame inside
-  // a badge, in the purple the torch sheet and the skills already use.
-  torch: { pal: { X: "#da7a29", W: "#eba748", K: "#3a2712", G: "#96682f" }, map: [
-    "............", "...GGGGGG...", "..GKKKKKKG..", ".GKK.WW.KKG.", ".GK.WWWW.KG.", ".GK.WXXW.KG.",
-    ".GKWXXXXWKG.", ".GKWXWWXWKG.", "..GKWXXWKG..", "...GGGGGG...", "............", "............"] },
+  // 2026. The board already draws the thing you carry and hand on, on its ITENS sheet: a
+  // LANTERNA — a metal frame with warm glass inside and a ring to carry it by.
+  torch: { pal: { K: "#3a2712", G: "#6d4620", g: "#96682f", W: "#fde79d", X: "#fffbe8", O: "#da7a29" }, map: [
+    "............", ".....KK.....", "....K..K....", "...KKKKKK...", "..KGGGGGGK..", "..KGWWWWgK..",
+    "..KGWXXWgK..", "..KGWXXWgK..", "..KGWOOWgK..", "..KGWWWWgK..", "..KKKKKKKK..", "............"] },
   // ---- the board's ÍCONES sheet: a sun, hands over a bowl, a gear ----
   sun: { pal: { W: "#fde79d", X: "#eba748", O: "#da7a29" }, map: [
     "............", "....O..O....", "..O.XXXX.O..", "....XWWX....", "..OXWWWWXO..", "..OXWWWWXO..",
@@ -2472,6 +2475,38 @@ function pessoa(nome, x, gy) {
   npcLuzPasso();
   sombra(Math.round(x) + (m[0].length >> 1), gy, m[0].length - 3, 0.16);
   cx.drawImage(npcSprite(nome), Math.round(x), Math.round(gy - m.length));
+}
+
+// ---------- ITENS & RECURSOS ----------
+// The board has a sheet of twelve. This game has exactly three things a beaten trouble can
+// leave on the ground, so it gets exactly three of them — the ones that already mean what
+// the game already says when you pick one up, and no new resource invented to justify a
+// drawing. Clearing smoke leaves a FLOR, because the float already reads CLEAR! and a flower
+// is what comes back where the air did. Emptying the drum leaves ÁGUA, and the float already
+// reads CLEAN!. The money bag leaves a REFEIÇÃO, and the float already reads SHARED! — the
+// board's own bowl of food, which is what "shared" looks like on this street.
+const ITEM_C = {
+  K: "#22190d",                                            // the keyline, so it pops off any ground
+  R: "#a04a5e", P: "#cf7d92", W: "#f2d2dc", Y: "#f3a03d",  // flor: petal shade / petal / rim / heart
+  G: "#3e4721", g: "#767f34",                              // stem and leaf
+  B: "#3f6f79", A: "#71a39c", C: "#dad8c0", S: "#9fc4bd",  // água: deep / body / lit rim / surface
+  T: "#7d4a1e", t: "#b9732c", L: "#dcbb84",                // refeição: bowl shade / bowl / lit rim
+  O: "#da7a29", E: "#525d2a", F: "#f3a03d"                 // what is in it
+};
+const ITEM_MAPS = {
+  smoke: [                                                 // FLOR
+    "..KKKK...", ".KRPPRK..", "KRPWWPRK.", "KRPWYPRK.", "KRPWWPRK.", ".KRPPRK..",
+    "..KGGK...", ".KGgGK...", "..KGK....", "..KGK...."],
+  barrel: [                                                // ÁGUA
+    "...KK....", "..KCK....", "..KCK....", ".KKCKK...", ".KCSSCK..", ".KCAABK..",
+    ".KCAABK..", ".KCAABK..", ".KBAABK..", "..KKKK..."],
+  cash: [                                                  // REFEIÇÃO
+    ".........", "...KK....", "..KOFK...", ".KOFOEK..", "KKKKKKKK.", "KLttttTK.",
+    "KLttttTK.", ".KtttTK..", "..KKKK...", "........."]
+};
+function itemSprite(tipo) {
+  const m = ITEM_MAPS[tipo] || ITEM_MAPS.smoke;
+  return sprite("item:" + tipo, m, ITEM_C);
 }
 
 let mobs = [];
@@ -4150,16 +4185,13 @@ function desenharMundo() {
     if (sx < -12 || sx > W + 12) return;
     const y = GROUND - 16 + Math.round(Math.sin(animT * 5 + d.wx * 0.1) * 2);
     const fim = Math.max(0, Math.min(1, (CFG.dropVida - d.t) / 2));
-    const cor = d.type === "cash" ? ["#ffcd75", "#ffe9b0"]
-      : d.type === "barrel" ? ["#6fdd94", "#b5e08c"] : ["#c9c2d8", "#e8edf6"];
+    // the board's ITENS sheet, one per kind of trouble; the tick colour is the item's own
+    const cor = d.type === "cash" ? "#f3a03d" : d.type === "barrel" ? "#71a39c" : "#f2d2dc";
     cx.globalAlpha = fim;
-    cx.fillStyle = "#10121c"; cx.fillRect(sx - 4, y - 1, 10, 9);   // dark keyline: it pops off any ground
-    cx.fillStyle = cor[0]; cx.fillRect(sx - 3, y, 8, 7);
-    cx.fillStyle = cor[1]; cx.fillRect(sx - 2, y + 1, 6, 2);
-    cx.fillStyle = "#10121c"; cx.fillRect(sx - 3, y + 3, 8, 1);
+    cx.drawImage(itemSprite(d.type), sx - 4, y - 2);
     // four ticks breathing around it: pixel-art for "pick me up"
     cx.globalAlpha = fim * pulso;
-    cx.fillStyle = cor[1];
+    cx.fillStyle = cor;
     const r = 6 + Math.round(pulso * 2);
     cx.fillRect(sx + 1, y - r, 1, 3); cx.fillRect(sx + 1, y + 6 + r - 3, 1, 3);
     cx.fillRect(sx - 3 - r, y + 3, 3, 1); cx.fillRect(sx + 5 + r - 3, y + 3, 3, 1);
@@ -4184,15 +4216,18 @@ function desenharMundo() {
   if (chamada) {
     const sx = chamada.sx, resta = Math.max(0, 1 - chamada.t / chamada.janela);
     cx.globalAlpha = 0.30 * pulso;
-    cx.fillStyle = "#ffcd75";
+    cx.fillStyle = "#f3a03d";
     cx.fillRect(sx - 16, GROUND - 26, 32, 28);
     cx.globalAlpha = 1;
-    cx.fillStyle = "#3a2f4a"; cx.fillRect(sx - 10, GROUND - 12, 20, 12);   // pot
-    cx.fillStyle = "#584a6e"; cx.fillRect(sx - 9, GROUND - 11, 18, 4);
-    cx.fillStyle = "#ffcd75"; cx.fillRect(sx - 12, GROUND - 14, 24, 3);    // gold rim
-    cx.fillStyle = "#7a5a3a"; cx.fillRect(sx - 7, GROUND, 4, 4); cx.fillRect(sx + 3, GROUND, 4, 4);
+    // ARGILA, off the board's ITENS sheet: a fired clay pot, not the old violet cauldron
+    cx.fillStyle = "#7d4a1e"; cx.fillRect(sx - 10, GROUND - 12, 20, 12);   // pot
+    cx.fillStyle = "#b9732c"; cx.fillRect(sx - 9, GROUND - 11, 17, 11);
+    cx.fillStyle = "#dcbb84"; cx.fillRect(sx + 6, GROUND - 11, 2, 11);     // the sunlit side
+    cx.fillStyle = "#f3a03d"; cx.fillRect(sx - 12, GROUND - 14, 24, 3);    // the rim
+    cx.fillStyle = "#da7a29"; cx.fillRect(sx - 12, GROUND - 12, 24, 1);
+    cx.fillStyle = "#5c421f"; cx.fillRect(sx - 7, GROUND, 4, 4); cx.fillRect(sx + 3, GROUND, 4, 4);
     cx.globalAlpha = 0.6;
-    cx.fillStyle = "#e8edf6";
+    cx.fillStyle = "#dad8c0";
     for (let s = 0; s < 3; s++) {                                          // steam
       const t = (animT * 22 + s * 9) % 18;
       cx.fillRect(sx - 6 + s * 6 + Math.round(Math.sin((animT * 4) + s) * 2), GROUND - 17 - t, 3, 3);
