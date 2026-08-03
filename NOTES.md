@@ -2964,6 +2964,73 @@ toda sessão começa lendo a última entrada.
   jogo, mas se um dia quiser um harness que pose o anúncio, congelar a animação como os
   `*shot.js` fazem.
 
+- **2026-08-03 · camada de recursos + projetos especiais (aditiva), a pedido do dono.** O
+  dono achou os projetos básicos demais e quis que os drops se acumulassem em recursos que
+  combinações específicas gastam em "projetos especiais". Fiz em dois incrementos, cada um
+  medido no `sim.js` antes de seguir. **(1) Recursos + coleta ao passar.** Todo drop continua
+  pagando o mesmo impacto de sempre (não toquei no `coletarDrop`); **por cima** disso deixa
+  +1 de um recurso por tipo — `smog`→🌸 flor, `barrel`→💧 água, `cash`→🍲 refeição, em
+  `S.recursos`. Escolhi **zerar no prestígio**, como projetos e upgrades, porque o que eles
+  compram (os projetos especiais) é dentro-da-corrida. E o herói agora **recolhe o drop só de
+  passar por cima** (`d.wx - worldX <= HX + 8`): valor cheio + recurso + foco, igual a um
+  toque mirado — então praticamente tudo no chão é coletado agora, um buff real ao jogo
+  passivo. **(2) Projetos especiais.** Quatro, cada um uma combinação específica, em
+  `CFG.especiais` pra o sim ler do próprio `index.html` e não divergir: Community Garden
+  12🌸+6💧 → +6% produção; Shared Kitchen 10🍲+6🌸 → +10% toques e coletas; Clean Water Works
+  12💧+8🍲 → trabalhos bloqueiam 40% menos; Repair Workshop 10🌸+10💧+10🍲 → +5% em tudo.
+  Painel novo (folha SPECIAL PROJECTS, alcançada da folha de projetos, na mesma linguagem
+  visual), mostra tem-vs-precisa e só libera BUILD quando dá. One-time por corrida.
+  **A regra dura, segurada por construção:** todo bônus é um **multiplicador de saída,
+  mode-neutro, que nunca entra na equação de cansaço** e continua multiplicado pela saúde do
+  time — é a mesma forma da camada do mundo, então o buraco GO FAST × GO STEADY é exatamente o
+  que era. **Medido** (`node test/sim.js --detail`, mesma bateria de estratégias):
+
+  | strategy | ANTES (shipped) | DEPOIS | worst team |
+  |---|---|---|---|
+  | rhythm + hold + world | **6m27s** | **6m26s** | 75% |
+  | projects STEADY + hold + world | 6m45s | 6m44s | 100% |
+  | rhythm + hold | 7m17s | 6m59s | 75% |
+  | projects STEADY + hold | 7m24s | 7m11s | 100% |
+  | STEADY + hold 25% + world | 7m22s | 7m21s | 100% |
+  | projects, GO STEADY + U4 | 10m57s | 10m55s | 100% |
+  | projects, GO STEADY | 12m01s | 12m01s | 100% |
+  | rhythm (fast/steady swap) | 14m00s | 14m00s | 75% |
+  | hold only (no projects) | 41m59s | 36m37s | 100% |
+  | projects FAST + hold + world | 47m43s | 42m48s | 5% |
+  | projects FAST + hold | 52m40s | 46m12s | 5% |
+  | projects, GO FAST | 1h25m29s | 1h25m29s | 5% |
+
+  Leitura: **a vencedora não se mexeu** (6m27s→6m26s, 1s), então a ameaça que o NOTES marca —
+  a primeira tocha em ~8min — não piorou. As corridas que ganharam de verdade são as **sem
+  mundo/passivas** (rhythm+hold 7m17s→6m59s; hold-only 42m→37m), que antes deixavam drop
+  expirar e agora recolhem tudo ao passar — era exatamente o buff pedido, e ele fica no jogo
+  passivo, não na ponta. **A decisão fast × steady ficou intacta**: pior saúde do time
+  continua 75% na de ritmo, 100% nas steady, 5% nas fast; a de troca de modos continua no
+  topo; as GO FAST seguem lá embaixo a 5% (42m+). Os projetos especiais completam **2–3 vezes
+  no meio da corrida** de quem joga o mundo (kitchen@2m04, water@4m28, garden@6m22 na
+  vencedora) e **zero** numa corrida ociosa — que não mata trabalho nenhum, logo não pega
+  drop, logo não acumula recurso. Guardas de regressão: **`--patch=u2Sempre` ainda derruba a
+  tabela para 4m03s com o time a 36%** (o detector do erro antigo continua funcionando) e
+  **`--patch=semMundo` reproduz a tabela pré-mundo** (rhythm+hold 7m28s, GO STEADY 8m37s),
+  então recursos e projetos especiais desligam junto com o resto da camada do mundo.
+  **Números que fixei:** custos ~18–30 recursos por projeto, bônus 1.05–1.10 — modestos de
+  propósito; a combinação de custo (água é o gargalo em GO STEADY, flor em GO FAST, pela
+  mistura de monstros) faz cada corrida escolher **quais** especiais dá pra bancar, que é o
+  ponto. **Quebrou no caminho, duas coisas.** (a) O regex que lê o `CFG` no `formulas.js` para
+  na primeira `};` — meu comentário dentro do `CFG.especiais` tinha um `};` e truncava o
+  objeto; reescrevi o comentário. (b) O bloco novo do smoke resetava `geradores=0` e derrubava
+  a pré-condição do teste da chamada comunitária logo abaixo (produção zero → mutirão não
+  "sobe"); passei a devolver o estado que o próximo bloco espera. Smoke cresceu para cobrir:
+  recurso pelo tipo certo, coleta ao passar, projeto especial só acessível com a combinação
+  certa, completar gasta os recursos certos e aplica o bônus, não pode ser feito duas vezes, e
+  **não toca no cansaço**. Verde, 61 FPS. **Dúvida nova:** os bônus são multiplicadores
+  globais de canal (prod/tap/drop/bloq) — seguros e fáceis de medir, mas "distintos" mais na
+  temática e no custo do que na mecânica; se o dono quiser um que mude a *forma* do jogo (ex.:
+  acelerar a rampa do steady), aí sim vira algo que pode inclinar a decisão e teria de ser
+  medido com muito mais cuidado. **Próximo passo: lente *Primeiros cinco minutos* — o painel
+  só é visto por quem abre a folha de projetos e desce mais um nível; medir se alguém entende
+  que os drops viraram recurso sem ninguém dizer.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
