@@ -191,6 +191,27 @@
   #alerta.magia { background: #3b3418; box-shadow: inset 0 0 0 2px var(--purple); color: #e0c47a; }
   @keyframes pulsa { 0% { opacity: 1 } 50% { opacity: .62 } 100% { opacity: 1 } }
 
+  /* a momentary shout in the MIDDLE of the screen when a big thing CHANGES. The top strip
+     carries standing status; this fires only on transitions the owner kept missing. It never
+     eats a tap (pointer-events: none) and clears itself after the fade. Styled like the
+     sheets: dark rounded panel, cream/gold text. */
+  #anuncio { position: fixed; z-index: 30; left: 50%; top: 32%; transform: translate(-50%, -50%);
+    max-width: min(340px, 88vw); text-align: center; pointer-events: none;
+    padding: 13px 20px; border-radius: var(--raio); border: 3px solid var(--ink);
+    background: linear-gradient(180deg, #333c22 0%, #242a16 60%, #1e2312 100%);
+    box-shadow: 0 5px 0 var(--ink), inset 0 1px 0 rgba(255,255,255,.13);
+    color: #fbe7ae; text-shadow: 1px 1px 0 var(--ink); font-size: var(--fs-lg); line-height: 1.45;
+    opacity: 0; }
+  #anuncio.mostra { animation: anuncia 2s ease forwards; }
+  #anuncio.festa { color: #d3e6a2; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--good); }
+  #anuncio.chama { color: #fbe7ae; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--gold); }
+  #anuncio.perigo { color: #eeae90; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 2px var(--bad); }
+  @keyframes anuncia {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.86) }
+    14% { opacity: 1; transform: translate(-50%, -50%) scale(1) }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1) }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1) } }
+
   /* REAL DATA became a thin ticker instead of a slab. It was eating a fifth of the screen
      to say one sentence; this hands most of that height back to the world.
      Keeps --hControles rather than a fixed 122px: that variable is measured from the real
@@ -343,12 +364,18 @@
   .explica.sub { margin: 7px 0 0; }
   .explica b { color: var(--gold); }
   .explica i { color: #b7d16a; font-style: normal; }
-  /* how many at once: three fixed targets read faster than a control you have to cycle */
-  .selQtd { display: flex; gap: 6px; margin-bottom: 7px; }
-  .selQtd button { flex: 1; padding: 10px 4px; font-size: var(--fs-xs); }
-  .selQtd button.ativo { color: #221806; border-color: rgba(120,60,0,.35);
-    background: linear-gradient(180deg, var(--ouroA), var(--ouroB));
-    box-shadow: 0 2px 7px rgba(120,60,0,.28), inset 0 1px 0 rgba(255,255,255,.55); }
+  /* buying is 1-or-MAX and nothing else: the gold primary buys one at the next price, the
+     compact green MAX beside it spends whatever the current energy covers. No third toggle,
+     no extra row — the owner wanted it direct. */
+  .compra { display: flex; gap: 6px; align-items: stretch; }
+  .compra .btnCompra { flex: 1 1 auto; width: auto; }
+  .btnMax { flex: 0 0 auto; min-width: 78px; padding: 8px 10px; font-size: var(--fs-xs); line-height: 1.25;
+    text-align: center; color: #1c2408; text-shadow: 0 1px 0 rgba(255,255,255,.4);
+    border: 1px solid rgba(60,90,10,.4); border-radius: var(--raioSm);
+    background: linear-gradient(180deg, #d8e29a 0%, #9fb45a 60%, #7f9440 100%);
+    box-shadow: 0 3px 9px rgba(60,80,10,.28), inset 0 1px 0 rgba(255,255,255,.5); }
+  .btnMax b { font-size: var(--fs-sm); }
+  .btnMax:disabled { opacity: .42; }
   .modo { display: flex; gap: 6px; margin-top: 8px; }
   .modo button { flex: 1; padding: 13px 6px; font-size: var(--fs-sm); }
   #modoCarvao, #modoLimpo { background: linear-gradient(180deg, #3a4324, #242a16); color: #a9a184; }
@@ -468,6 +495,7 @@
 
 <div id="offline"></div>
 <div id="alerta"></div>
+<div id="anuncio"></div>
 <div id="fato"></div>
 <div id="cartao"><div class="cn" id="cartaoN"></div><div class="ct" id="cartaoT"></div>
   <div class="cv" id="cartaoV"></div></div>
@@ -516,10 +544,10 @@
   <div class="sheetHead"><div class="t">PROJECTS — <span id="nGeradores2">0</span> RUNNING</div>
     <button class="fechar" data-close="sheetProjects">✕</button></div>
   <div class="explica" id="oQueEh"></div>
-  <div class="selQtd">
-    <button data-q="1">×1</button><button data-q="10">×10</button><button data-q="max">MAX</button>
+  <div class="compra">
+    <button class="btnCompra" id="btnGerador"></button>
+    <button class="btnMax" id="btnGeradorMax"></button>
   </div>
-  <button class="btnCompra" id="btnGerador"></button>
   <div class="explica sub" id="oQueDa"></div>
   <div class="ritmo">
     <div class="rCol" id="rColA">
@@ -732,7 +760,7 @@ let S = {
   u1: false, u2: false, u3: false,
   u4: false, u5: false, u6: false, u7: false,
   inovacao: 0, transicoes: 0,
-  qtdCompra: 1,              // 1 / 10 / "max" — remembered, because nobody wants to re-pick it
+  qtdCompra: 1,              // vestigial: buying is now the 1-or-MAX pair, no remembered target
   skillAuto: false,          // learned once, survives every torch — unlike u1..u7
   capVisto: 0,               // how many chapter cards this run has shown — reset by the torch
   introSeen: false,
@@ -6266,7 +6294,7 @@ function desenharMundo() {
     cx.fillRect(sx - 6, GROUND - 1, 2, 3); cx.fillRect(sx + 14, GROUND - 1, 2, 3);
     cx.globalAlpha = 1;
   });
-  // the community call: a pot, steam, and a window that is visibly closing
+  // the community call: a pot, steam, and a friendly radial countdown (NOT an HP bar)
   if (chamada) {
     const sx = chamada.sx, resta = Math.max(0, 1 - chamada.t / chamada.janela);
     cx.globalAlpha = 0.30 * pulso;
@@ -6287,13 +6315,35 @@ function desenharMundo() {
       cx.fillRect(sx - 6 + s * 6 + Math.round(Math.sin((animT * 4) + s) * 2), GROUND - 17 - t, 3, 3);
     }
     cx.globalAlpha = 1;
-    cx.fillStyle = "#10121c"; cx.fillRect(sx - 16, GROUND - 32, 32, 5);    // closing window
-    cx.fillStyle = resta > 0.35 ? "#6fdd94" : "#ff6b57";
-    cx.fillRect(sx - 15, GROUND - 31, Math.round(30 * resta), 3);
-    // a chevron nodding at the pot: the clearest "put your thumb here" there is
-    const bob = Math.round(Math.sin(animT * 7) * 2);
-    cx.fillStyle = "#ffcd75";
-    for (let i = 0; i < 5; i++) cx.fillRect(sx - 5 + i, GROUND - 42 + bob + Math.abs(i - 2), 1, 3 - Math.abs(i - 2));
+    // NOT a horizontal HP bar. The old closing-window strip sat at mob-HP height and drained
+    // green->red exactly like an enemy's health, so players read the pot as a threat. It is a
+    // friendly, time-limited call, so it now wears event markers a monster never gets: a name
+    // pill, a RADIAL clock with the seconds ticking in the middle, and a fat arrow.
+    const seg = Math.max(0, Math.ceil(chamada.janela - chamada.t));
+    // a name pill above the pot: this is the mutirao, not something to kill
+    const lbl = "MUTIRAO";
+    const lw = larguraTexto(lbl, 1);
+    cx.fillStyle = "#10121c"; cx.fillRect(sx - (lw >> 1) - 4, GROUND - 60, lw + 8, 12);
+    cx.fillStyle = "#43391a"; cx.fillRect(sx - (lw >> 1) - 4, GROUND - 60, lw + 8, 1);
+    texto(lbl, sx - (lw >> 1), GROUND - 58, 1, "#fbe7ae", "#10121c");
+    // a circular countdown clock (warm gold, never mob-red) with the seconds in the middle
+    const cyC = GROUND - 34, rC = 9;
+    cx.lineWidth = 3; cx.lineCap = "butt";
+    cx.strokeStyle = "#10121c";                                           // dark track ring
+    cx.beginPath(); cx.arc(sx, cyC, rC, 0, Math.PI * 2); cx.stroke();
+    cx.globalAlpha = resta > 0.3 ? 1 : (0.5 + 0.5 * pulso);               // pulses when short
+    cx.strokeStyle = resta > 0.3 ? "#ffcd75" : "#f3a03d";
+    cx.beginPath(); cx.arc(sx, cyC, rC, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * resta); cx.stroke();
+    cx.globalAlpha = 1;
+    cx.fillStyle = "#10121c"; cx.beginPath(); cx.arc(sx, cyC, rC - 2, 0, Math.PI * 2); cx.fill();
+    const sw = larguraTexto(String(seg), 1);
+    texto(String(seg), sx - (sw >> 1) + 1, cyC - 4, 1, "#fbe7ae", "#10121c");
+    // a fat arrow nodding down at the pot: the clearest "put your thumb here" there is
+    const bob = Math.round(Math.sin(animT * 7) * 2), ay = GROUND - 24 + bob;
+    cx.fillStyle = "#10121c";                                            // outline
+    for (let r = 0; r < 6; r++) { const w = 11 - r * 2; cx.fillRect(sx - (w >> 1) - 1, ay + r, w + 2, 1); }
+    cx.fillStyle = "#ffcd75";                                            // the arrow
+    for (let r = 0; r < 5; r++) { const w = 9 - r * 2; cx.fillRect(sx - (w >> 1), ay + r, w, 1); }
   }
   // the mutirão: the street is working with you, so the ground is busier
   if (mutiraoT > 0 && Math.random() < 0.3) {
@@ -6403,23 +6453,24 @@ function desenharProjetos() {
       + (S.geradores === 1 ? " project" : " projects") + " — they work on their own, forever"
     : "projects earn <b>every second, by themselves</b> — taps are the only income you have until then";
 
-  const alvo = S.qtdCompra === "max" ? Infinity : (S.qtdCompra || 1);
-  const compra = quantosCabem(alvo);
-  const b = $("btnGerador");
+  // the primary button always buys ONE, at the next project's price
   const c1 = custoGerador();
-  if (compra.n > 0) {
-    b.textContent = "+ " + compra.n + (compra.n === 1 ? " PROJECT — " : " PROJECTS — ") + fmt(compra.gasto);
+  const b = $("btnGerador");
+  if (S.energia >= c1) {
+    b.textContent = "+ PROJECT — " + fmt(c1);
     b.disabled = false;
   } else {
     b.textContent = "+ PROJECT — " + fmt(c1) + " (NOT ENOUGH)";
     b.disabled = true;
   }
+  // the compact MAX beside it: how many the current energy affords, in one tap
+  const compraMax = quantosCabem(Infinity);
+  const bm = $("btnGeradorMax");
+  bm.innerHTML = "MAX<br><b>×" + compraMax.n + "</b>";
+  bm.disabled = compraMax.n <= 0;
   $("oQueDa").innerHTML = "each adds <i>+" + taxaCurta(um) + "</i> forever &middot; next one costs "
     + fmt(c1) + ", and every one after is +"
     + Math.round((CFG.custoGeradorFator - 1) * 100) + "%";
-  document.querySelectorAll(".selQtd button").forEach(function (el) {
-    el.classList.toggle("ativo", String(S.qtdCompra) === el.dataset.q);
-  });
 }
 
 // The skills surface. One skill ships; the sheet is a list, so a second one is markup and
@@ -6574,6 +6625,50 @@ function alertaMundo() {
   }
 }
 
+// A momentary shout in the MIDDLE of the screen when a big thing CHANGES. The strip above
+// carries standing status; this fires only on transitions, so the player always knows what
+// just happened. It observes existing state — it invents no game state — and never eats a
+// tap (pointer-events: none in CSS).
+let anuncioTimer = null;
+function anunciar(txt, tom) {
+  const el = $("anuncio");
+  el.textContent = txt;
+  el.className = "";                 // restart the fade even mid-flight
+  void el.offsetWidth;
+  el.className = "mostra" + (tom ? " " + tom : "");
+  clearTimeout(anuncioTimer);
+  anuncioTimer = setTimeout(function () { el.className = ""; }, 2000);
+}
+let anChamada = false, anMutirao = false, anSuper = false, anBloqueio = false, anTocha = false;
+function semearAnuncios() {          // adopt the current state without shouting, so a reload
+  anChamada = !!chamada;             // or an offline jump does not fire a burst on the first frame
+  anMutirao = mutiraoT > 0;
+  anSuper = superT > 0;
+  anBloqueio = bloqueioMundo() < 0.999;
+  anTocha = S.energiaTotal >= CFG.metaPrestigio;
+}
+function verificarAnuncios() {
+  const temChamada = !!chamada;
+  if (temChamada && !anChamada) anunciar("THE POT IS OUT — tap it, quick!", "chama");
+  anChamada = temChamada;
+
+  const temMutirao = mutiraoT > 0;   // rising edge covers "the player answered the call"
+  if (temMutirao && !anMutirao) anunciar("MUTIRAO! Everyone's helping — ×" + CFG.mutiraoMult, "festa");
+  anMutirao = temMutirao;
+
+  const temSuper = superT > 0;
+  if (temSuper && !anSuper) anunciar("ALL TOGETHER! The street swings — ×" + CFG.superMult, "festa");
+  anSuper = temSuper;
+
+  const bloqueado = bloqueioMundo() < 0.999;   // troubles are actively holding production back
+  if (bloqueado && !anBloqueio) anunciar("TROUBLES IN THE WAY — tap them to clear", "perigo");
+  anBloqueio = bloqueado;
+
+  const tocha = S.energiaTotal >= CFG.metaPrestigio;   // a run just reached its end
+  if (tocha && !anTocha) anunciar("TORCH READY — pass it on", "chama");
+  anTocha = tocha;
+}
+
 let fatoIdx = 0;
 function girarFato() {
   const f = dadosReais[fatoIdx % dadosReais.length]; fatoIdx++;
@@ -6648,13 +6743,8 @@ document.addEventListener("DOMContentLoaded", () => {
   ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
     cv.addEventListener(ev, function () { soltar("mundo"); });
   });
-  $("btnGerador").onclick = function () { comprarGerador(S.qtdCompra); };
-  document.querySelectorAll(".selQtd button").forEach(function (el) {
-    el.onclick = function () {
-      S.qtdCompra = el.dataset.q === "max" ? "max" : Number(el.dataset.q);
-      desenhar();
-    };
-  });
+  $("btnGerador").onclick = function () { comprarGerador(1); };
+  $("btnGeradorMax").onclick = function () { comprarGerador("max"); };
   $("modoCarvao").onclick = () => { marcarGuia("rhythm"); definirModo("carvao"); };
   $("modoLimpo").onclick = () => { marcarGuia("rhythm"); definirModo("limpo"); };
   $("modeQuick").onclick = () => { marcarGuia("rhythm"); definirModo(S.modo === "carvao" ? "limpo" : "carvao"); };
@@ -6721,6 +6811,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   girarFato();
   desenhar();
+  semearAnuncios();      // adopt current state so the first frames do not shout on load
   medirControles();
   window.addEventListener("resize", medirControles);
 
@@ -6740,6 +6831,7 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarChamada(dt);
     atualizarWand(dt);
     atualizarSuper(dt);
+    verificarAnuncios();
     if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
     if (cartaoT > 0) cartaoT -= dt;
     if (S.u4) { // neighbors keep helping on their own — but they do not charge your super
