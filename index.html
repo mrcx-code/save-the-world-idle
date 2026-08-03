@@ -1757,6 +1757,18 @@ const PALETA_BASE = {
   morro:   [[80, 98, 50], 0.20],
   traco:   [[92, 59, 31], 0.18],
   caixa:   [[113, 163, 156], 0.12],
+  // THE STREET'S OWN FAÇADES, wave 18 — the fronts that recede down the road between the
+  // proscenium columns. TERRA and ACENTO, authored around L 80-95 so that after `luzDoDia()`
+  // adds its ~+26 at MANHÃ they land near the board's own PAINTED means for the strips they
+  // fill (89 in the second fifth, 82 in the third). They carry a small `dist` because they
+  // are middle distance, not proscenium: they must sit BEHIND the columns in air as well as
+  // in draw order.
+  ruaPar:  [[118, 88, 52], 0.16],
+  ruaParB: [[96, 74, 48], 0.16],
+  ruaSom:  [[62, 48, 32], 0.13],
+  ruaTel:  [[112, 58, 34], 0.15],
+  ruaTelL: [[146, 82, 46], 0.13],
+  ruaVao:  [[38, 30, 20], 0.10],
   // the three green planes, still separated by value at every t
   mataFar:  [[118, 143, 66], 0.42],
   mataFarL: [[158, 172, 90], 0.36],
@@ -3848,6 +3860,75 @@ function drawScene() {
           cx.fillStyle = (h > 0.5 || escuridao() > 0.4) ? "rgba(253,231,157,.85)" : traco;
           cx.fillRect(x + 7, y - 7, 3, 3);                                  // one window
           if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 8, y - 15, 4, 3); }  // water tank
+        }
+      }
+    }
+  }
+  // ---- THE STREET'S OWN FAÇADES, RECEDING BETWEEN THE COLUMNS ----
+  // WAVE 18, and it is the move waves 11 to 17 were circling. Measured: our PAINT in the
+  // second and third fifths is already at or below the board's — PAINTED 81 and 77 against
+  // 89 and 82 — and the whole of the remaining difference is SHARE OF SKY. The board has
+  // 14.4% and 1.6% bare sky in those two strips; we have 51.0% and 49.8%. No brush moves
+  // that. The board is a street between two façades and ours was a street with a slot of sky
+  // down the middle, and the only framing lever anyone had tried was the width of the
+  // proscenium, which the print refused at 0.115·W in wave 14 (the frame became a tunnel and
+  // the right column ate the third mob in the queue).
+  //
+  // This is the other lever, and it is the one the board actually draws: the buildings on
+  // both sides RECEDE, so their rooflines rake from the top corners toward a vanishing point
+  // on the horizon and the sky they leave open is a WEDGE, not a slot. It closes sky in the
+  // middle of the picture without touching either edge, so nothing at the frame's border
+  // moves and the mob queue is untouched.
+  //
+  // The envelope is fixed to the SCREEN and only the fabric scrolls, which is what a corridor
+  // does when you walk down it — a vanishing point that slides sideways is not a vanishing
+  // point. So the roof height is a function of x alone, and the party walls, storey lines and
+  // openings tile in world space and flow through it. No new object, no new draw pass beyond
+  // this one loop, and it is drawn here: after the hillside, before the three green planes,
+  // so the tree line and the near bushes root it and the proscenium covers its ends.
+  {
+    const vy = GROUND - 26;                 // the separator band IS the horizon line
+    const vx = Math.round(W * 0.60);        // vanishing point right of centre, as on the board
+    const passo = 21, vel = 0.42;
+    const altE = H * 0.38, altD = H * 0.30; // the left run is the taller one, as on the board
+    // roof height above the horizon at screen column x, zero at the vanishing point
+    const teto = function (x) {
+      const t = x < vx ? (vx - x) / Math.max(1, vx) : (x - vx) / Math.max(1, W - vx);
+      return (x < vx ? altE : altD) * Math.pow(Math.min(1, Math.max(0, t)), 1.2);
+    };
+    const aceso = h > 0.5 || escuridao() > 0.4;
+    const k0 = Math.floor(worldX * vel / passo) - 1;
+    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+      const sx = Math.round(k * passo - worldX * vel);
+      const x0 = Math.max(0, sx), x1 = Math.min(W, sx + passo - 1);
+      if (x1 <= x0) continue;
+      const meio = (sx + passo * 0.5);
+      // the roof is taken at the edge NEARER the vanishing point, so the run steps down
+      // toward it instead of stepping up — that step is the whole read of "receding"
+      const alt = Math.round(teto(meio < vx ? sx + passo - 1 : sx));
+      if (alt < 4) continue;
+      const yTop = vy - alt;
+      cx.fillStyle = hash01(k * 19 + 5) > 0.5 ? P.ruaPar : P.ruaParB;
+      cx.fillRect(x0, yTop, x1 - x0, GROUND - 4 - yTop);
+      // the sun is up and to the right, so the left flank of every front is in its own shade
+      cx.fillStyle = P.ruaSom;
+      cx.fillRect(x0, yTop, Math.min(2, x1 - x0), GROUND - 4 - yTop);
+      // terracotta over everything, and an eave that overhangs the party wall
+      cx.fillStyle = P.ruaTel;
+      cx.fillRect(Math.max(0, sx - 1), yTop, Math.min(W, sx + passo) - Math.max(0, sx - 1), 3);
+      cx.fillStyle = P.ruaTelL;
+      cx.fillRect(Math.max(0, sx - 1), yTop, Math.min(W, sx + passo) - Math.max(0, sx - 1), 1);
+      // storey lines and one opening per storey, thinning out as the front recedes
+      if (alt >= 14) {
+        for (let y = yTop + 9; y < GROUND - 6; y += 9) {
+          cx.fillStyle = P.ruaSom; cx.fillRect(x0, y, x1 - x0, 1);
+          if (x1 - x0 >= 7 && hash01(k * 23 + y) > 0.35) {
+            const jx = Math.min(x1 - 4, x0 + 2);
+            cx.fillStyle = P.ruaVao; cx.fillRect(jx, y - 6, 3, 5);
+            cx.fillStyle = aceso ? "rgba(253,231,157,.5)" : P.ruaVao;
+            cx.fillRect(jx, y - 5, 3, 3);
+            cx.fillStyle = P.ruaTelL; cx.fillRect(jx - 1, y - 1, 5, 1);   // the sill
+          }
         }
       }
     }
