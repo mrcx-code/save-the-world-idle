@@ -1197,6 +1197,89 @@ toda sessão começa lendo a última entrada.
   move o `smog` — não medi se as duas juntas fazem o cansaço pesar visualmente duas vezes e
   roubar leitura do arco doente→são num quadro já sujo.**
 
+- **2026-08-02 · visual — a rua ganhou gente, e as folhas de ITENS, ÍCONES e DECORAÇÕES
+  saíram do board para dentro do jogo.** Quatro incrementos, cada um com `node test/smoke.js`
+  verde. **Nada de `CFG`, `S`, fórmula ou economia foi tocado — medido: `node test/sim.js`
+  dá saída byte a byte idêntica nos quatro commits** (`diff` vazio, quatro vezes).
+
+  **(1) NPCS — PESSOAS DA RUA.** O jogo tinha **uma** figurinha genérica de 5×11 em quatro
+  cores de camisa arbitrárias, na paleta pré-board, mais uma segunda feita de três retângulos
+  esperando na cozinha. Agora é o elenco do board: **cadeirante, mulher de avental, senhor de
+  chapéu, criança, avó, homem de boné e cachorro**. Construção igual à do herói e dos
+  monstros — contorno escuro em toda a volta, uma direção de luz só (sol em cima e à direita,
+  então a borda acesa é sempre a da direita) e cores só das famílias do board. **Medido em
+  células de sprite:** o vizinho antigo cabia em 7×11 = 77 células com 4 cores; os novos são
+  11×16 = 176 (adultos), 15×14 = 210 (a cadeira de rodas), 11×13 = 143 (a criança) e 13×8 =
+  104 (o cachorro), numa paleta de **22 cores**. Eles **tomam a hora** por `luzPersonagem`, mas
+  na dose do mundo (piso 0,06–0,12) e não na do herói (piso 0,34): ele é a leitura do quadro e
+  é segurado; um vizinho tem de descer junto com a rua. Resolvidos nos mesmos 24 degraus do
+  dia, então um quadro é um `drawImage` por pessoa.
+  **São cenário por construção, não por promessa:** função pura do índice do segmento e da
+  saúde do mundo, igual a uma árvore. Sem entidade, sem estado, sem hitbox, nada tocável,
+  nada que encoste na economia. Ficam **fora da pista**, não têm pips de vida e não usam os
+  tiques vermelhos que significam "esse aí é para bater" — um vizinho não pode ser confundido
+  com um problema. **Densidade medida** sobre 20.000 segmentos, com a rua sã: **3,9 pessoas,
+  1,7 decorações e 0,4 varais por tela** (a tela tem 160 px de mundo = 3,33 segmentos).
+  Aparecem a partir de `h > 0,55`, então rua doente continua rua vazia — e é essa a leitura
+  que os prints entregam: doente tem os bancos e as jardineiras, e não tem ninguém.
+
+  **(2) ITENS & RECURSOS e ÍCONES.** Os três drops eram um retângulo arredondado de 8×7 em
+  três tons, distinguidos só pela cor. Viraram três dos doze do board, escolhidos porque já
+  significam o que o jogo já diz na hora de recolher — **nenhum recurso novo foi inventado
+  para justificar um desenho**: fumaça limpa deixa **FLOR** (o float já lê CLEAR!), o tambor
+  deixa **ÁGUA** (CLEAN!) e o saco de dinheiro deixa **REFEIÇÃO** (SHARED!). Nos ícones,
+  UPGRADES era uma seta para cima — "o número sobe", a única coisa que a pessoa já vê — e
+  virou a **FERRAMENTA** do board, porque o primeiro upgrade do jogo é literalmente *better
+  tools for all*; e TOCHA virou **LANTERNA**, que é o objeto que o board desenha para "o que
+  você carrega e passa adiante". A panela da chamada virou **ARGILA**: era o último objeto
+  pré-board da camada de mundo, um caldeirão violeta com tampa lilás. **Os tiques vermelhos
+  embaixo do monstro ficaram como estavam** — aquilo é sinal de jogo, não decoração, e não
+  vou enfraquecê-lo por arrumação de paleta.
+
+  **(3) DECORAÇÕES.** Banco de ripas sobre ferro escuro, vaso de barro com copa assada,
+  jardineira de madeira com canteiro e uma flor, cadeira que alguém deixou na calçada, varal
+  com roupa, e o poste do board no lugar do mastro solar azul-ardósia. Compostas, não
+  ladrilhadas: **no máximo uma por segmento**, o *se* vem de um hash e o *onde dentro do
+  segmento* vem de outro — prop no mesmo x em todo segmento é cerca, não rua. O varal é a
+  exceção posicionada e não sorteada: pertence a uma casa, então sai de uma, e só sobe com
+  `h > 0,35` porque ninguém estende roupa no pior momento. A corda faz catenária e cada peça
+  balança um pixel na sua própria fase. A barraca da cozinha veio junto para a paleta do
+  board (toldo creme-e-terracota no lugar de creme-e-vermelho-alarme, balcão e mesa em
+  madeira, panela em barro, bancos de navy para madeira) e a roda dela foi espaçada: o
+  cadeirante e a mulher de avental estavam a três pixels um do outro, desenhados um dentro do
+  outro.
+
+  **(4) TILES & TERRENOS, no único encontro que dá para ver.** O plano do chão tem 30 px de
+  mundo e a tarja REAL DATA cobre quase tudo: **o que sobra visível são os 6 primeiros
+  pixels**, a faixa colada nos prédios. Então é ali que a folha de tiles ganha lugar — onde
+  há prédio (casa ou cozinha) aquela faixa é **piso de ladrilho**, e no resto o
+  paralelepípedo continua subindo até a parede. O ladrilho anda com o segmento, não com as
+  fiadas, porque é da casa e não da rua. As pedras com musgo entraram junto: eram a última
+  coisa azul-ardósia em pé no chão, uma cor que o board não tem.
+
+  **O que os prints pegaram, e eu refiz — duas vezes.** (a) O primeiro corte dos NPCs dava
+  **sete linhas de cabelo e crânio** num corpo de dezesseis e eles liam como bichinhos, não
+  como gente; a cabeça caiu para seis linhas e o tronco ficou com os pixels. A roda da cadeira
+  começou como um anel claro que lia como uma **tigela** onde ele estava sentado — hoje é
+  metal cinza com o lado direito aceso, carimbada **na frente do colo** (roda escondida atrás
+  de figura sentada é gente sentada no chão) e **atrás do peito**, que é onde uma roda de
+  verdade fica. (b) O print da NOITE mostrou um **banco brilhando marrom-quente numa rua
+  escura**: as decorações estavam todas em hexadecimal cravado, que não sabe que horas são.
+  Passaram todas pela hora, nos mesmos 24 degraus. A exceção é o vidro do poste e o brilho
+  dele — lâmpada é fonte de luz, e quanto mais escura a rua em volta, mais da luz do quadro
+  ela deve ter (mesma regra que o Cetro já segue).
+
+  **Medido no fim:** smoke verde nos quatro incrementos, **FPS 61 do começo ao fim**, e o
+  `drawScene` foi de **2,528 ms para 2,604 ms** por quadro de MANHÃ (+3,0%) e de **2,256 para
+  2,373 ms** à NOITE (+5,2%), medidos na mesma máquina e no mesmo procedimento (300 quadros
+  com o mundo rolando, depois de assar) — ~15% do orçamento de 16,7 ms.
+  **Próximo passo: as casas, as árvores e a barraca da cozinha continuam em hexadecimal
+  cravado e continuam acesas à meia-noite — hoje as decorações, as pedras, os NPCs e o herói
+  tomam a hora, e os prédios não, o que deixa a rua com dois regimes de luz no mesmo quadro.
+  Dúvida honesta: subi a densidade para 3,9 pessoas por tela e julguei por print, não por
+  medida de leitura; não sei dizer se num celular pequeno, com três monstros na fila e o
+  campo de partículas cheio, o herói continua sendo a primeira coisa que o olho acha.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
