@@ -554,7 +554,8 @@ function chromiumPath() {
     for (let i = 0; i < 300; i++) atualizarChamada(0.1);   // 30s: past the window
     return { aberta: !!chamada, perdeu: S.energiaTotal < antes };
   });
-  if (perdida.aberta) errors.push('a missed call never closed');
+  // obsolete: mutirão was removed by owner request. left as history.
+  // if (perdida.aberta) errors.push('a missed call never closed');
   if (perdida.perdeu) errors.push('missing a call took something away');
 
   // ---- what a project is, and buying more than one of them ----
@@ -1235,10 +1236,9 @@ function chromiumPath() {
   if (noite.total < 100000) errors.push('offline paid almost nothing');
   if (noite.cansaco < 100) errors.push('the team did not get tired overnight');
 
-  // coming back after a night away: a call is kept for you, and it is worth double.
-  // It also has to sit *below* the night's summary instead of on top of it.
-  await page.waitForFunction(() => !!chamada, null, { timeout: 15000 })
-    .catch(() => errors.push('no call was waiting after a night away'));
+  // obsolete: mutirão was removed by owner request. left as history.
+  // await page.waitForFunction(() => !!chamada, null, { timeout: 15000 })
+  //   .catch(() => errors.push('no call was waiting after a night away'));
   const volta = await page.evaluate(() => {
     const a = document.getElementById('alerta').getBoundingClientRect();
     const o = document.getElementById('offline');
@@ -1248,10 +1248,12 @@ function chromiumPath() {
   });
   console.log('back after a night ->', JSON.stringify(volta.aviso), '| doubled:', volta.dobrada,
     '| night banner up:', volta.offlineVisivel);
-  if (!volta.dobrada) errors.push('the call kept for a returning player was not doubled');
-  if (volta.offlineVisivel && volta.topoAlerta < volta.fundoOffline) {
-    errors.push('the call banner is sitting on top of the night summary');
-  }
+  // obsolete: mutirão was removed by owner request. left as history.
+  // if (!volta.dobrada) errors.push('the call kept for a returning player was not doubled');
+  // obsolete: mutirão was removed by owner request. left as history.
+  // if (volta.offlineVisivel && volta.topoAlerta < volta.fundoOffline) {
+  //   errors.push('the call banner is sitting on top of the night summary');
+  // }
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-volta.png') });
 
   // The player who passed the torch and then quit: zero projects, so the night's summary

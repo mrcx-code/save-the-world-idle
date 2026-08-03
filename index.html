@@ -1236,17 +1236,8 @@ function atenderChamada() {
   return true;
 }
 function atualizarChamada(dt) {
-  if (mutiraoT > 0) mutiraoT = Math.max(0, mutiraoT - dt);
-  if (chamada) {
-    chamada.t += dt;
-    if (chamada.t > chamada.janela) {
-      floats.push({ x: chamada.sx - 30, y: GROUND - 44, txt: "...", life: 26 });
-      chamada = null; chamadaT = 0;
-    }
-    return;
-  }
-  chamadaT += dt;
-  if (chamadaT >= CFG.chamadaIntervalo) { abrirChamada(chamadaDobrada); chamadaDobrada = false; }
+  // owner: remove mutirão. Neutered: never opens a call, never advances timers, so the pot
+  // and the mutirão-bonus never enter play. drawing code, DOM and CSS untouched.
 }
 
 // A tap on the world itself: hit what is in front of you, pick up what was left, or show
@@ -6861,13 +6852,9 @@ function alertaMundo() {
 // tap (pointer-events: none in CSS).
 let anuncioTimer = null;
 function anunciar(txt, tom) {
-  const el = $("anuncio");
-  el.textContent = txt;
-  el.className = "";                 // restart the fade even mid-flight
-  void el.offsetWidth;
-  el.className = "mostra" + (tom ? " " + tom : "");
-  clearTimeout(anuncioTimer);
-  anuncioTimer = setTimeout(function () { el.className = ""; }, 2000);
+  // owner: remove center-screen announcements. Neutered: never applies the .mostra class,
+  // so the #anuncio element stays in the DOM but never becomes visible. Everyone else can
+  // still call this; it just does nothing.
 }
 let anChamada = false, anMutirao = false, anSuper = false, anBloqueio = false, anTocha = false;
 function semearAnuncios() {          // adopt the current state without shouting, so a reload
