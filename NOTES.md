@@ -2468,6 +2468,131 @@ toda sessão começa lendo a última entrada.
   que é a pergunta que este repositório existe para responder. Quem abrir isto a seguir deve
   ler o parágrafo acima e ir para a lente **Medir**, não para o pincel.
 
+- **2026-08-03 · onda 20: o cenário virou uma coisa nomeada com sete parâmetros, e a PRAÇA
+  COMUNITÁRIA é a prova.** Três incrementos, cada um com `node test/smoke.js` verde. **FPS 61
+  do começo ao fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado — **medido:
+  `node test/sim.js` byte a byte idêntico nos três commits**.
+
+  **(0) A regressão primeiro, porque a rua não podia pagar um pixel pelo refactor.**
+  `test/igual.js` é novo: as mesmas doze células do `cruz.js` (três saúdes × quatro horas),
+  o quadro congelado como todas as bancadas já congelam, **e mais o relógio (`tick`), o campo
+  de partículas e os dados (`Math.random`) fixados** — sem isso o hash não repetia, porque a
+  camada de clima sorteia cinza e folha **dentro** do mesmo `drawScene()` que depois as
+  desenha. Saída: um SHA-1 por célula. Um pixel diferente em qualquer uma muda um hash.
+  **Medido: doze hashes idênticos antes e depois da extração**, idênticos de novo depois de
+  hoistar `serra()` e `faixaVerde()` para helpers compartilhados, e idênticos no fim da onda.
+
+  **(1) A extração.** `drawScene()` tinha uma rua chumbada dentro dele. Agora desenha o que
+  `CEN()` devolve, em sete ganchos — `fundo` (serras, faixa separadora, cidade, marcos),
+  `meio` (o que preenche o vão entre a moldura), `veg`, `chao`, `segmentos` (os props, um
+  desenho por segmento de 48px), `moldura` e `fios` — mais dois parâmetros de cor: `paleta`
+  (overrides sobre a `PALETA_BASE`, resolvidos por cenário em `paletaCen()`) e `chaoCor` (as
+  duas pontas da rampa da laje do chão). **Fica de fora de propósito, e é isso que faz o
+  segundo cenário custar algumas centenas de linhas em vez de um segundo jogo:** o céu e as
+  quatro horas, as nuvens e o cirro, o clima que carrega o ritmo, o campo de partículas, o
+  menino, os monstros e a HUD. Cenário é lugar, não renderizador. A chave de cache da paleta,
+  do céu e do chão passou a carregar o nome do cenário — **como texto e não empacotado num
+  número**, que é a armadilha que a correção do relógio na `main` acabou de pagar.
+
+  **(2) O merge da `main` (correção do strobe do fundo) entrou no meio da onda e as duas
+  correções dela vivem exatamente no código que eu estava movendo.** Conferido do jeito que
+  importa: **o `index.html` mesclado desenha as doze células pixel a pixel iguais às do
+  `index.html` da `main`** (mesma bancada `igual.js`, rodada nos dois). O `acendeu(semente)`
+  e o `topoCol()` por coluna estão dentro do gancho `meio` da rua. E o aviso da coordenação
+  virou regra escrita no cenário novo: **o envelope da praça é de tela e o tecido é de mundo,
+  e nada que ladrilha lê o próprio tamanho do envelope** — a fiada de casas e o anel de copas
+  tiram altura do hash do bloco, nunca de onde o bloco está na tela.
+
+  **(3) PRAÇA COMUNITÁRIA, lida do painel dela e não de memória.** `test/board.js` agora
+  recorta o painel do cenário que se está medindo (`CEN=praca`), e os painéis da tira não têm
+  largura igual — as frestas medem em x 16, 248, 466, 682, 876, 1064, 1285 e 1518.
+  **O painel PRAÇA: luma 76,1 a C\* 19,3** contra 90,1 / 19,5 da RUA, **perfil topo→chão
+  93 75 77 65 72** contra 141 101 83 60 66, **esq→dir 87 92 80 64 58** contra 63 86 115 125 61,
+  **céu por quinto 12,0 / 8,9 / 0,9 / 0 / 0** contra 35,3 / 14,4 / 1,6 / 0,1 / 0. Ou seja: a
+  praça é **mais escura em cima** (uma copa só por cima dela em vez de uma fresta de céu), a
+  croma dela **sobe** em direção ao chão (16,6 → 24,3 por quintos) e ela é iluminada pela
+  **esquerda** com a massa da árvore à direita. Foi isso que eu construí, nesta ordem:
+  chão de terra batida com lajes gastas (mesma rampa de sombra por fiada da rua, com a croma
+  reexpandida em torno da luma Rec.709 do resultado), a borda construída **plana** (uma praça
+  não tem ponto de fuga; a rua tem), **o anel de copas** que fecha o meio onde a rua fecha com
+  as fachadas que recuam, a fileira de barracas, a gente, **a árvore que a praça tem no meio**
+  — nua quando o mundo está doente, com fruta quando não está — e **uma copa por cima em vez
+  de duas colunas dos lados**.
+
+  **O placar, `test/board.js`, quadro inteiro, os dois cenários contra os dois painéis:**
+
+  |  | luma | C* | topo→chão | céu por quinto (exato) |
+  |---|---|---|---|---|
+  | BOARD RUA | 90,1 | 19,5 | 141 101 83 60 66 | 35,3 14,4 1,6 0,1 0,0 |
+  | JOGO RUA MANHÃ | 110,6 | **19,6** | 137 124 104 104 85 | 27,3 46,3 27,1 3,6 0,0 |
+  | BOARD PRAÇA | 76,1 | 19,3 | 93 75 77 65 72 | 12,0 8,9 0,9 0,0 0,0 |
+  | JOGO PRAÇA MANHÃ | 108,1 | **21,1** | **87** 122 124 116 91 | **3,0** 36,1 35,5 26,0 0,0 |
+
+  **O quinto de cima da praça sai em 87 contra os 93 do painel — a única tira desta série que
+  passou o board — e o céu nu dele em 3,0% contra 12,0%.** TARDE 116,1 / 27,8; NOITE 56,5 /
+  7,9. Céu aberto no visível: **praça 20,8% contra rua 22,7%**.
+
+  **O menino, medido nos dois lugares** (`test/medir.js`, pior caso, luma/croma/dE, fora da
+  moldura): **RUA MANHÃ 19 / 66 / 13 de 485** e **NOITE 44 / 1 / 1**; **PRAÇA MANHÃ 59 / 110 /
+  31 de 413** e **NOITE 95 / 8 / 16**. Ele lê **pior na praça, e a atribuição está feita**: um
+  mercado, uma multidão e um anel de copas são um quadro mais cheio que um corredor entre duas
+  fachadas, e os rivais que a bancada nomeia são as barracas em (100,158) e a barriga da copa
+  em (60..85, 128..143). O que **não** mudou é ele: a nota absoluta dele é **41,0 na praça
+  contra 41,8 na rua** na luma e **29,0 contra 28,9** no dE — o campo subiu, ele não caiu.
+  Razão C\* dele / do quadro **1,33 na praça** e 1,51 na rua; à NOITE ele é **8/413 em croma**,
+  o que é a mesma frase da rua com outro cenário embaixo.
+  **A bancada teve de aprender uma coisa para essa comparação existir:** a exclusão da moldura
+  era **de rua** (duas colunas laterais e dezesseis linhas no topo). A praça é emoldurada **por
+  cima**, então a mesma regra contava a moldura dela como prop disputando o olho. O cenário
+  agora **declara a própria extensão** (`molduraAte(x)`) e o `medir.js` lê isso; para a rua a
+  função devolve os mesmos 16 de sempre e **a rua não se move um dígito**.
+
+  **Segurado nos dois cenários:** poncho **123,3** à NOITE no dígito, miolo 195,6 e cristal
+  214,7 — o Cetro segue a coisa mais quente de um quadro noturno **também na praça**; um
+  regime de luz só (NOITE p99,5 **142,7** e 0,48% acima de luma 150, contra 140,3 e 0,21% da
+  rua); e o arco doente→são rodando em **saturação** com o doente **mais claro** (PRAÇA
+  DOENTE/MANHÃ **131,7** a C\* 10,7 contra SÃ **100,2** a C\* 21,8).
+
+  **Tentei e desfiz, os cinco medidos:**
+  **(a) Copa preenchendo cada coluna sólida.** O número fecha o quadro e **o print recusou**:
+  uma laje verde chapada em cima de dois postes. Um quinto das colunas passou a ser cortado em
+  duas com o contorno acompanhando o corte — é o buraco que faz folha ler como folha.
+  **(b) O anel de copas preenchido até uma linha fixa em `GROUND-30`.** Fechava a faixa e
+  saía uma **sebe com bainha reta**; a copa virou copa e o tronco desceu com ela.
+  **(c) Dois galhos horizontais no tronco grande**, que é como a árvore pequena da rua faz.
+  Naquela espessura de tronco o print leu **travessa de poste** — e a rua já tem postes.
+  **(d) A bainha da copa acesa de ponta a ponta.** Os três blocos mais fortes do quadro inteiro
+  caíam em cima dela, em y33-38: linha reta comprida contra céu aberto é justamente o mecanismo
+  que as ondas 16 e 18 pagaram duas vezes. Acesa só onde `quina > 0,30`, e a bainha passou a
+  ser **mordida por coluna** (um dente de hash) em vez de ondulada por senos.
+  **(e) Lâmpadas do varal a `#fde79d`.** L 226, ou seja **acima do miolo do Cetro (195,6) e do
+  cristal (214,7)** — o percentil 99,5 do quadro noturno foi a 183,6 contra os 140,3 da rua.
+  A L 168 continuam inconfundivelmente lâmpadas e ficam **debaixo** da varinha.
+
+  **O que a abstração ainda NÃO expressa, sem maquiagem.** (i) **A HUD não sabe onde você
+  está**: a barra de progresso diz `STREET n%` numa praça, e o texto é do jogo e não do
+  cenário. (ii) **O céu é um só**: `HORAS` e o `skyCanvas` são globais, então uma ORLA ou um
+  CERRADO — que no board têm céu próprio — só conseguiriam mudar a rampa por cima da paleta,
+  não a rampa em si. (iii) **`GROUND` e `HX` são do jogo, não do lugar**: qualquer cenário com
+  outra linha de horizonte encosta em colisão. (iv) **A camada do mundo é fixa**: monstros,
+  drops, a panela e os NPCs de rua saem do `desenharMundo()`, que nenhum cenário vê — o que é
+  a razão de a praça não ter custado nenhuma mecânica, mas também significa que um cenário não
+  pode dizer "aqui as pessoas ficam em outro lugar". (v) **Não há troca**: `setCenario()` é
+  gancho de depuração, não existe caminho de jogador, e isso é de propósito — como o jogador
+  encontra um cenário é desenho e é do dono.
+
+  **Medido no fim:** smoke verde nos três commits, **FPS 61**, `sim.js` idêntico, `igual.js`
+  com a rua pixel a pixel igual, `cruz.js` sem erro de console em três saúdes × quatro horas
+  nos **dois** cenários (vinte e quatro prints, olhados).
+  **Próximo passo: a maior distância medida que sobra na praça são os quintos 2 e 3 —
+  122 e 124 contra 75 e 77 do painel — e o `quinto.js` já diz que é a mesma história da rua:
+  36,1% e 35,5% daquelas tiras ainda são céu nu, e o PINTADO delas (95 e 113) está acima do
+  board (65 e 75). Fechar aquilo é pôr massa entre a barra da HUD e a cabeça do menino, que é
+  o mecanismo que esta série recusou cinco vezes — e desta vez a copa por cima foi a exceção,
+  porque comprou o quadro E o menino ao mesmo tempo. Dúvida honesta: não sei se isso se
+  repete uma segunda vez ou se a copa só pagou porque estava a 150 px acima dele.**
+
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
