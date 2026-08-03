@@ -1,0 +1,119 @@
+// The board, beside the game, as two numbers instead of two impressions.
+// Run: node test/board.js
+//
+// The band table in `medir.js` answers "how much event is in this strip". It cannot answer
+// "this frame is oppressive", because a frame that is closed and a frame that is dark score
+// the same way — mass is mass. The one comparison that CAN answer it is the whole-frame
+// average against the thing we are copying: the board's RUA DO BAIRRO panel is bright and
+// airy, the street recedes into light, and the foliage frames it without pressing on it.
+// So: mean luma and mean C* over the WHOLE picture, board panel against game frame, plus
+// the vertical luma profile, because "the middle opens into light" is a shape, not a mean.
+//
+// No new dependency: the board PNG is decoded by the same headless chromium that runs every
+// other harness here, drawn to a canvas, and read back with getImageData.
+const { chromium } = require('playwright');
+const path = require('path'), fs = require('fs');
+function chromiumPath() {
+  for (const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium']) if (p && fs.existsSync(p)) return p;
+  return undefined;
+}
+const BOARD = process.env.BOARD || path.resolve(
+  'C:/Users/User/AppData/Local/Temp/claude/C--Users-User-OneDrive-Documentos-game/9e48b8f1-799a-446d-ab30-84fa6af2e465/scratchpad/design/board.png');
+// the CENÁRIOS strip, first panel, in board pixels — cropped and saved so the crop itself
+// can be looked at rather than trusted
+const CROP = { x: 18, y: 724, w: 228, h: 106 };
+
+const ANALISE = function (d, w, h) {
+  const lin = function (u) { u /= 255; return u <= 0.04045 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4); };
+  const f = function (t) { return t > 0.008856 ? Math.cbrt(t) : (7.787 * t + 16 / 116); };
+  let sL = 0, sC = 0, n = 0;
+  const linhaL = new Float64Array(h), linhaN = new Float64Array(h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const rl = lin(r), gl = lin(g), bl = lin(b);
+    const X = (0.4124 * rl + 0.3576 * gl + 0.1805 * bl) / 0.95047;
+    const Y = 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+    const Z = (0.0193 * rl + 0.1192 * gl + 0.9505 * bl) / 1.08883;
+    const fx = f(X), fy = f(Y), fz = f(Z);
+    const A = 500 * (fx - fy), B2 = 200 * (fy - fz);
+    sL += L; sC += Math.sqrt(A * A + B2 * B2); n++;
+    linhaL[y] += L; linhaN[y]++;
+  }
+  // the vertical profile in five slices: top of frame down to the ground line
+  const perfil = [];
+  for (let k = 0; k < 5; k++) {
+    let s = 0, m = 0;
+    for (let y = Math.floor(h * k / 5); y < Math.floor(h * (k + 1) / 5); y++) { s += linhaL[y]; m += linhaN[y]; }
+    perfil.push(m ? s / m : 0);
+  }
+  // and the horizontal one, because "the middle opens" is a horizontal shape
+  const colunas = [];
+  for (let k = 0; k < 5; k++) {
+    let s = 0, m = 0;
+    for (let y = 0; y < h; y++) for (let x = Math.floor(w * k / 5); x < Math.floor(w * (k + 1) / 5); x++) {
+      const i = (y * w + x) * 4;
+      s += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]; m++;
+    }
+    colunas.push(m ? s / m : 0);
+  }
+  return { luma: sL / n, cstar: sC / n, perfil: perfil, colunas: colunas };
+};
+
+function linha(nome, a) {
+  console.log(nome.padEnd(22) + 'luma ' + a.luma.toFixed(1).padStart(6) + '  C* ' + a.cstar.toFixed(1).padStart(5) +
+    '  | topo->chao ' + a.perfil.map(v => v.toFixed(0).padStart(3)).join(' ') +
+    '  | esq->dir ' + a.colunas.map(v => v.toFixed(0).padStart(3)).join(' '));
+}
+
+(async () => {
+  const browser = await chromium.launch({ executablePath: chromiumPath() });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  // ---- the board panel ----
+  const b64 = fs.readFileSync(BOARD).toString('base64');
+  await page.goto('about:blank');
+  const alvo = await page.evaluate(async ({ b64, CROP }) => {
+    const img = new Image();
+    await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + b64; });
+    const c = document.createElement('canvas');
+    c.width = CROP.w; c.height = CROP.h;
+    const g = c.getContext('2d');
+    g.drawImage(img, CROP.x, CROP.y, CROP.w, CROP.h, 0, 0, CROP.w, CROP.h);
+    return { d: Array.from(g.getImageData(0, 0, CROP.w, CROP.h).data), w: CROP.w, h: CROP.h,
+      full: [img.width, img.height], png: c.toDataURL('image/png') };
+  }, { b64, CROP });
+  fs.writeFileSync(path.resolve(__dirname, '..', 'board-rua.png'),
+    Buffer.from(alvo.png.split(',')[1], 'base64'));
+  console.log('board ' + alvo.full[0] + 'x' + alvo.full[1] + ', recorte RUA DO BAIRRO ' +
+    CROP.w + 'x' + CROP.h + ' -> board-rua.png');
+  linha('BOARD RUA DO BAIRRO', ANALISE(Uint8ClampedArray.from(alvo.d), alvo.w, alvo.h));
+
+  // ---- the game, same treatment: only the picture, i.e. the world band down to the ground
+  // plane, and only below the HUD bar, because the bar is chrome and not the picture ----
+  const file = 'file://' + path.resolve(__dirname, '..', 'index.html');
+  await page.goto(file);
+  await page.waitForTimeout(700);
+  await page.evaluate(() => { S.introSeen = true; document.getElementById('lore').classList.add('escondido'); });
+  await page.evaluate(() => {
+    window.FIXO_X = 4000; window.FIXO_T = 100;
+    window.QUADRO = function () { drawScene(); desenharMundo(); desenhar(); };
+    window.requestAnimationFrame = function () { return 0; };
+  });
+  await page.evaluate('window.ANALISE = ' + ANALISE.toString());
+  const SAO = { geradores: 60, energia: 90000, energiaTotal: 90000, poluicao: 0, modo: 'limpo' };
+  for (const [nome, frac] of [['MANHA', 0], ['TARDE', 0.25], ['NOITE', 0.75]]) {
+    const r = await page.evaluate(({ st, frac }) => {
+      Object.assign(S, st); mobs.length = 0; drops.length = 0; parts.length = 0;
+      chamada = null; cartaoT = 0; S.capVisto = 9; relogio = frac * DIA_SEG;
+      worldX = FIXO_X; animT = FIXO_T; QUADRO();
+      const cv = document.querySelector('canvas'), g = cv.getContext('2d');
+      const topo = Math.round(document.getElementById('barraTopo').getBoundingClientRect().bottom / (window.innerWidth / W));
+      const y0 = topo, y1 = Math.min(cv.height, GROUND + 22);
+      return ANALISE(g.getImageData(0, y0, cv.width, y1 - y0).data, cv.width, y1 - y0);
+    }, { st: SAO, frac });
+    linha('JOGO ' + nome, r);
+  }
+  await browser.close();
+})();

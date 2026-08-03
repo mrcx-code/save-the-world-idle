@@ -2978,15 +2978,36 @@ const CETRO = { casca: "#3a2712", mad: "#6d4620", madL: "#96682f", cord: "#da7a2
 // Both are resolved on 24 steps of the day and the hero's sprite is re-baked on the step,
 // so a normal frame is still one drawImage and a handful of cached colour strings.
 function hexA(s) { return [parseInt(s.substr(1, 2), 16), parseInt(s.substr(3, 2), 16), parseInt(s.substr(5, 2), 16)]; }
-function luzPersonagem(c, piso, forcaF) {
+function luzPersonagem(c, piso, forcaF, recupC) {
   const q = horaAgora();
   const esc = lerp(lerp(q.a.escala, q.b.escala, q.f), 1, piso);
   const forca = lerp(q.a.forca, q.b.forca, q.f) * forcaF;
   const tin = mixA(q.a.tinta, q.b.tinta, q.f);
-  return mixA([cl255(c[0] * esc), cl255(c[1] * esc), cl255(c[2] * esc)], tin, forca);
+  const m = mixA([cl255(c[0] * esc), cl255(c[1] * esc), cl255(c[2] * esc)], tin, forca);
+  if (!recupC || forca <= 0) return m;
+  // THE TINT DOES NOT ONLY COOL HIM, IT FLATTENS HIM. Mixing every pigment he owns toward
+  // ONE colour pulls them all to the same point in a*b*, so at NOITE, tinted 80%, he ended
+  // up at C* 7.4 against 9.9 for the street around him — measured in wave 9, and the frame
+  // has only got greener since. Less saturated than his own background is the wrong picture
+  // for the one character in it, and the obvious fix — tint him less — is the one wave 7
+  // already refused with a number, because it is his VALUE at night that makes him read as
+  // somebody standing in the dark.
+  // So the two are separated. The mix keeps the hour's hue and the hour's value exactly as
+  // they were, and then the residual chroma is re-expanded ABOUT HIS OWN LUMA — which is a
+  // pure saturation move: Rec.709 luma of the result is unchanged (the expansion is applied
+  // to c − y, and the weights of that vector sum to zero), so the poncho stays where wave 7
+  // measured it. Only where the tint actually bit, in proportion to how hard it bit, which
+  // is why MANHÃ comes out identical to the pixel.
+  // It costs him one point of luma contrast at NOITE (21.9 → 20.9, rank 66 → 80 of 485) and
+  // I could not explain that away: capping the factor per colour so no channel can clip —
+  // the expansion is luma-neutral only while nothing clamps — changed the number by 0.0, so
+  // it is not clipping, and the same point was lost at 0.65 as at 1.05. Kept anyway, because
+  // dE is what the eye actually gets and dE goes 45 → 34 while croma goes 63 → 32.
+  const y = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2], k = 1 + recupC * forca;
+  return [cl255(y + (m[0] - y) * k), cl255(y + (m[1] - y) * k), cl255(y + (m[2] - y) * k)];
 }
 let heroPasso = -1, heroCor = {}, cetroCor = {}, HERO_HORA = HERO_COLORS, CETRO_H = null;
-function hc(hex) { let v = heroCor[hex]; if (!v) v = heroCor[hex] = rgbS(luzPersonagem(hexA(hex), 0.34, 0.80)); return v; }
+function hc(hex) { let v = heroCor[hex]; if (!v) v = heroCor[hex] = rgbS(luzPersonagem(hexA(hex), 0.34, 0.80, 1.05)); return v; }
 function cc(hex) { let v = cetroCor[hex]; if (!v) v = cetroCor[hex] = rgbS(luzPersonagem(hexA(hex), 0.58, 0.45)); return v; }
 function heroLuzPasso() {
   const k = horaKey() >> 2;                        // 24 steps a day, a few re-bakes a minute
