@@ -2311,6 +2311,163 @@ toda sessão começa lendo a última entrada.
   resta é do tamanho do ruído das próprias bancadas, e o único eixo que ainda anda sem custo
   é a croma do quadro, que quatro ondas mostraram poder subir junto com o valor.**
 
+- **2026-08-03 · onda 19: a croma chegou ao número do board, e esta é a última onda da série.**
+  Três incrementos que ficaram e três experimentos desfeitos, cada um com `node test/smoke.js`
+  verde. **FPS 61 do começo ao fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado —
+  **medido: `node test/sim.js` byte a byte idêntico nos três commits**.
+
+  **O placar, `test/board.js`, quadro inteiro, contra o painel RUA DO BAIRRO:**
+
+  |  | luma | C* | topo→chão | C* por quinto |
+  |---|---|---|---|---|
+  | BOARD | 90,1 | **19,5** | 141 101 83 60 66 | 18,7 19,0 20,4 17,7 21,6 |
+  | JOGO MANHÃ antes | 111,2 | 18,3 | 136 125 105 105 85 | 15,5 17,4 16,1 21,0 21,5 |
+  | JOGO MANHÃ depois | 111,3 | **19,5** | 136 125 105 106 85 | **17,5 18,7 17,0 22,1 22,3** |
+  | JOGO TARDE depois | 116,5 | 25,5 | 132 129 117 113 91 | 19,9 20,9 26,6 30,6 29,4 |
+  | JOGO NOITE depois | 56,0 | 8,5 | 59 61 58 56 45 | 9,8 10,5 8,3 7,8 6,3 |
+
+  **A croma do quadro à MANHÃ está no número do board no dígito, e o perfil não se moveu
+  (um ponto no quinto 4).** Os quintos 1, 2 e 3 subiram 2,0 / 1,3 / 0,9 e a NOITE ficou
+  parada em tudo, que era a condição.
+
+  **(1) Uma moldura baixada em valor e depois levantada pela luz do dia volta mais CINZA do
+  que entrou.** O quinto de cima media **C\* 15,5 contra 18,7** e era a maior distância de
+  croma que sobrava; o `quinto.js` atribui **40% desse quinto a sete entradas e as sete são
+  proscênio** — `muroM/muroC/muroK/muroL` e `colunaC/colunaL/colunaB`. A onda 14 tomou a
+  massa delas em VALOR de propósito, e é por isso que elas têm de continuar escuras; mas
+  `luzDoDia()` soma ~+26 de luma chapados por cima, e somar o mesmo valor a três canais que
+  já não estão longe um do outro é dessaturar. A croma residual é **reexpandida em torno da
+  luma Rec.709 da própria entrada** — o movimento das ondas 12, 13, 15 e 16, valor move zero
+  porque a expansão age sobre `c − y` e os pesos desse vetor somam zero. **Medido: C\* do
+  quadro 18,3 → 19,5, por quinto 15,5 17,4 16,1 21,0 21,5 → 17,5 18,7 17,0 21,9 22,2, perfil
+  136 125 105 105 85 → 136 125 105 106 85.**
+  **E é ganho SÓ DE DIA, e isso é medido e não suposto** — a onda 15 rodou um ganho de croma
+  liso no relógio e inverteu o que a onda 12 comprou. `escuridao()` é exatamente 0 à MANHÃ,
+  então o dia sai inteiro e a NOITE fica no dígito: **8,5 e 59 61 58 56 45, iguais.**
+
+  **(2) O ganho foi cobrado no menino na hora, e a resposta é a mesma de sempre: ele não
+  dessatura com o mundo.** Com a moldura de volta à sua croma, a razão C\* dele / do quadro
+  caiu **1,52 → 1,43 com os rivais de topo parados** — assinatura do CAMPO a subir, não dele
+  a cair, exatamente a leitura das ondas 13 e 15 quando levantaram o piso dele para 1,32 e
+  1,50. Piso **1,50 → 1,70**, neutro em luma como antes. **Medido, MANHÃ: C\* dele 29,1 →
+  30,7 contra 20,5 do quadro, razão 1,43 → 1,50; croma 110 → 70 de 485 (a onda abriu em
+  103), dE 15 → 13, luma 19 parada. NOITE: 40 / 4 / 1 contra 40 / 8 / 3, razão 1,11 → 1,19.**
+  **Acima disso ele CEIFA:** a 1,78 a C\* mede 31,3 onde a razão pura pede 32,7, e ceifar é o
+  que quebra a neutralidade de luma em que o movimento inteiro se apoia — o poncho lê
+  **123,3** em vez de 123,4 e a luma dele à NOITE vai de 40 para 43. **O décimo do poncho fica
+  registado: é o único número da lista de segurar que se moveu, e moveu-se por um dígito.**
+
+  **Tentei e desfiz, os três medidos, e os três estão escritos no arquivo ao lado do botão
+  que mexem:**
+  **(a) O mesmo ganho a 1,25 nas seis frentes de meia-distância**, apontado ao quinto 3, que
+  é a maior distância de croma que sobra (17,0 contra 20,4). **Caiu no quinto ERRADO: o 3 foi
+  17,0 → 17,9 e o 4 foi 21,9 → 23,6**, e o 4 já estava 4,2 acima de um board que lê 17,7 ali,
+  porque o quarto quinto do board é chão de cânion em sombra. O quadro passou para C\* 20,0 e
+  **o menino pagou nos três eixos ao mesmo tempo (MANHÃ 19/70/13 → 21/81/14 de 485)**.
+  Estreitado às duas entradas de parede, a forma é idêntica: 17,6 / 23,2 / 19,9 / 20-75-13.
+  **(b) O mesmo ganho da moldura a 1,42 em vez de 1,30.** Compra o quinto de cima —
+  **17,5 → 18,3 contra 18,7 do board**, e o segundo 18,7 → 19,2 — mas leva o quadro inteiro a
+  **C\* 20,0, ou seja PASSA os 19,5 que perseguia**, e leva um posto de dE (13 → 14).
+  **(c) A conclusão aritmética que fecha o quinto 3, e é a razão de não haver onda 20 de
+  tinta ali:** aquele quinto é **32,1% de céu nu a C\* 17,7**, e o nosso céu já está **acima
+  do céu do board (16,9 na nossa proporção)** — para o quinto chegar a 20,4 a TINTA dele teria
+  de chegar a **21,7**, e as duas tentativas acima mostram o que isso custa. **É a mesma
+  resposta que a onda 17 deu para o VALOR do mesmo quinto: enquadramento, não pincel.**
+
+  **INSTANTÂNEO FINAL — todas as bancadas rodadas em sequência no commit que fecha a série:**
+  - **perfil topo→chão, MANHÃ:** `136 125 105 106 85` contra `141 101 83 60 66` do board.
+    TARDE `132 129 117 113 91`; NOITE `59 61 58 56 45`. Esq→dir MANHÃ `86 110 136 137 87`
+    contra `63 86 115 125 61`.
+  - **PINTADO (perfil menos o piso de céu), MANHÃ:** `100 83 87 103 85` contra `128 89 82 60
+    66`. Só os quintos 1 e 4 têm tinta devendo, e o 4 tem a cabeça do menino.
+  - **croma:** quadro MANHÃ **C\* 19,5 — o número do board, no dígito**. Por quinto
+    **17,5 18,7 17,0 22,1 22,3** contra 18,7 19,0 20,4 17,7 21,6. TARDE 25,5. NOITE 8,5.
+  - **céu por quinto (exato, `quinto.js`), MANHÃ:** 27,3 / 49,6 / 32,1 / 5,3 / 0,0% contra
+    35,3 / 14,4 / 1,6 / 0,1 / 0,0 do board. Pisos aritméticos 48,1 / 73,4 / 44,8 / 7,2 / 0,0.
+  - **céu aberto:** quadro inteiro **24,1%**, **visível 24,7%** (alvo verdadeiro 23,6%, lido
+    no recorte 0,85:1). `CEU alto` 38,0%, `CEU baixo` 31,8%.
+  - **céu (`ceu.js`), MANHÃ:** céu 30,9% do quadro, nuvem **28,1% do céu** contra 22,6% do
+    board na nossa proporção, separação de valor **52** contra 47, **C\* do céu 17,7 contra
+    16,9** — a única medida em que passamos o board, e é ela que agora limita o quinto 3.
+  - **menino de 485, fora da moldura:** MANHÃ **19 / 70 / 13** (luma/croma/dE), razões contra
+    o rival 0,53 / 0,71 / 0,82, C\* dele / do quadro **1,50**. NOITE **40 / 4 / 1**, razões
+    0,77 / 0,96 / **1,02**, razão de croma **1,19**. **À NOITE ele é o bloco de dE mais forte
+    do quadro inteiro, o que nunca aconteceu nesta série; à MANHÃ a croma dele está 33 postos
+    à frente de onde a onda 18 a deixou.**
+  - **fonte à NOITE:** poncho **123,3**, miolo **195,6**, cristal **214,7**, conjurando 250,5
+    — o Cetro segue a coisa mais quente de um quadro noturno.
+  - **arco doente→são:** DOENTE/MANHÃ luma **134,6** a C\* 9,9 contra SÃ **110,1** a C\*
+    **20,2** — o doente segue **mais CLARO** e quase sem croma, o são mais escuro e saturado.
+    À NOITE 78,0 / C\* 5,7 contra 55,3 / 9,1. **O arco ABRIU nesta onda: a distância de croma
+    doente→são à MANHÃ foi de 9,3 para 10,3** (doente 9,6 → 9,9, são 18,9 → 20,2), porque um
+    ganho sobre croma quase nula continua quase nulo — que era a promessa desta técnica desde
+    a onda 15, e agora está medida nos dois extremos em vez de assumida.
+  - **um regime de luz só:** NOITE média 55,6, p99,5 140,3, **0,22% acima de luma 150** —
+    lâmpada, janela acesa e Cetro, e mais nada.
+  - **smoke verde nos três commits, FPS 61, `sim.js` byte-idêntico**; `cruz.js` sem erro de
+    console em três saúdes × quatro horas, com os doze prints olhados: a rua doente segue
+    ocre lavada e mais clara, e a moldura mais saturada NÃO aparece na rua doente, que é
+    exatamente o que a técnica prometia.
+
+  ### ONDE ESTE BUILD REALMENTE ESTÁ CONTRA O BOARD
+
+  **Chegou, e está medido:** a **croma do quadro** (19,5 contra 19,5), o **céu** em todos os
+  eixos que o board dá para medir (fração de nuvem, separação de valor, croma do céu e da
+  nuvem, tamanho das peças), o **céu aberto** a 1,1 ponto do alvo verdadeiro (24,7% contra
+  23,6%), o **quinto 5** em valor e em croma (85/22,3 contra 66/21,6 — a única tira do fundo
+  do quadro que é inteiramente pagável com tinta, e foi paga), a **tinta dos quintos 2 e 3**
+  (PINTADO 83 e 87 contra 89 e 82), o **arco doente→são a rodar em saturação e não em brilho**
+  com o doente mais claro, o **regime de luz único à NOITE**, e o **menino a ler primeiro em
+  dE à NOITE**. Sete ondas atrás nenhuma destas frases tinha número.
+
+  **Não chegou:** o **perfil vertical**, que é a espinha do board. Ele corre 141 101 83 60 66,
+  uma queda contínua do céu ao chão; nós corremos 136 125 105 106 85, que é uma queda muito
+  mais rasa com um patamar no meio. Os quintos 2, 3 e 4 estão 24, 22 e 46 pontos acima. E
+  **não chegou o par esquerda→direita**: 86 110 136 137 87 contra 63 86 115 125 61, ou seja
+  as bordas do board continuam a ser dois terços das nossas.
+
+  **E isto é o que é estruturalmente inalcançável, com a atribuição feita e não com uma
+  desculpa.** Aqueles 24, 22 e 46 pontos **não são tinta** — a onda 17 provou-o e a onda 19
+  repetiu-o pelo eixo da croma: a nossa tinta nesses quintos já está igual ou mais escura que
+  a do board. **A diferença inteira é FRAÇÃO DE CÉU.** O board tem 14,4% / 1,6% / 0,1% de céu
+  nesses três quintos; nós temos 49,6% / 32,1% / 5,3%. O board é uma rua fotografada num
+  prato **2,15:1 deitado, entre duas fachadas que saem do topo do quadro**; nós compomos um
+  **0,85:1 em pé** por cima de uma rua que rola de lado. **Uma tela alta sobre um cenário que
+  rola mostra mais céu — necessariamente, por geometria, não por escolha de paleta.** Os
+  quatro caminhos conhecidos para fechar esse céu foram todos tentados e todos medidos:
+  largura das colunas (onda 14), segundo degrau da serra (onda 16), fachadas mais escuras e
+  ponto de fuga deslocado (onda 18), frentes mais saturadas (esta). **Os cinco falham pelo
+  mesmo mecanismo, agora nomeado cinco vezes: qualquer massa nova entre a barra do HUD e a
+  cabeça do menino compra perfil e vende o menino.** Ele é o único personagem do jogo; o
+  perfil é uma média. A troca não vale, e recusá-la é a decisão, não a falha.
+
+  **O que é inalcançável num renderizador de `fillRect` a 60 FPS num arquivo só,** e é
+  honesto dizê-lo em vez de o deixar em aberto: o board é arte gerada com gradiente contínuo,
+  oclusão ambiente, luz difusa e textura por pixel. Nós temos retângulos de cor chapada,
+  algumas assadas em canvas offscreen, sem pós-processamento por decisão de direção. Isso põe
+  um teto em três coisas: **(a) transição de valor** — cada plano nosso é um degrau, o board
+  tem rampa, e é por isso que o nosso perfil tem patamar onde o dele tem queda; **(b) textura
+  de superfície** — o calçamento do board tem grão por pedra, o nosso tem quatro faces e um
+  fio de luz, e a quinta face custa uma chamada de desenho por pedra por quadro; **(c)
+  densidade de objeto** — o board põe dezenas de coisas pequenas na rua e nós temos um
+  orçamento de quadro, medido, de 61 FPS num telemóvel. Nenhuma das três se resolve com mais
+  ondas de tinta. Resolvem-se com um renderizador diferente, e um renderizador diferente é
+  outro projeto.
+
+  **Um aviso para quem voltar a isto:** as bancadas medem o que medem. O `medir.js` pontua um
+  bloco pelo espalhamento interno, e um bloco com um telhado, um vão e um peitoril dentro dele
+  pontua alto sem estar visualmente errado; o `board.js` compara um painel 2,15:1 com um
+  quadro 0,85:1 e a onda 15 já apanhou um alvo lido no recorte errado por quatro ondas
+  seguidas; o `ceu.js` chama "nuvem" a mediana+22 e o limiar anda quando a população anda.
+  **Três vezes nesta série o print recusou um número que estava bom, e as três vezes o print
+  tinha razão.** A regra desde a onda 11 mantém-se e é a última linha desta série: **quando o
+  número e o print discordarem, olhe para o print.**
+
+  **Próximo passo: nenhum, nesta frente.** O visual chegou ao patamar que uma bancada pode
+  defender e a fila da seção 6 do `CLAUDE.md` tem trabalho que move a pergunta das três dias,
+  que é a pergunta que este repositório existe para responder. Quem abrir isto a seguir deve
+  ler o parágrafo acima e ir para a lente **Medir**, não para o pincel.
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the

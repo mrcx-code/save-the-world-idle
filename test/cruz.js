@@ -1,4 +1,17 @@
-// cross-check: health level x hour, with monsters on screen so the readout is in frame
+// THE GRID THAT CATCHES WHAT A SINGLE FRAME HIDES: health level x hour, twelve prints.
+// Run: node test/cruz.js   ->   cruz-<sick|mid|healed>-<manha|tarde|poschuva|noite>.png
+//
+// Every other harness here measures ONE frame — `medir.js` and `board.js` both stand at
+// MANHÃ and NOITE on a healed street. Two things in the direction only break in the cells
+// between: the sick->healed arc runs on SATURATION and not on brightness (so a sick street
+// must come out BLEACHED AND LIGHTER than a healed one, never darker), and a correction
+// authored for daylight gets charged after dark unless somebody looks. Wave 15 caught a
+// chroma gain inverting the hero at night this way; wave 17 caught the near ridge paying a
+// daylight pull at NOITE. It also fails on any console error in any of the twelve.
+// Monsters are queued on screen so the readout is measured in the frame that ships.
+//
+// It prints nothing but errors on purpose. The output is the twelve PNGs, and this project's
+// rule since wave 11 is that the print outranks the number when the two disagree.
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
 const RAIZ = path.resolve(__dirname, '..');
