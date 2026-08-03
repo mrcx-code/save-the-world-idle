@@ -3995,8 +3995,8 @@ CENARIOS.rua = {
   // Now it is a real skyline: a height per column from three sines at different periods,
   // continuous across the whole world so it never tiles, with the sun catching the flanks
   // that face right. Runs of equal height are merged, so a layer is ~40 rects, not 195.
-  serra(0.09, Math.round(H * 0.045), Math.round(H * 0.085), 0, P.serraFar, P.serraFarL);
-  serra(0.20, Math.round(H * 0.055), Math.round(H * 0.115), 320, P.serraNear, P.serraNearL);
+  serra(0, Math.round(H * 0.045), Math.round(H * 0.085), 0, P.serraFar, P.serraFarL);
+  serra(0, Math.round(H * 0.055), Math.round(H * 0.115), 320, P.serraNear, P.serraNearL);
   // THE SEPARATOR BAND. The one cheap trick that carries the whole value architecture:
   // light sky, mid background, a bright strip exactly on the horizon line, dark ground.
   // Everything in front of it now reads as a silhouette against light, and the character
@@ -4017,7 +4017,7 @@ CENARIOS.rua = {
     // and the town being rebuilt was on screen even less often than the matriz — 420 px of
     // spacing for 68 px of towers, i.e. one frame in six. The windows coming on as the world
     // heals is one of the few things in the picture that answers the economy directly.
-    const spacing = 250, speed = 0.16;
+    const spacing = 250, speed = 0;   // static backdrop: the far layer drifted sub-pixel and juddered
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed) + 40;
@@ -4089,7 +4089,7 @@ CENARIOS.rua = {
     // at sx −70 with 71 px of width, i.e. one column of it on the screen, and that frame
     // measured 0.18% marco and 28.5% sky — the emptiest of the ten. 210 is shorter than the
     // frame minus a landmark's width, so there is always one up.
-    const spacing = 210, speed = 0.15, base = GROUND - 29, E = 1.55;
+    const spacing = 210, speed = 0, base = GROUND - 29, E = 1.55;   // landmarks static
     const corpo = P.marcoC, claro = P.marcoL, escuro = P.marcoE;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
@@ -4220,7 +4220,7 @@ CENARIOS.rua = {
     // asking you to save. Every house is a third bigger, the slope is half again as tall, the
     // stretches that have one go from 38% to 78%, and they repeat every 230 screen pixels
     // instead of every 340.
-    const speed = 0.21, spacing = 230, base = GROUND - 27, CEL = 16, AND = 14;
+    const speed = 0, spacing = 230, base = GROUND - 27, CEL = 16, AND = 14;   // morro static
     const paredes = P.parede, luzP = P.paredeL, telha = P.telha, telhaL = P.telhaL;
     const traco = P.traco, caixa = P.caixa, morro = P.morro;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
@@ -6356,7 +6356,7 @@ function drawScene() {
   // because they are the furthest thing there is. They cannot crowd anything: they live
   // between y8 and y=0.34*GROUND, which is 100 px above the hero's head.
   {
-    const passo = 30, vel = 0.05, teto = GROUND * 0.44;
+    const passo = 30, vel = 0, teto = GROUND * 0.44;   // cirrus static
     const k0 = Math.floor(worldX * vel / passo) - 1;
     for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
       const s1 = hash01(k * 11 + 3);
@@ -6391,9 +6391,9 @@ function drawScene() {
   // the big cluster — on a tighter spacing, so the same painted area arrives as eight or ten
   // pieces instead of four. No new object and no new draw call: same loop, same lobes.
   const passoN = 12;
-  const ck0 = Math.floor(worldX * 0.12 / passoN) - 1;
+  const ck0 = Math.floor(0 / passoN) - 1;
   for (let k = ck0; k < ck0 + Math.ceil(W / passoN) + 2; k++) {
-    const sx = Math.round(k * passoN - worldX * 0.12) + Math.round((hash01(k * 37 + 2) - 0.5) * 11);
+    const sx = Math.round(k * passoN - 0) + Math.round((hash01(k * 37 + 2) - 0.5) * 11);
     const prof = hash01(k * 3 + 1);                       // 0 = high overhead, 1 = near the horizon
     const cy = Math.round(H * 0.09 + prof * GROUND * 0.58);
     const cls = hash01(k * 53 + 8);
