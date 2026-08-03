@@ -215,19 +215,29 @@
   #controls { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
     bottom: calc(8px + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px); }
 
-  /* the progress panel — "RUA: 42%" on the board, the street's health here */
-  #painelRua { background: linear-gradient(180deg, #2b3320, #1e2312);
-    border: 2px solid var(--contorno); border-radius: var(--raio); padding: 6px 10px 7px;
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.09); margin-bottom: 6px; }
-  #painelRua .pr1 { display: flex; align-items: center; gap: 8px; }
-  #painelRua .prT { font-size: var(--fs-sm); font-weight: 800; letter-spacing: .08em; color: var(--creme); }
-  #painelRua .prV { font-size: var(--fs-sm); font-weight: 800; color: var(--gold);
-    font-variant-numeric: tabular-nums; }
-  .prBar { flex: 1 1 auto; height: 9px; background: var(--barra); border-radius: 5px; overflow: hidden; }
-  .prBar > div { height: 100%; width: 0%; border-radius: 5px; transition: width .3s;
-    background: linear-gradient(180deg, #f6cf7e, var(--barraOn)); }
-  #ruaSub { font-size: var(--fs-xs); color: var(--sub); line-height: 1.5; margin-top: 4px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* the street's health — a slim VERTICAL bar pinned to the right edge, out of the thumb's
+     way. It reads worldHealth() exactly as the old horizontal panel did (fills bottom-to-top
+     as total impact climbs toward the torch target). It stops above the REAL DATA ticker and
+     the control block, and it sits BELOW the sheets (z 20) so an open panel simply covers it
+     rather than fighting it. */
+  #barraRua { position: fixed; z-index: 8; right: 7px;
+    top: calc(60px + env(safe-area-inset-top));
+    bottom: calc(var(--hControles, 120px) + env(safe-area-inset-bottom) + 60px);
+    width: 34px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    pointer-events: none; }
+  #barraRua .rvNum { font-size: var(--fs-xs); font-weight: 800; color: var(--gold);
+    font-variant-numeric: tabular-nums; background: rgba(16,18,10,.72); border-radius: 7px;
+    padding: 2px 5px; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  #barraRua .rvTrack { flex: 1 1 auto; width: 12px; border-radius: 999px;
+    background: rgba(16,18,10,.6); box-shadow: inset 0 0 0 1px rgba(0,0,0,.45),
+      inset 0 1px 3px rgba(0,0,0,.5); overflow: hidden; position: relative; }
+  #barRua { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; border-radius: 999px;
+    transition: height .3s; background: linear-gradient(0deg, var(--gold2), #f6cf7e);
+    box-shadow: 0 0 8px rgba(235,167,72,.45); }
+  #barraRua .rvCap { writing-mode: vertical-rl; text-orientation: mixed; font-size: 8px;
+    font-weight: 700; letter-spacing: .22em; color: var(--creme); opacity: .82;
+    background: rgba(16,18,10,.6); border-radius: 6px; padding: 5px 2px;
+    text-shadow: 0 1px 2px rgba(0,0,0,.6); }
 
   /* the four cards — icon over name over value, exactly the board's card */
   #cartoes { display: flex; gap: 6px; margin-bottom: 6px; }
@@ -477,12 +487,15 @@
      is the one decision this prototype exists to measure), the TORCH is a small keepsake
      button beside it, the two things you BUILD with are a stacked pair at the side, and
      the main action takes the whole rest of the block under your thumb. -->
+<!-- The street's health as a slim vertical bar on the right edge, out of the thumb's way.
+     Same ids the draw code writes (ruaPct, barRua); it just grows in height now, not width. -->
+<div id="barraRua" aria-hidden="true">
+  <div class="rvNum" id="ruaPct">0%</div>
+  <div class="rvTrack"><div id="barRua"></div></div>
+  <div class="rvCap">STREET</div>
+</div>
+
 <div id="controls">
-  <div id="painelRua">
-    <div class="pr1"><span class="prT">STREET</span><span class="prV" id="ruaPct">0%</span>
-      <div class="prBar"><div id="barRua"></div></div></div>
-    <div id="ruaSub"></div>
-  </div>
   <div id="cartoes">
     <button id="modeQuick" class="cartao"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas>
       <span class="cn" id="modeNome">FAST</span><span class="cv" id="modeSub"></span></button>
@@ -6902,11 +6915,7 @@ function desenhar() {
   // ---- the board's progress panel: a percentage, a bar, and a line under it ----
   const pctRua = Math.round(worldHealth() * 100);
   $("ruaPct").textContent = pctRua + "%";
-  $("barRua").style.width = pctRua + "%";
-  $("ruaSub").textContent = pctRua >= 95 ? "the street looks after itself now"
-    : pctRua >= 60 ? "green is coming back — keep going"
-      : pctRua >= 25 ? "it is turning · every small action changes the street"
-        : "nobody is saved alone · start something";
+  $("barRua").style.height = pctRua + "%";
   // ...and the two cards that carry a number of their own
   const naoTem = [1, 2, 3, 4, 5, 6, 7].filter(function (n) { return !S["u" + n]; });
   const podeComprar = naoTem.filter(function (n) { return S.energia >= CFG["custoU" + n]; }).length;
