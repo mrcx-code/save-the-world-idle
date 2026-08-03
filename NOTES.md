@@ -1453,6 +1453,76 @@ toda sessão começa lendo a última entrada.
   só empilha mais silhueta numa faixa que já tem serra, cidade e marco disputando os mesmos
   40 px.**
 
+- **2026-08-03 · visual — a pergunta em aberto respondida com número (e a resposta era
+  "não"), e o céu ganhou o que faltava nele.** Três incrementos, cada um com
+  `node test/smoke.js` verde. **FPS 61 do começo ao fim.** Nada de `CFG`, `S`, fórmula ou
+  economia foi tocado — **medido: `node test/sim.js` dá saída byte a byte idêntica**
+  (`diff` vazio, três vezes).
+
+  **(0) A bancada aprendeu a dizer ONDE dentro de uma faixa está o buraco.** `CEU baixo`
+  tem 55 px de altura e a dúvida sobre ela era se uma segunda fiada de telhados a
+  preenchia. Média de faixa não responde isso: uma camada que só encosta na borda de baixo
+  sobe a média e deixa o buraco intacto. `medir.js` agora parte `CEU baixo` em três.
+  **Linha de base, MANHÃ: y86-107 dE 7,8 | y107-129 dE 3,6 | y129-150 dE 15,0.** NOITE:
+  2,9 | 2,1 | 9,2. **O buraco é o terço do MEIO**, e o terço de baixo já era a coisa mais
+  densa do quadro depois do horizonte.
+
+  **(1) A dúvida da onda passada: a segunda fiada de telhados a 0,45×. Construída, medida
+  e jogada fora.** Um renque de fachadas de 2–3 andares com telha, janelas que acendem com
+  a saúde e caixa d'água, na paleta do morro, entre a mata longe e a mata do meio.
+  **Medido:** ela pôs **100% da massa no terço de BAIXO** — 15,0 → **19,0** à MANHÃ e
+  9,2 → 11,3 à NOITE, ou seja, empilhou silhueta exatamente onde já estão as duas serras,
+  a cidade e o marco — e **0,0 no terço do meio**, que ficou em 3,6 **no dígito**. E cobrou
+  do menino: fora da moldura, dE **38 → 53 de 485** à MANHÃ e **54 → 62** à NOITE; luma à
+  NOITE 76 → 81. **Desfeita.** A intuição registrada na onda 9 estava certa e agora tem
+  número: um side-scroller não tem ponto de fuga, então "recuar para o ponto de fuga" vira
+  "descer na tela", e descer na tela é entrar na faixa cheia.
+
+  **(2) O que o board de fato põe naquele vão são os FIOS.** Abri o painel RUA DO BAIRRO
+  ampliado ao lado do quadro do jogo: os postes são a coisa mais alta da imagem por larga
+  margem e os fios atravessam o céu aberto, não a linha do telhado. O jogo já tinha postes,
+  mas paravam em **46–55 px**, o que punha toda travessa e todo vão de fio entre **y136 e
+  y152** — dentro da faixa mais cheia do quadro e na altura da cabeça do menino. Agora
+  **74–86**: travessa em y105–117, barriga do fio passando por y123–134.
+  **Medido, o terço vazio y107-129: MANHÃ 3,6 → 13,5; NOITE 2,1 → 6,9.** `CEU baixo`
+  inteira: **6,9 → 11,0** e **3,6 → 5,7**. E o terço de baixo, o cheio, **desce**:
+  15,0 → 14,2 e 9,2 → 8,9 — os fios saíram de lá. **O menino lê MELHOR, não pior:** fora
+  da moldura, MANHÃ luma **49 → 40** e dE **38 → 36**; NOITE luma **76 → 67** e dE
+  **54 → 49** de 485. **Nenhum objeto novo entrou no quadro** — é o mesmo poste e o mesmo
+  fio, mais altos. A lâmpada ficou onde sempre esteve (`base-42`), num braço a meio do
+  mastro: lâmpada a 80 px do chão é holofote de pátio, não luminária de rua, e assim o
+  derrame e a poça sobre a pedra não se mexeram.
+
+  **(3) A maior distância que sobrou, e o motivo dela é contável.** Com `CEU baixo`
+  resolvida, a faixa mais vazia passou a ser `CEU alto`: **38% do quadro a dE 10,0 / 3,1**.
+  O motivo não é estético: os cúmulos ficam **um a cada 34 px de TELA**, então um quadro de
+  130 px comporta **quatro**, e os quatro caem num só banco baixo. Tudo acima disso era
+  degradê pelado. Os quatro painéis de LUZ & ATMOSFERA do board têm céu inteiro: cirros em
+  bandas por cima dos cúmulos. Entrou um **segundo estrato**: riscos de 2–3 px, borda de
+  cima acesa (o sol está acima deles), barriga sombreada, mais finos e mais apagados quanto
+  mais baixo pendem, no **parallax mais lento do quadro (0,05, metade do cúmulo)** porque
+  são a coisa mais distante que existe. Vivem entre y8 e 0,44·GROUND — **100 px acima da
+  cabeça do menino**, então não disputam nada. **Medido: `CEU alto` 10,0 → 10,6 à MANHÃ e
+  3,1 → 3,4 à NOITE.** É um movimento pequeno e está relatado como pequeno: a faixa tem
+  83 px de altura e cirro fino sobre quase tudo não move média por bloco. **O menino não se
+  move**: 40/485 na luma e 35/485 no dE à MANHÃ, 67 e 49 à NOITE.
+
+  **Tentei e desfiz, medido:** os mesmos riscos com **+45% de alfa**. Comprou 0,3 de dE
+  (10,6 → 10,9) e o print mostrou o preço — naquela força deixam de ser cirro e viram
+  **barras brancas duras** deitadas no céu.
+
+  **Conferido em três níveis de saúde e quatro horas** (`test/cruz.js`): rua doente ganha
+  bandas cinza-pálidas, não brancas, e os fios desbotam com o mundo junto com o resto.
+
+  **Medido no fim:** smoke verde nos três incrementos, **FPS 61**, `sim.js` idêntico.
+  **Próximo passo: `CEU alto` continua sendo a maior faixa e a menos autorada — 38% do
+  quadro a dE 10,6, e o cirro só arranhou. Dúvida honesta: acho que a distância que sobra
+  ali não se fecha com mais coisa no céu, e sim com o céu sendo MENOS do quadro. Nos
+  painéis do board o céu é ~25% da imagem porque as fachadas sobem pelos dois lados até
+  quase o topo; aqui o céu é 68% porque `GROUND = 0,68·H` e a rua é uma faixa fina no pé.
+  Não sei medir "o enquadramento está errado" com a bancada que tenho, e mexer em `GROUND`
+  encosta em colisão e em `HX`, o que é bem mais do que uma troca de tinta.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
