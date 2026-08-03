@@ -1618,6 +1618,94 @@ toda sessão começa lendo a última entrada.
   acumulado contra o que a onda 8 disse, que é que a croma já era o pior eixo dele. Se a
   próxima onda puser mais verde no quadro, mede isso primeiro.**
 
+- **2026-08-03 · visual — a dívida da onda passada paga: a croma do menino, e o board medido
+  em vez de sentido.** Quatro incrementos, cada um com `node test/smoke.js` verde. **FPS 61
+  do começo ao fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado — **medido:
+  `node test/sim.js` dá saída byte a byte idêntica nos quatro commits** (`diff` vazio,
+  quatro vezes).
+
+  **O placar, que é o que esta onda existe para mover.** Pior caso, fora da moldura, de 485:
+
+  | | luma | croma | dE | C* dele | C* do quadro |
+  |---|---|---|---|---|---|
+  | MANHÃ antes | 52 | **168** | 46 | 23,0 | 16,5 (razão 1,39) |
+  | MANHÃ depois | **49** | **83** | **33** | 23,4 | 15,8 (razão **1,48**) |
+  | NOITE antes | 66 | 63 | 45 | 7,5 | 9,0 (razão **0,83**) |
+  | NOITE depois | 76 | **27** | **30** | 8,7 | 9,0 (razão **0,96**) |
+
+  **A croma dele voltou de 168 para 83 à MANHÃ e de 63 para 27 à NOITE**, e à NOITE ele
+  deixou de ser **menos** saturado que a própria rua. **Céu aberto no visível ficou em 31,2%
+  no dígito** — o enquadramento da onda 11 não foi desfeito em lugar nenhum.
+
+  **(1) A hora não o esfriava, ela o achatava.** Tingir 80% na direção de **uma** cor não o
+  move só em matiz: puxa todo pigmento que ele tem para o mesmo ponto do plano `a*b*`. Agora
+  a mistura entrega matiz e valor exatamente como antes e a croma residual é **reexpandida em
+  torno da luma dele**, que é um movimento de saturação puro — a luma Rec.709 do resultado
+  não muda, então **o poncho continua em 123,6, no dígito**, e a escolha que a onda 7 tomou
+  medindo fica intacta. **Medido: NOITE croma 63 → 32, dE 45 → 34, C* 7,5 → 8,8.** MANHÃ
+  croma 168 → 157. **Custa um ponto de contraste de luma à NOITE (66 → 80 de 485) e eu não
+  consigo explicar:** limitar o fator para nenhum canal estourar mudou o número em **0,0**,
+  logo não é *clipping*, e o mesmo ponto se perdia a 0,65 e a 1,05.
+
+  **(2) O board medido, e a impressão de quem roteou estava errada na média e certa na
+  forma.** `test/board.js` é novo: recorta o painel **RUA DO BAIRRO** do board e põe ao lado
+  do quadro do jogo, comparando **luma e C* médios do quadro inteiro**, que é o que uma
+  tabela de faixas não consegue enxergar. **Quadro inteiro: board luma 90,1 / C* 19,5; o jogo
+  à MANHÃ 130,5 / 15,6.** Somos **metade mais claros** que o board e **menos** saturados —
+  "estamos materialmente mais escuros e pesados" é falso e está aqui o número. O que é
+  verdade é a **forma**: do topo do quadro até a linha do chão, em quintos, o board faz
+  **141 101 83 60 66** — mais claro em cima, recuando para a sombra — e nós fazíamos
+  **116 140 145 138 112**, um U invertido com o quinto **mais escuro em cima**. Isso é uma
+  **tampa**, e tampa é a única coisa que nenhum painel de rua do board tem.
+
+  **Então a massa da copa de cima não perdeu um pixel de profundidade** (céu aberto tinha de
+  ficar onde estava) **e ganhou luz**: a franja passa dos verdes das colunas nos cantos
+  fundos para **BRILHO** no meio fino, o que **sobe o valor e ABAIXA a croma**, porque folha
+  daquela espessura está segurando dia do outro lado. **Medido: quinto de cima 116 → 121, C*
+  do quadro 16,5 → 16,3, céu aberto 31,2% no dígito**, e o menino melhora nos três eixos:
+  luma 52 → 49, croma 157 → 149, dE 43 → 40.
+
+  **(3) A árvore grande devolveu a saturação e ficou com a massa.** Desligá-la é a atribuição
+  mais limpa do arquivo, e foi feita: ela compra **todo** o enquadramento da onda 11 (céu
+  aberto visível 34,9% → 31,2%, `CEU baixo` 61,1% → 50,1%, y86-107 dE 9,1 → 12,5) **e cobra
+  do menino croma 73 → 149, dE 29 → 40, luma 35 → 49 à MANHÃ**. Os dois se separam: quem
+  disputa com ele **não é a MASSA da árvore** — massa chapada pontua perto de zero, que é a
+  razão de a medida de enquadramento ter sido reescrita na onda 11 — **é a SATURAÇÃO dela
+  contra céu aberto**. Então a massa fica no pixel e os cinco verdes são puxados **38% na
+  direção da própria luma Rec.709**. **Medido: MANHÃ croma 149 → 85, dE 40 → 38; NOITE croma
+  31 → 26, dE 34 → 31; céu aberto 31,2% e `CEU baixo` 50,1% não se movem um décimo; a faixa
+  alvo y86-107 custa 12,5 → 11,6.**
+
+  **(4) Uma quina que toma a hora não é quina.** O contorno dele tomava a mesma dose da pele
+  (piso 0,34, tinta 80%), então à NOITE a linha que o separa da rua já estava quase toda no
+  azul da rua. Agora toma piso 0,02 e 30% da tinta — é a única coisa nele que pode ir a quase
+  preto à noite. **Medido: MANHÃ dE 38 → 33; NOITE luma 79 → 76, dE 31 → 30.** Pequeno, e
+  relatado como pequeno.
+
+  **Tentei e desfiz, os três medidos:** (a) Graduar a franja do topo para `mataNear/mataNearL`
+  em vez de BRILHO — mesmo valor, mas põe **mais verde** no quadro e a croma dele foi
+  **157 → 173**, que é exatamente a troca pela qual a onda 11 foi cobrada. (b) A mesma
+  dessaturação da copa feita como **mistura para BRILHO**: mediu **melhor** — croma 149 → 100
+  a 0,42, e ainda subia a luma dele — e **o print recusou**, porque funciona **clareando**: a
+  copa saiu mais pálida que as serras atrás dela, e árvore perto mais pálida que morro longe
+  inverte a profundidade do quadro inteiro. (c) Limitar a reexpansão de croma para nenhum
+  canal estourar: **0,0**.
+
+  **Conferido em três níveis de saúde e quatro horas** (`test/cruz.js`): rua doente continua
+  desbotada e não escura, a árvore grande continua não nascendo com `h ≤ 0,5`, e à NOITE o
+  Cetro segue a coisa mais quente do quadro (miolo 195,6 / cristal 214,7 contra poncho 123,6).
+
+  **Medido no fim:** smoke verde nos quatro incrementos, **FPS 61**, `sim.js` idêntico.
+  **Próximo passo: `CEU alto` continua a maior faixa e a de menor dE, e agora sabemos o que o
+  board faz ali — o quinto de cima dele é o MAIS CLARO da imagem (141) e o nosso é 121; a
+  diferença não é falta de coisa no céu, é que o board deixa a luz entrar por cima e nós
+  ainda temos folha lá. Dúvida honesta: o único eixo que ANDOU PARA TRÁS nesta onda é a luma
+  do menino à NOITE, 66 → 76 de 485, e a atribuição está feita — com a árvore grande
+  desligada a reexpansão de croma custa 0, com ela ligada custa 14 posições, ou seja o preço
+  não é do efeito, é de onde ele o põe no meio do pelotão de blocos da copa. Não sei se isso
+  é medida frouxa (o ranking é denso ali) ou perda real, e a razão dele contra o rival não
+  piorou (0,65). Se a próxima onda mexer na luma dele, mede isso primeiro.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
