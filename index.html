@@ -2032,6 +2032,22 @@ function pal(h) {
       };
       ["muroC", "muroM", "muroK", "muroL", "muroS",
         "colunaC", "colunaL", "colunaB"].forEach(function (k) { ganhoC(k, 1.30); });
+      // TRIED AND BACKED OUT (a): the same gain at 1.25 on the six middle-distance fronts
+      // `ruaPar/ruaParB/ruaSom/ruaTel/ruaTelL/ruaVao`, aimed at the third fifth, which is the
+      // widest chroma gap left (17.0 against 20.4). It landed in the WRONG FIFTH: the third
+      // went 17.0 -> 17.9 and the FOURTH went 21.9 -> 23.6, and the fourth was already 4.2
+      // over a board that reads 17.7 there, because the board's fourth fifth is a shaded
+      // canyon floor. The frame overshot to C* 20.0 and the boy paid on all three axes at
+      // once (MANHÃ 19/70/13 -> 21/81/14 of 485). Narrowed to the two wall entries only, the
+      // shape was identical: third 17.6, fourth 23.2, frame 19.9, boy 20/75/13.
+      // TRIED AND BACKED OUT (b): this same gain at 1.42 instead of 1.30. It does buy the top
+      // fifth — 17.5 -> 18.3 against the board's 18.7, and the second 18.7 -> 19.2 — but it
+      // takes the whole frame to C* 20.0, i.e. PAST the 19.5 it was chasing, and costs a dE
+      // rank (13 -> 14). At 1.30 the frame mean lands on the board's number exactly. The
+      // per-fifth shortfall that remains in the third is not paint: that fifth is 32.1% bare
+      // sky, and our sky already reads C* 17.7 against the board's 16.9 in our own aspect
+      // ratio, so the sky is holding the fifth down at a value the paint would have to reach
+      // 21.7 to overcome. Same answer wave 17 gave for the same fifth's VALUE: framing.
     }
   }
   // thick air eats the bright strip on the horizon: the band is the value architecture, so
