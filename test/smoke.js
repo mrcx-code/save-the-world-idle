@@ -1161,6 +1161,36 @@ function chromiumPath() {
 
   await page.evaluate(() => localStorage.removeItem('proto_savetheworld'));
 
+  // ---- the STREET progress moved to a vertical bar on the right edge ----
+  // Same state drives it (worldHealth via ruaPct); it now grows in HEIGHT, not width, and it
+  // must sit clear of the control block and to the right of the world. A silent regression
+  // would be setting width again (no visible fill) — so the fill height is what is checked.
+  const rua = await page.evaluate(async () => {
+    const guarda = JSON.stringify(S);
+    const settle = () => new Promise(r => setTimeout(r, 360));   // clear the .3s height transition
+    S.inovacao = 0;
+    S.energiaTotal = CFG.metaPrestigio * 0.05; desenhar(); await settle();
+    const baixo = document.getElementById('barRua').getBoundingClientRect().height;
+    S.energiaTotal = CFG.metaPrestigio * 0.95; desenhar(); await settle();
+    const barra = document.getElementById('barRua');
+    const alto = barra.getBoundingClientRect().height;
+    const track = barra.parentElement.getBoundingClientRect();
+    const box = document.getElementById('barraRua').getBoundingClientRect();
+    const ctr = document.getElementById('controls').getBoundingClientRect();
+    const pct = document.getElementById('ruaPct').textContent;
+    Object.assign(S, JSON.parse(guarda)); desenhar();
+    return { baixo, alto, trackH: track.height, boxRight: box.right, boxBottom: box.bottom,
+      janW: window.innerWidth, ctrTop: ctr.top, pct };
+  });
+  console.log('street bar -> fill', Math.round(rua.baixo), '->', Math.round(rua.alto),
+    'px of', Math.round(rua.trackH), '| readout', rua.pct,
+    '| right edge', Math.round(rua.boxRight), 'of', rua.janW, '| bottom', Math.round(rua.boxBottom),
+    'vs controls top', Math.round(rua.ctrTop));
+  if (!(rua.alto > rua.baixo + 10)) errors.push('the street bar does not grow in height with progress');
+  if (rua.boxRight > rua.janW) errors.push('the street bar runs off the right edge');
+  if (rua.boxRight < rua.janW - 60) errors.push('the street bar is not pinned to the right side');
+  if (rua.boxBottom > rua.ctrTop) errors.push('the street bar overlaps the control block');
+
   const fps = await page.evaluate(() => new Promise(res => {
     let n = 0; const t0 = performance.now();
     (function f() { n++; performance.now() - t0 < 2000 ? requestAnimationFrame(f) : res(Math.round(n / 2)); })();
