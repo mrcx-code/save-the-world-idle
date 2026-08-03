@@ -2593,6 +2593,142 @@ toda sessão começa lendo a última entrada.
   repete uma segunda vez ou se a copa só pagou porque estava a 150 px acima dele.**
 
 
+- **2026-08-03 · onda 21: o céu virou do cenário, a MATA ATLÂNTICA nasceu — e no meio da onda
+  o dono disse "cadê o Brasil?" e a moldura passou a ser o assunto.** Cinco commits, todos com
+  `node test/smoke.js` verde e **FPS 61**, `node test/sim.js` **byte a byte idêntico** do
+  começo ao fim. `CFG`, economia, alvo do prestígio e curva de custo: intocados.
+
+  **(1) O CÉU PASSOU A SER DO LUGAR, e a rua não pagou um pixel por isso.** A onda 20 fechou
+  nomeando este bloqueio: `HORAS` e o `skyCanvas` eram globais, então uma ORLA ou um CERRADO só
+  conseguiam tingir a rampa da rua. A divisão é a mesma que a abstração de cenário já faz em
+  todo o resto: **o RELÓGIO continua do jogo** (as quatro horas, quanto escurece, a luz que cai
+  em cada sólido — um regime de luz só é regra da direção) e **o CÉU passa a ser do lugar**:
+  a rampa sã de cinco paradas, uma rampa de cinco paradas por hora, o expoente da queda até o
+  horizonte, quanto da hora entra, o ganho de croma diurno, onde fica o sol e de que tamanho,
+  quantas estrelas, **se há nuvem** e a cor em que a distância se dissolve. O `CEU_PADRAO` traz
+  os números da RUA escritos como as MESMAS expressões que estavam inline — nada de `lerp(a,b)`
+  onde antes havia `0.30 + 0.55*h`, porque `0.85-0.30` não é `0.55` em ponto flutuante.
+  **Medido: `test/igual.js` imprimiu os mesmos doze hashes para a RUA e os mesmos doze para a
+  PRAÇA depois da extração.**
+
+  **(2) MATA ATLÂNTICA, lida do painel dela — e os recortes do board estavam errados desde a
+  onda 11.** Uma varredura de linhas e colunas no board diz que a área pintada de todo painel da
+  tira é `y 728..852` e que as bordas verticais estão em x 17, 246, 467, 681, 865. As janelas
+  que as ondas 11-20 usaram (`18,724,228,106` e `252,724,212,106`) carregam **quatro linhas do
+  passe-partout creme a L 227** e a da RUA ainda entra **oito colunas dentro do painel da
+  PRAÇA**. Quatro linhas de L 227 em 106 valem uns cinco pontos de luma num número que a série
+  inteira perseguiu por três. Recortes corrigidos, e os alvos mudam:
+  **BOARD RUA 90,1 → 81,4** (C\* 19,5 → 18,9), **BOARD PRAÇA 76,1 → 72,9** (19,3 → 20,1),
+  **BOARD ORLA 104,5 / 19,9**, **BOARD MATA 53,1 / 17,4**.
+
+  O painel da mata: perfil topo→chão **51 62 57 48 47**, esq→dir **47 49 78 57 35**,
+  **céu por quinto 0,5 / 0 / 0 / 0 / 0,4** — não há céu nenhum ali, e a coisa mais clara é a
+  clareira no fim da trilha, [149,150,87]. Então a rampa desta mata corre **ao contrário de
+  todas as outras do arquivo**: quatro das cinco paradas abaixo de L 90, `curva` 1,80, `nuvem`
+  0 (um cúmulo passando por um buraco na copa não é atmosfera, é um bug que dá pra ver), sol
+  pequeno dentro da clareira, e a distância se dissolvendo em **ar verde escuro** e não na luz
+  da clareira. **Medido, MANHÃ, quadro contra painel: luma 71,8 contra 53,1** (a rua lê 110,5
+  contra os 81,4 dela — a mesma razão de 1,35), **C\* 18,0 contra 17,4**, perfil 58 68 79 90 64,
+  e **céu aberto 0,0% em todos os cinco quintos** contra 0,5/0/0/0/0,4 do painel: **o primeiro
+  cenário desta série sem céu nu em lugar nenhum.** TARDE 83,7 / 26,3; NOITE 39,9 / 6,7.
+
+  **Cinco tentativas desfeitas na mata, todas recusadas pelo print:** (a) o eixo de luz a alpha
+  0,86 abrindo em `GROUND·0,28` — um holofote, quadro a 122 contra um painel de 53; (b) uma
+  faixa de `mataFar` a 55% de alpha atravessando o meio — um filme por cima do quadro inteiro;
+  (c) uma copa por bloco em dois planos, cada uma com um tronco inteiro até o chão — **um
+  renque de tubos de órgão**; (d) uma elipse chapada por bloco — pingos pendurados no nada;
+  (e) fissuras horizontais nos troncos de frente — **uma escada**. A que ficou: copas como
+  união de cinco lóbulos por coluna, quatro tons sorteados por coluna, **um buraco em cada
+  cinco colunas** (toda folha daquele board é definida por um vão e não por um contorno) e um
+  pixel de luz salpicado — sem o salpico, uma massa verde é uma sebe por melhor que seja a
+  silhueta.
+
+  **(3) A MOLDURA ESTAVA COMENDO O MUNDO, E ISSO É UMA FALHA DE MEDIÇÃO.** No meio da onda o
+  dono escreveu *"cadê o Brasil, os cenários de brasilidades e as referências??"*. Estava tudo
+  desenhado — o maciço com a figura, o elevador do penhasco, a matriz, o arcade, o morro
+  pintado, a cidade sendo reconstruída — e nada dava pra ver. **A causa é minha bancada, não o
+  desenho:** as ondas 11 a 14 tinham **um número de enquadramento só** — céu aberto contra
+  23,6% — e todo jeito barato de mexer nesse número é pôr massa na frente do céu. A moldura
+  cresceu onda após onda, cada passo medido, cada passo uma melhora pela única medida que
+  existia, e **ninguém nunca perguntou quanto sobrava de MUNDO**. Dois prints recusaram um túnel
+  e foram vencidos pelos números das ondas seguintes.
+
+  **`test/mundo.js` é o número contrário.** A moldura é medida **exatamente**: o quadro é
+  desenhado duas vezes, uma com o gancho `moldura` do cenário e outra sem, e os pixels que
+  diferem SÃO a moldura — nada de heurística, nada de supor onde ela está. Céu nu contra o
+  `skyCanvas` como o `quinto.js` faz. O resto é o jogo. Mais uma contagem por família (marco,
+  morro, cidade, rua, serra), porque *"a matriz está desenhada"* e *"dá pra ver a matriz"* são
+  afirmações diferentes e só a segunda vale alguma coisa. Cinco posições de mundo × dois níveis
+  de saúde. **Medido, antes → depois:**
+
+  | | antes | depois |
+  |---|---|---|
+  | **MUNDO%** (o que é jogo) | 50,8 | **57,3** |
+  | moldura% | 24,4 | **20,3** |
+  | céu nu% | 24,9 | **22,3** |
+  | matriz visível | 4/10 quadros, 0,75% do quadro | **8/10, 5,8%** |
+  | morro visível | 4/10, 0,86% | **10/10, 0,98%** |
+
+  O que mexeu: o inchaço das colunas **0,16·W → 0,075·W** (a BASE não se mexe — está limitada
+  pela fila de monstros e a onda 14 mediu esse limite); a copa **0,72·W sobre 0,34·W → 0,40·W
+  sobre 0,26·W**, então as quinas continuam escuras (o ganho de valor da onda 14 era real) e
+  deixam de ser um terço do quadro; **marcos a cada 210 px em vez de 460 e desenhados a 1,55×**;
+  o morro com casa um terço maior, encosta metade mais alta, presente em 78% dos trechos em vez
+  de 38%, a cada 230 px em vez de 340; a cidade a cada 250 em vez de 420.
+  **E o céu aberto NÃO subiu — desceu**: `medir.js`, na janela dele, 22,7% → **17,5%**, com o
+  `CEU baixo` indo de 22,9% para **7,4%**. O jeito honesto de fechar céu é **pôr o lugar
+  dentro dele**, não construir um muro na beirada. O menino paga o campo mais cheio de dia e
+  está registrado: MANHÃ luma 19 → 15 de 485, croma 66 → 78, dE 13 → 11.
+
+  **(4) O JUDDER DO SCROLL É A MESMA MOLDURA — E É UM CONFLITO DE PROJETO, NÃO UM BUG.**
+  Medido com `scratchpad/scroll.js`: **a câmera é lisa, 0,823 px de mundo por frame com 0,4% de
+  variação**. O que treme é a quantização: 1 px de mundo = **2,44 px de tela**, e cada camada de
+  parallaxe anda um número inteiro de pixels de mundo por frame. Passo por frame em 120 frames:
+  camada 0,05 → `{0:114, 1:5}`; 0,15 → `{0:94, 1:25}`; 0,42 → `{0:78, 1:41}`;
+  0,66 → `{0:55, 1:64}`; 1,00 → `{0:21, 1:98}`. **Nenhuma delas anda regularmente** — todas
+  alternam 0 e 1 de forma irregular, e cada troca é um salto de 2,44 px de tela. Não é defeito
+  de uma camada: é o tamanho do pixel contra a velocidade da câmera.
+  **Conclusão, e ela é do dono:** rolagem contínua tipo One Piece e o pixel atual estão em
+  conflito direto. Desenhar em posição fracionária faz o canvas antisserrilhar a arte (a direção
+  proíbe pós-processamento); resolução interna mais fina reduz o salto de 2,44 px para 1,63 px
+  em `SCALE 2` mas **não** torna o passo regular, e custa o pixel grosso. O que esta onda fez de
+  concreto é **encolher a área que treme**: a moldura era a camada mais lenta e mais próxima e
+  saiu de 24,4% para 20,3% do quadro. Fica registrado para o dono escolher.
+
+  **(5) Três recados do dono, todos de apresentação, nenhum tocando lógica.**
+  **(a) Barra de vida vermelha no lugar dos pontinhos brancos.** Lê `m.hp`/`m.hpMax` e nada
+  mais. Uma largura só para todo monstro, porque com pips o COMPRIMENTO da barra era o hp
+  máximo e isso lê como "esse é mais largo" e não como "esse aguenta mais". **E isso conserta
+  um defeito que uma onda anterior só tinha conseguido remendar: `medir.js`, PIPS NOITE, o que
+  os monstros põem no quadro acima de luma 150 vai de 108 px para 0 px, e o posto do menino à
+  NOITE em luma vai de 52 para 8 de 485** — os pips brancos eram rivais dele. Poncho 123,3,
+  miolo 195,6, cristal 214,7, tudo no dígito.
+  **(b) Os bichos parados agora animam.** Cada um é o próprio estrago: a fumaça arrota e engrossa
+  o ar em volta, o tambor vaza e a poça cresce e encolhe embaixo dele, o saco de dinheiro treme
+  e joga moeda fora. Roda em `m.parado` e `tick` e mais nada.
+  **(c) O drop é a coisa que ele te dá.** Pegar um drop dá impacto, e impacto já tem um glifo —
+  a folha do contador do HUD. Três itens lindos que não são aquele glifo ensinam que existem três
+  moedas quando existe uma. O drop agora é **o ícone do HUD, o mesmo mapa, as mesmas cores, o
+  mesmo contorno**, mais um "+" no ouro ACENTO (o creme do chrome mede L 244 e poria um drop
+  acima do cristal do Cetro à noite). Qual bicho deixou continua sendo dito pela cor dos quatro
+  tracinhos e pela palavra que pula ao pegar.
+
+  **Fora do meu território a partir do meio da onda:** o sprite do herói, o Cetro e os visuais
+  de conjuração/combo passaram para um agente dedicado. **Eu tinha começado a simplificar o
+  `lancarMagia` e o bloco de magia do `drawHero()` e revertí tudo com `git checkout`** assim que
+  o recado chegou — nada disso está nos commits.
+
+  **Medido no fim:** smoke verde nos cinco commits, **FPS 61**, `sim.js` idêntico, `cruz.js` sem
+  erro de console em três saúdes × quatro horas nos **três** cenários, e o `igual.js` **rebaseado
+  de propósito** para rua e praça (a rua mudou de moldura e as três mudanças de monstro/drop
+  valem em todo cenário — os hashes novos estão no commit e valem como novo ponto de partida).
+  **Próximo passo: ORLA, que ficou parada quando o recado do dono chegou. O painel dela já está
+  medido (`BOARD ORLA 104,5 / 19,9, perfil 126 126 94 93 83, céu por quinto 60,6/13,9/3,4/3,6/0`)
+  e o céu por cenário — que era o bloqueio — está feito. Dúvida honesta que sobra: o `mundo.js`
+  ainda não sabe distinguir "moldura" de "moldura que É o cenário" — na PRAÇA e na MATA a copa
+  por cima conta como moldura e ela é o lugar, então o 20,3% da rua não se compara direto com o
+  número delas.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
