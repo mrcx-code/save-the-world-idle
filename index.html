@@ -1720,9 +1720,14 @@ function desbotar(c) {
 }
 // [healed, distance into the haze] — the sick end is computed
 const PALETA_BASE = {
-  nuvB:  [[224, 235, 240], 0],
-  nuvT:  [[255, 253, 242], 0],
-  nuvD:  [[176, 200, 210], 0],
+  // Cumulus lit from above: a warm top, a cool blue underside. They were authored as three
+  // neutrals — C* 7, 5 and 11 — back when the sky behind them was near-white too, and they
+  // are ~10% of a frame whose CEU alto band measures C* 16.7 against the board's 19.5.
+  // Pulling their VALUE down was tried in this same wave and the screenshot refused it; this
+  // does not touch their value, it gives them the hue the light would.
+  nuvB:  [[218, 234, 244], 0],
+  nuvT:  [[255, 250, 226], 0],
+  nuvD:  [[158, 190, 214], 0],
   serraFar:  [[124, 152, 158], 0.44],
   serraFarL: [[158, 182, 182], 0.40],
   serraNear:  [[86, 118, 124], 0.25],
