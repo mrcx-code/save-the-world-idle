@@ -1730,8 +1730,15 @@ const PALETA_BASE = {
   nuvD:  [[158, 190, 214], 0],
   serraFar:  [[124, 152, 158], 0.44],
   serraFarL: [[158, 182, 182], 0.40],
-  serraNear:  [[86, 118, 124], 0.25],
-  serraNearL: [[122, 154, 152], 0.21],
+  // THE NEAR RIDGE WAS LIGHTER THAN THE SKY IN FRONT OF IT. Attributed, not guessed: it is
+  // 18.8% of the fourth fifth of the picture at L 141, paying 26.5 of that fifth's 115 on
+  // its own, and the sky it stands against measures L 136-137 at the same rows. A silhouette
+  // that is brighter than its own background is not distance, it is a hole — the wave that
+  // straightened the sky ramp fixed exactly this for `horizonC` and left the two ridges
+  // sitting on the old value. Same hue, ~85% of the luma, chroma re-expanded around it so
+  // the ridge goes deeper rather than greyer.
+  serraNear:  [[70, 101, 107], 0.25],
+  serraNearL: [[101, 132, 130], 0.21],
   cidade:  [[92, 120, 134], 0.24],
   // the landmarks are the board's CENTRO HISTÓRICO now, so they are limewashed stone and
   // terracotta rather than the cool slate of a modernist skyline: warm body, near-white
