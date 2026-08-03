@@ -4910,9 +4910,9 @@ CENARIOS.praca = {
         const sx = Math.round(k * passo2 - worldX * vel2);
         const s = hash01(k * 47 + 9);
         if (s > 0.90) continue;                       // a gap, so the ring is not a hedge
-        const larg = 15 + Math.round(hash01(k * 23 + 4) * 12);
-        const alt = 11 + Math.round(hash01(k * 59 + 2) * 9);
-        const topo = GROUND - 44 - Math.round(hash01(k * 31 + 6) * 22) - alt;
+        const larg = 19 + Math.round(hash01(k * 23 + 4) * 15);
+        const alt = 13 + Math.round(hash01(k * 59 + 2) * 10);
+        const topo = GROUND - 48 - Math.round(hash01(k * 31 + 6) * 24) - alt;
         const meia = larg >> 1;
         // TRIED AND BACKED OUT: filling every column from the crown all the way down to a
         // fixed line at GROUND-30. It closed the band, and the screenshot called it what it
@@ -5251,12 +5251,12 @@ CENARIOS.praca = {
     // and three clumps hanging OFF that hem rather than floating below it — the first cut
     // drew them at a fixed depth and the screenshot showed three dark blobs in the sky with
     // daylight between them and the canopy they were supposed to belong to
-    for (let c = 0; c < 3; c++) {
-      const cx0 = Math.round(W * (0.14 + c * 0.33) + Math.sin((worldX * 0.03 + c * 40) * 0.02) * 3);
-      const larg = 9 + c * 2;
+    for (let c = 0; c < 5; c++) {
+      const cx0 = Math.round(W * (0.08 + c * 0.21) + Math.sin((worldX * 0.03 + c * 40) * 0.02) * 3);
+      const larg = 8 + (c % 3) * 3;
       for (let x = -larg; x <= larg; x++) {
         const u2 = x / larg;
-        const prof = Math.round(Math.sqrt(Math.max(0, 1 - u2 * u2)) * (9 + c * 3));
+        const prof = Math.round(Math.sqrt(Math.max(0, 1 - u2 * u2)) * (11 + (c % 3) * 5));
         if (prof < 1) continue;
         // where the hem already is at this column, so the clump grows out of it
         const xx = cx0 + x;
