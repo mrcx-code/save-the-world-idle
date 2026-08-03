@@ -1982,7 +1982,26 @@ function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the 
   // not noon with orange on it. Health still decides how much colour survives the smoke.
   const q = horaAgora();
   const hora = mixA(mixA(q.a.ceu[i], q.a.ceu[i + 1], k), mixA(q.b.ceu[i], q.b.ceu[i + 1], k), q.f);
-  return mixA(base, hora, 0.30 + 0.55 * h);
+  const c = mixA(base, hora, 0.30 + 0.55 * h);
+  // AND THEN THE ONE NUMBER THE SKY WAS STILL SHORT ON, WHICH IS NOT VALUE. Sampled off the
+  // board: the blue of the RUA DO BAIRRO panel measures C* 16.1 and ours measured 13.3 — the
+  // sky is the single largest region of the picture, so three points of chroma there is most
+  // of the 16.3-against-19.5 the whole frame is short. Three waves have now walked into the
+  // trap of paying for sky in the value channel and being refused by the print, so this one
+  // does not touch value at all: the residual chroma is re-expanded AROUND the colour's own
+  // Rec.709 luma, exactly the move waves 12 and 13 made on the hero and on the big canopy.
+  // The luma the last two waves authored line by line comes out unchanged, and a sick sky —
+  // which has almost no chroma to expand — stays bleached, because a gain on nearly zero is
+  // still nearly zero.
+  // ...and it is a DAYLIGHT gain only. Measured: run flat across the clock it takes the
+  // night sky from C* 6.7 to 7.2 and the frame from 9.8 to 10.8, and that inverts the one
+  // thing wave 12 bought — the hero stops being more saturated than his own street at NOITE
+  // (ratio 1.00 -> 0.90) and his NOITE croma goes 12 -> 17 of 485. Held at zero after dark.
+  const yy = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  const gc = 1 + 0.25 * (1 - lerp(q.a.escuro, q.b.escuro, q.f));
+  return [Math.max(0, Math.min(255, yy + (c[0] - yy) * gc)),
+          Math.max(0, Math.min(255, yy + (c[1] - yy) * gc)),
+          Math.max(0, Math.min(255, yy + (c[2] - yy) * gc))];
 }
 // The sky is baked and rebuilt only when world health moves a step, so a normal frame is
 // one drawImage. Without the dither it is also two thirds cheaper to bake.
@@ -3079,7 +3098,7 @@ function luzPersonagem(c, piso, forcaF, recupC) {
   // The direction has said from the first line that HE DOES NOT DESATURATE WITH THE WORLD, so
   // the floor is the direction written down: a constant 1.15 about his own luma, in every
   // hour, luma-neutral by the same argument as the term beside it.
-  const y = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2], k = 1.32 + recupC * forca;
+  const y = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2], k = 1.50 + recupC * forca;
   return [cl255(y + (m[0] - y) * k), cl255(y + (m[1] - y) * k), cl255(y + (m[2] - y) * k)];
 }
 let heroPasso = -1, heroCor = {}, cetroCor = {}, HERO_HORA = HERO_COLORS, CETRO_H = null;
