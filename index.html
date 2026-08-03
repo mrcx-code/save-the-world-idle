@@ -87,6 +87,47 @@
     background: #234d2c; border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #38b764;
     color: #c9f5d4; padding: 8px 10px; font-size: var(--fs-xs); line-height: 1.7; }
 
+  /* ---- chapter cards: the run gets named out loud ----
+     Thresholds are fractions of CFG.metaPrestigio, computed at fire time — nothing here
+     freezes the target. Pointer-through on purpose: the whole game is one button and a
+     card that eats a swing would be worse than no card at all. */
+  #cartao { display: none; position: fixed; z-index: 12; left: 50%; transform: translateX(-50%);
+    top: 28%; width: min(420px, 92vw); text-align: center; pointer-events: none;
+    background: linear-gradient(180deg, rgba(36,50,92,.96), rgba(18,25,51,.96));
+    /* purple, not gold: REAL DATA owns the gold left edge, and a made-up line must never
+       be able to pass for a sourced one */
+    border: 3px solid var(--contorno); border-left: 5px solid var(--purple);
+    box-shadow: 0 5px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.13);
+    padding: 12px 12px 13px; }
+  #cartao.mostra { display: block; animation: cartaoVai 5.4s ease-out 1 forwards; }
+  #cartao .cn { font-size: var(--fs-xs); color: var(--sub); letter-spacing: .2em; }
+  #cartao .ct { font-size: var(--fs-md); color: var(--gold); margin: 7px 0 9px;
+    text-shadow: 2px 2px 0 var(--ink); }
+  #cartao .cv { font-size: var(--fs-xs); color: #c6d4f0; line-height: 1.75; }
+  #cartao .cv b { color: var(--gold); }
+  @keyframes cartaoVai {
+    0% { opacity: 0; transform: translateX(-50%) translateY(10px) }
+    9% { opacity: 1; transform: translateX(-50%) translateY(0) }
+    85% { opacity: 1; transform: translateX(-50%) translateY(0) }
+    100% { opacity: 0; transform: translateX(-50%) translateY(0) } }
+
+  /* ---- the wall: the only thing here that survives a reset ----
+     Painted, street, and it only ever grows. Its own localStorage key, for the same
+     reason the retention record has one: passing the torch wipes S. */
+  .btnMuro { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 8px;
+    background: linear-gradient(180deg, #2f6f4d, #163a28); border-color: var(--ink); color: #b7ffce; }
+  #sheetMuro .upgrade { align-items: flex-start; }
+  .muroN { font-size: var(--fs-sm); color: var(--gold); min-width: 34px; letter-spacing: .06em; }
+  .muroVazio { font-size: var(--fs-xs); color: var(--sub); line-height: 1.9; }
+  /* the epilogue: same furniture as every other sheet, one beat louder */
+  #epilogoCorpo { font-size: var(--fs-sm); line-height: 2; margin-bottom: 4px; }
+  #epilogoCorpo b { color: var(--gold); }
+  #epilogoVoz { font-size: var(--fs-xs); color: #c6d4f0; line-height: 1.8; margin-top: 9px;
+    border-left: 4px solid var(--gold); padding-left: 8px; }
+  #epilogoVoz b { color: var(--gold); }
+  #btnEpilogo { width: 100%; padding: 14px 8px; font-size: var(--fs-sm); margin-top: 10px;
+    color: #f3e8ff; background: linear-gradient(180deg, #7f4fd4, #4b2a86); }
+
   /* one line that says what the world wants from you right now */
   #alerta { display: none; position: fixed; z-index: 11; left: 50%; transform: translateX(-50%);
     top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
@@ -319,7 +360,7 @@
     <canvas id="loreArt" width="128" height="42"></canvas>
     <h2>YEAR 2026</h2>
     <p>You wake up in a world that is <i>in really bad shape</i>. The sky is gray. The rivers are dirty. The trees have no leaves. The people are tired.</p>
-    <p>Everyone says it is too late. You are <i>THE SPARK</i> — and you believe it can get better. <i>Nobody is saved alone.</i></p>
+    <p>Everyone says it is too late. You are <i>NIA</i> — Gran Odete called you <i>a spark</i> as a complaint, and the name stuck — and you believe it can get better. <i>Nobody is saved alone.</i></p>
     <p>Tap anywhere to help — the button or the world itself. Start projects. Clear what gets in the way, pick up what it drops, and show up when the kitchen calls. <i>Don't let your team get too tired.</i></p>
     <button id="btnBegin">▶ START</button>
   </div>
@@ -339,6 +380,8 @@
 <div id="offline"></div>
 <div id="alerta"></div>
 <div id="fato"></div>
+<div id="cartao"><div class="cn" id="cartaoN"></div><div class="ct" id="cartaoT"></div>
+  <div class="cv" id="cartaoV"></div></div>
 
 <!-- Four entries, four different jobs, and they used to be four identical slabs in a row.
      Now the block says what each one is: the RHYTHM you are running is a wide readout (it
@@ -439,7 +482,27 @@
   <button id="btnPrestigio"></button>
   <div class="avisoPrestigio">+10% forever per WISDOM • rested team = more Wisdom</div>
   <div id="linhaInovacao">★ WISDOM: <b id="inovacao">0</b> — bonus ×<span id="bonus">1.0</span></div>
+  <button id="abrirMuro" class="btnMuro">▚ THE WALL <span id="muroNota"></span></button>
   <button id="abrirSkills" class="btnSkills">✦ SKILLS <span id="skillsNota"></span></button>
+</div>
+
+<!-- The wall is the only thing in the game that survives passing the torch, and the only
+     thing that only ever grows. Its own key in localStorage, never part of S. -->
+<div class="sheet" id="sheetMuro">
+  <div class="sheetHead"><div class="t">THE WALL</div>
+    <button class="fechar" data-close="sheetMuro">✕</button></div>
+  <div id="muroCorpo"></div>
+  <div class="avisoPrestigio"><b>MARA</b> — "I painted the first name. Gran says that's vandalism."</div>
+</div>
+
+<div class="sheet" id="sheetEpilogo">
+  <div class="sheetHead"><div class="t">THE TORCH PASSES</div>
+    <button class="fechar" data-close="sheetEpilogo">✕</button></div>
+  <div id="epilogoCorpo"></div>
+  <div class="avisoPrestigio" id="epilogoWisdom"></div>
+  <div id="epilogoVoz"></div>
+  <button id="btnEpilogo"></button>
+  <button id="btnEpilogoMuro" class="btnMuro">▚ SEE THE WALL</button>
 </div>
 
 <div class="sheet" id="sheetSkills">
@@ -562,6 +625,7 @@ let S = {
   inovacao: 0, transicoes: 0,
   qtdCompra: 1,              // 1 / 10 / "max" — remembered, because nobody wants to re-pick it
   skillAuto: false,          // learned once, survives every torch — unlike u1..u7
+  capVisto: 0,               // how many chapter cards this run has shown — reset by the torch
   introSeen: false,
   salvoEm: 0
 };
@@ -1163,10 +1227,18 @@ function pedirTransicao() {
     : "the world starts over, but nobody starts from zero";
   abrir("sheetConfirm");
 }
+// Everything the epilogue says about the run has to be read BEFORE the wipe: the projects
+// count, the year, who was carrying it. Two lines later S.geradores is zero.
 function transicionar() {
   if (S.energiaTotal < CFG.metaPrestigio) return;
   const ganho = inovacaoAoTransicionar();
+  const epi = {
+    spark: spark(S.transicoes), prox: spark(S.transicoes + 1),
+    ano: (S.transicoes | 0) + 1, anoIdx: Math.min(S.transicoes | 0, 2),
+    projetos: S.geradores, sabedoria: S.inovacao + ganho
+  };
   S.inovacao += ganho; S.transicoes++;
+  S.capVisto = 0;                     // the next street gets its chapters read to it too
   S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
   S.geradores = 0; S.modo = "carvao"; S.tempoLimpo = 0;
   S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
@@ -1175,6 +1247,10 @@ function transicionar() {
   foco = 0; canalizando = 0; autoFogoAcc = 0;
   superCarga = 0; superSwings = 0; superCd = 0; superT = 0; superFx = null;
   R.tochas++; salvarRetencao();
+  // the wall and the epilogue first, then the redraw: the chapter check inside desenhar()
+  // steps aside while the epilogue is up, and it can only do that once it is up
+  escreverNoMuro(epi.spark, epi.prox, epi.projetos, S.transicoes);
+  mostrarEpilogo(epi);
   salvar(); desenhar();
 }
 
@@ -1207,17 +1283,28 @@ function carregar() {
   try { Object.assign(S, JSON.parse(bruto)); } catch (e) { return; }
   const dt = Math.min((Date.now() - S.salvoEm) / 1000, CFG.capOfflineHoras * 3600);
   voltouDepoisDe = dt;
+  let texto = "";
   if (dt > 60 && S.geradores > 0) {
     const antes = S.poluicao;
     const ganho = simularOffline(dt);
     const h = Math.floor(dt / 3600), m = Math.floor((dt % 3600) / 60);
-    const el = document.getElementById("offline");
-    el.style.display = "block";
-    el.textContent = "🌙 WHILE YOU WERE AWAY (" + h + "h" + String(m).padStart(2, "0") + "): +" +
+    texto = "🌙 WHILE YOU WERE AWAY (" + h + "h" + String(m).padStart(2, "0") + "): +" +
       fmt(ganho) + " impact" +
       (S.poluicao > antes ? ", +" + fmt(S.poluicao - antes) + " tiredness." : ".")
       + (R.dias.length > 1 ? " DAY " + R.dias.length + " — the neighbourhood knows you: ×"
         + bonusDias().toFixed(2) + " to everything." : "");
+  }
+  // The gain summary is gated on having projects, so the player who passed the torch and
+  // then quit used to come back to nothing at all. The greeting is not gated on anything.
+  const nota = notaDeVolta();
+  if (nota) {
+    texto += (texto ? "<br>" : "")
+      + "<b>" + nota[0] + "</b> — &ldquo;" + nota[1] + "&rdquo;";
+  }
+  if (texto) {
+    const el = document.getElementById("offline");
+    el.style.display = "block";
+    el.innerHTML = texto;
     setTimeout(function () { el.style.display = "none"; }, 12000);
   }
 }
@@ -1273,6 +1360,205 @@ function mostrarRetencao() {
     + linha("torches passed", String(R.tochas))
     + linha("first session &middot; span", primeiro + " &middot; " + vao + (vao === 1 ? " day" : " days"))
     + linha("the neighbourhood knows you", "×" + bonusDias().toFixed(2) + " to everything");
+}
+
+// ============================================================
+// THE STREET — the fiction layer.
+// Three rules from the narrative design are enforced here instead of remembered:
+//   1. No line is ever spoken by the game. Every one has a neighbour's name in front of
+//      it — a narrator saying sharing is good is a sermon, a person complaining is not.
+//   2. Somebody permanently disagrees. That is RUI, and he is why the sincere lines are
+//      allowed to be sincere.
+//   3. NO AUTHORED STRING CONTAINS A DIGIT. That keeps invented text from ever being
+//      mistaken for the sourced REAL DATA banner, and test/smoke.js asserts it. The
+//      numbers in the epilogue are interpolated from the run at render time; none of
+//      them is written down in this section.
+// It is 2026 and this is a street, not a court: mutirão, a shared pot, a painted wall.
+// ============================================================
+
+// Who carries the torch, in order. Ten neighbours, then names the game introduces without
+// ceremony — by then "somebody starts things here" is just how the street works.
+const ELENCO = ["NIA", "MARA", "RUI", "SAFI", "BEN", "TOMAS", "INES", "KOJO", "VERA", "ODETE",
+  "YARA", "LUCA", "DELE", "PIA", "OMAR", "SUN"];
+function spark(i) { const n = ELENCO.length; return ELENCO[((i % n) + n) % n]; }
+const ORDINAIS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh",
+  "eighth", "ninth", "tenth"];
+function ordinal(n) { return ORDINAIS[n - 1] || "another"; }
+// wall entries are numbered without digits, so the row can never read as REAL DATA
+function romano(n) {
+  if (!(n > 0)) return "?";
+  const t = [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"],
+  [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+  let s = "", r = Math.min(n, 3999);
+  for (let i = 0; i < t.length; i++) while (r >= t[i][0]) { s += t[i][1]; r -= t[i][0]; }
+  return s;
+}
+
+// ---------- chapter cards ----------
+// Six rungs on one run, keyed to FRACTIONS of CFG.metaPrestigio — read, never written, so
+// the target stays exactly where it is and the chapters follow it if it ever moves. The
+// titles never change; the voice under them is chosen by S.transicoes, so the second run
+// hears a different street for the price of one index.
+const CAPITULOS = [
+  { frac: 0.00, n: "I", t: "THE QUIET STREET", v: [
+    ["ODETE", "Somebody has to go first. Unfortunately it's you."],
+    ["ODETE", "Second time is worse. You know how long it takes."],
+    ["RUI", "Street's quiet again. Not sad quiet. Sunday quiet."]] },
+  { frac: 0.04, n: "II", t: "SOMEONE COPIES YOU", v: [
+    ["MARA", "I started one too. Mine's smaller. It counts."],
+    ["BEN", "Three houses started something this week. Three."],
+    ["SAFI", "Nobody asked permission this time. They just began."]] },
+  { frac: 0.16, n: "III", t: "THE WATER COMES BACK", v: [
+    ["SAFI", "Pump's running. I'm going to stand here and watch it."],
+    ["MARA", "I taught two kids the pump. Now I'm unemployed."],
+    ["KOJO", "Water's boring now. Best thing I've ever said."]] },
+  { frac: 0.40, n: "IV", t: "THE LIGHTS FIND US", v: [
+    ["RUI", "Fine. It's not embarrassing anymore. Don't gloat."],
+    ["TOMAS", "Oven's on at four. You can set a clock by us."],
+    ["INES", "I moved back. Don't make a thing of it."]] },
+  { frac: 0.76, n: "V", t: "THE LAST STRETCH", v: [
+    ["BEN", "You're tired. That's allowed. Sit down for a second."],
+    ["ODETE", "You always do this at the end. Eat first."],
+    ["RUI", "Go slower. Nothing's chasing us anymore."]] },
+  { frac: 1.00, n: "VI", t: "SOMEONE IS READY", v: [
+    ["ODETE", "There's a kid two streets over who fixes things."],
+    ["MARA", "Someone's been asking me how it all works. Daily."],
+    ["BEN", "They're ready. They've been ready a while."]] }
+];
+let cartaoT = 0;
+function mostrarCartao(c) {
+  const el = $("cartao"); if (!el) return;
+  const voz = c.v[Math.min(Math.max(0, S.transicoes | 0), c.v.length - 1)];
+  $("cartaoN").textContent = "CHAPTER " + c.n;
+  $("cartaoT").textContent = c.t;
+  $("cartaoV").innerHTML = "<b>" + voz[0] + "</b> — &ldquo;" + voz[1] + "&rdquo;";
+  el.classList.remove("mostra"); void el.offsetWidth;   // restart the fade
+  el.classList.add("mostra");
+  cartaoT = 5.4;
+}
+// Called from the HUD tick. One card per threshold crossed, in order, never two at once.
+function verificarCapitulo() {
+  if (!S.introSeen) return;                 // the intro is already saying chapter one
+  // the epilogue is the beat that closed the last run; chapter one waits until it is read
+  if ($("sheetEpilogo").classList.contains("aberto")) return;
+  const i = Math.max(0, S.capVisto | 0);
+  if (i >= CAPITULOS.length) return;
+  if (cartaoT > 0) return;                  // a card still up wins; the next one waits
+  const c = CAPITULOS[i];
+  if (S.energiaTotal >= CFG.metaPrestigio * c.frac) { S.capVisto = i + 1; mostrarCartao(c); }
+}
+
+// ---------- the wall ----------
+// Every torch leaves a name painted on it and the wall only ever grows. It is the one
+// thing here that survives a reset, so it lives in its own localStorage key — passing the
+// torch wipes S, and a corrupted game save must not take the wall down with it.
+const CHAVE_MURO = "proto_savetheworld_muro";
+const MURO_MAX = 30;               // it grows, but not without bound
+let MURO = [];
+// what the street said about that year — by how many torches had been passed when it was
+// written. The fourth one stops congratulating the player on purpose: that is the only
+// thing that keeps the earlier warmth credible.
+function caudaMuro(tochas) {
+  if (tochas <= 1) return "the first one is the hardest";
+  if (tochas === 2) return "people started copying";
+  if (tochas <= 5) return "the wall got longer";
+  if (tochas <= 9) return "nobody called it brave";
+  return "mostly it rained";
+}
+// a stable paint slot per entry, so whoever draws the wall in the world can give the same
+// name the same colour every time without storing a colour
+function tintaMuro(nome, n) {
+  let h = n * 7;
+  for (let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) & 0xffff;
+  return h % 6;
+}
+function salvarMuro() {
+  try { localStorage.setItem(CHAVE_MURO, JSON.stringify(MURO)); } catch (e) {}
+}
+function carregarMuro() {
+  let bruto = null;
+  try { bruto = localStorage.getItem(CHAVE_MURO); } catch (e) {}
+  if (bruto) { try { const v = JSON.parse(bruto); if (Array.isArray(v)) MURO = v; } catch (e) {} }
+  // hand-edited or half-written records get repaired, never thrown
+  MURO = (Array.isArray(MURO) ? MURO : []).filter(function (e) {
+    return e && typeof e === "object" && typeof e.nome === "string" && e.nome.length < 24;
+  }).map(function (e, i) {
+    return {
+      n: (typeof e.n === "number" && isFinite(e.n) && e.n > 0) ? Math.floor(e.n) : i + 1,
+      nome: e.nome,
+      prox: typeof e.prox === "string" ? e.prox.slice(0, 23) : "",
+      proj: (typeof e.proj === "number" && isFinite(e.proj) && e.proj >= 0) ? Math.floor(e.proj) : 0,
+      cauda: typeof e.cauda === "string" ? e.cauda.slice(0, 40) : "",
+      estilo: (typeof e.estilo === "number" && isFinite(e.estilo)) ? (Math.floor(e.estilo) % 6 + 6) % 6 : 0
+    };
+  }).slice(-MURO_MAX);
+}
+function escreverNoMuro(nome, prox, projetos, tochas) {
+  MURO.push({ n: tochas, nome: nome, prox: prox, proj: projetos,
+    cauda: caudaMuro(tochas), estilo: tintaMuro(nome, tochas) });
+  if (MURO.length > MURO_MAX) MURO = MURO.slice(-MURO_MAX);
+  salvarMuro();
+}
+// what the scenery can ask for, without knowing how any of this is stored
+function muroNomes() { return MURO.map(function (e) { return e.nome; }); }
+function muroTotal() { return MURO.length; }
+function mostrarMuro() {
+  if (!MURO.length) {
+    $("muroCorpo").innerHTML = '<div class="muroVazio"><b>MARA</b> — "Nothing on it yet. '
+      + 'Pass the torch once and I\'ll paint you."</div>';
+    return;
+  }
+  let html = "";
+  for (let i = MURO.length - 1; i >= 0; i--) {
+    const e = MURO[i];
+    html += '<div class="upgrade"><div class="muroN">' + romano(e.n) + '</div><div class="info">'
+      + '<div class="nome">' + e.nome + " — " + e.proj + (e.proj === 1 ? " project" : " projects")
+      + '</div><div class="desc">' + (e.prox ? "handed to " + e.prox + " &middot; " : "")
+      + e.cauda + "</div></div></div>";
+  }
+  $("muroCorpo").innerHTML = html;
+}
+
+// ---------- the epilogue ----------
+// Prestige used to be a panel and a reset. This is the four seconds where the player
+// decides whether they lost their stuff or the story moved, so it names who takes over
+// and what the run left behind, in the run's own numbers.
+const EPILOGO_VOZ = [
+  ["ODETE", "You're not going anywhere. Sit down, eat something."],
+  ["RUI", "Second time. Still embarrassing. Still worked."],
+  ["MARA", "I keep the names. You just keep showing up."]
+];
+function mostrarEpilogo(d) {
+  const voz = EPILOGO_VOZ[Math.min(Math.max(0, d.anoIdx), EPILOGO_VOZ.length - 1)];
+  $("epilogoCorpo").innerHTML =
+    "<b>" + d.spark + "</b> ran the " + ordinal(d.ano) + " year.<br>"
+    + d.projetos + (d.projetos === 1 ? " project" : " projects") + " started on this street.<br>"
+    + "<b>" + d.prox + "</b> takes the torch.";
+  $("epilogoWisdom").textContent = "★ WISDOM " + d.sabedoria
+    + " — that many people know where the shortcuts are.";
+  $("epilogoVoz").innerHTML = "<b>" + voz[0] + "</b> — &ldquo;" + voz[1] + "&rdquo;";
+  $("btnEpilogo").textContent = "BEGIN — YOU ARE " + d.prox;
+  $("btnEpilogoMuro").innerHTML = "▚ SEE THE WALL — " + MURO.length
+    + (MURO.length === 1 ? " NAME" : " NAMES");
+  abrir("sheetEpilogo");
+}
+
+// ---------- coming back ----------
+// The night's summary is gated on having projects, so somebody who passed the torch and
+// then quit came back to a completely silent screen — and that is exactly the player worth
+// greeting. This note fires on its own, whether or not anything was earned overnight.
+const NOTAS_VOLTA = [
+  ["RUI", "Nothing collapsed. Don't look so surprised."],
+  ["ODETE", "Second day. That's when people usually stop."],
+  ["MARA", "Three days. Your name's going on the wall."],
+  ["SAFI", "You keep coming back. So does everyone else."],
+  ["ODETE", "You've been at this a week. Sit. Eat something."]
+];
+function notaDeVolta() {
+  const d = R.dias.length;
+  if (d < 2 && voltouDepoisDe < 60) return null;    // a cold first start is not a return
+  const i = d >= 7 ? 4 : (d >= 4 ? 3 : Math.max(0, Math.min(2, d - 1)));
+  return NOTAS_VOLTA[i];
 }
 
 // ---------- the world (fullscreen side-scroller) ----------
@@ -3101,9 +3387,12 @@ function desenhar() {
     $("inovacao").textContent = S.inovacao;
     $("bonus").textContent = bonusInovacao().toFixed(1);
   }
+  $("muroNota").textContent = MURO.length
+    ? "— " + MURO.length + (MURO.length === 1 ? " NAME" : " NAMES") : "— EMPTY";
   desenharSkills();
   desenharSuperHUD();
   alertaMundo();
+  verificarCapitulo();
 }
 
 // The super's charge, on the button that will spend it: one square per completed combo,
@@ -3310,7 +3599,8 @@ function girarFato() {
 }
 
 // ---------- sheets ----------
-const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch", "sheetStats", "sheetConfirm", "sheetSkills"];
+const SHEETS = ["sheetProjects", "sheetUpgrades", "sheetTorch", "sheetStats", "sheetConfirm",
+  "sheetSkills", "sheetMuro", "sheetEpilogo"];
 function abrir(id) {
   SHEETS.forEach(function (s) { $(s).classList.toggle("aberto", s === id && !$(s).classList.contains("aberto")); });
 }
@@ -3394,6 +3684,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btnConfirmaSim").onclick = function () { fecharTudo(); transicionar(); };
   $("btnConfirmaNao").onclick = () => abrir("sheetTorch");
   $("abrirSkills").onclick = () => abrir("sheetSkills");
+  $("abrirMuro").onclick = function () { mostrarMuro(); abrir("sheetMuro"); };
+  $("btnEpilogoMuro").onclick = function () { mostrarMuro(); abrir("sheetMuro"); };
+  $("btnEpilogo").onclick = function () { fecharTudo(); };
   $("btnSkillAuto").onclick = comprarSkill;
   $("openProjects").onclick = () => abrir("sheetProjects");
   $("openUpgrades").onclick = () => abrir("sheetUpgrades");
@@ -3421,6 +3714,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("dblclick", function (e) { e.preventDefault(); });
 
   carregarRetencao();   // before the save: the night that just passed is paid at today's rate
+  carregarMuro();       // ...and before carregar(), so the wall count is right on the first draw
   carregar();
   // Coming back is an event, not a cold start: after a night away — or on a day you had
   // not played yet — the kitchen has kept a call for you, and it is worth double.
@@ -3450,6 +3744,7 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarWand(dt);
     atualizarSuper(dt);
     if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
+    if (cartaoT > 0) cartaoT -= dt;
     if (S.u4) { // neighbors keep helping on their own — but they do not charge your super
       autoAcc += dt * CFG.autoTapsPorSeg;
       let n = Math.min(4, Math.floor(autoAcc));

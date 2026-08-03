@@ -831,6 +831,163 @@ function chromiumPath() {
   if (passou.projetos !== 0) errors.push('passing the torch did not reset the run');
   if (passou.tochas !== 1) errors.push('passing the torch was not counted');
 
+  // ---- the epilogue: the torch names a successor and says what the run left behind ----
+  // The projects count is read BEFORE transicionar() wipes it; if that ever regresses it
+  // shows up here as a zero.
+  const epi = await page.evaluate(() => ({
+    aberto: document.getElementById('sheetEpilogo').classList.contains('aberto'),
+    corpo: document.getElementById('epilogoCorpo').innerText,
+    wisdom: document.getElementById('epilogoWisdom').textContent,
+    voz: document.getElementById('epilogoVoz').innerText,
+    botao: document.getElementById('btnEpilogo').textContent,
+    muroBtn: document.getElementById('btnEpilogoMuro').textContent
+  }));
+  console.log('epilogue ->', epi.aberto ? 'open' : 'NOT OPEN', '|',
+    JSON.stringify(epi.corpo.replace(/\n/g, ' / ')), '|', JSON.stringify(epi.botao));
+  console.log('         ->', JSON.stringify(epi.voz), '|', JSON.stringify(epi.wisdom));
+  if (!epi.aberto) errors.push('passing the torch showed no epilogue');
+  if (!/NIA ran the first year/.test(epi.corpo)) errors.push('the epilogue did not name the spark');
+  if (!/12 projects/.test(epi.corpo)) errors.push('the epilogue lost the run it was describing (projects read after the wipe?)');
+  if (!/MARA/.test(epi.corpo) || !/MARA/.test(epi.botao)) errors.push('the epilogue named no successor');
+  if (!/—/.test(epi.voz)) errors.push('the epilogue line is not spoken by anybody');
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-epilogo.png') });
+
+  // ---- the wall: written by the torch, and it only ever grows ----
+  const muro1 = await page.evaluate(async () => {
+    document.getElementById('btnEpilogoMuro').click();
+    await new Promise(r => setTimeout(r, 250));
+    return {
+      aberto: document.getElementById('sheetMuro').classList.contains('aberto'),
+      corpo: document.getElementById('muroCorpo').innerText.replace(/\n+/g, ' · '),
+      n: MURO.length, nomes: muroNomes(), ultimo: MURO[MURO.length - 1],
+      guardado: localStorage.getItem('proto_savetheworld_muro')
+    };
+  });
+  console.log('the wall ->', muro1.n, 'name(s):', JSON.stringify(muro1.corpo));
+  if (!muro1.aberto) errors.push('the wall did not open');
+  if (!muro1.n) errors.push('the torch wrote no name on the wall');
+  if (!muro1.ultimo || muro1.ultimo.nome !== 'NIA' || muro1.ultimo.proj !== 12) {
+    errors.push('the wall entry does not describe the run that just ended: ' + JSON.stringify(muro1.ultimo));
+  }
+  if (!muro1.guardado) errors.push('the wall was not written to its own storage key');
+  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-muro.png') });
+
+  // it must survive the thing that wipes everything else: the game save going away
+  const muro2 = await page.evaluate(() => {
+    localStorage.removeItem('proto_savetheworld');
+    MURO = []; carregarMuro();
+    const u = MURO[MURO.length - 1] || {};
+    return { n: MURO.length, nome: u.nome, proj: u.proj };
+  });
+  console.log('wall after the game save is wiped ->', muro2.n, 'entries, last:', JSON.stringify(muro2.nome), muro2.proj, 'projects');
+  if (muro2.n !== muro1.n || muro2.nome !== 'NIA') errors.push('the wall did not survive losing the game save');
+
+  // a hand-edited wall must be repaired, never thrown
+  const muro3 = await page.evaluate(() => {
+    const bom = localStorage.getItem('proto_savetheworld_muro');
+    try {
+      localStorage.setItem('proto_savetheworld_muro', '[{"nome":"OK"},{"lixo":1},7,null]');
+      MURO = []; carregarMuro(); mostrarMuro();
+      const meio = MURO.length;
+      localStorage.setItem('proto_savetheworld_muro', '{not an array}');
+      MURO = []; carregarMuro(); mostrarMuro();
+      const vazio = MURO.length;
+      localStorage.setItem('proto_savetheworld_muro', bom);
+      MURO = []; carregarMuro();
+      return { meio: meio, vazio: vazio, voltou: MURO.length };
+    } catch (e) { return { erro: String(e) }; }
+  });
+  console.log('hand-edited wall -> junk rows dropped, kept', muro3.meio, '| not-an-array ->', muro3.vazio,
+    '| the real one still loads:', muro3.voltou);
+  if (muro3.erro || muro3.meio !== 1 || muro3.vazio !== 0 || muro3.voltou !== muro1.n) {
+    errors.push('a corrupted wall broke the game: ' + JSON.stringify(muro3));
+  }
+  // and it is capped, so a very long-lived device cannot grow localStorage forever
+  const muroCap = await page.evaluate(() => {
+    const bom = localStorage.getItem('proto_savetheworld_muro');
+    for (let i = 0; i < 60; i++) escreverNoMuro('X', 'Y', i, i + 1);
+    const n = MURO.length, primeiro = MURO[0].n;
+    localStorage.setItem('proto_savetheworld_muro', bom); MURO = []; carregarMuro();
+    return { n: n, primeiro: primeiro, max: MURO_MAX };
+  });
+  console.log('wall cap -> after 60 torches it holds', muroCap.n, '(max', muroCap.max + ') starting at', muroCap.primeiro);
+  if (muroCap.n !== muroCap.max) errors.push('the wall is not capped');
+
+  // ---- chapter cards: thresholds are fractions of the target, never hardcoded ----
+  const caps = await page.evaluate(async () => {
+    const meta = CFG.metaPrestigio;
+    const fora = CAPITULOS.filter(c => !(c.frac >= 0 && c.frac <= 1));
+    S.introSeen = true; S.capVisto = 0; S.energiaTotal = 0; cartaoT = 0;
+    desenhar();
+    const um = { n: document.getElementById('cartaoN').textContent, t: document.getElementById('cartaoT').textContent,
+      v: document.getElementById('cartaoV').innerText, visivel: document.getElementById('cartao').classList.contains('mostra') };
+    // just short of chapter II: nothing new
+    cartaoT = 0; S.energiaTotal = meta * CAPITULOS[1].frac - 1; desenhar();
+    const antes = S.capVisto;
+    // exactly at it: the card turns over
+    cartaoT = 0; S.energiaTotal = meta * CAPITULOS[1].frac; desenhar();
+    const dois = { visto: S.capVisto, t: document.getElementById('cartaoT').textContent,
+      v: document.getElementById('cartaoV').innerText };
+    // the same chapter, heard on a later run: same title, different street
+    const vozNo = function (t) {
+      S.transicoes = t; S.capVisto = 1; cartaoT = 0; S.energiaTotal = meta; desenhar();
+      return { t: document.getElementById('cartaoT').textContent,
+        v: document.getElementById('cartaoV').innerText };
+    };
+    const r1 = vozNo(0), r3 = vozNo(2);
+    S.transicoes = 0;
+    return { fora: fora.length, um, antes, dois, r1, r3, total: CAPITULOS.length };
+  });
+  const CAP1 = caps.um.t;
+  console.log('chapters ->', caps.total, '|', caps.um.n, JSON.stringify(caps.um.t), '|', JSON.stringify(caps.um.v));
+  console.log('         -> at', (100 * 0.04) + '% of the target:', JSON.stringify(caps.dois.t), '|', JSON.stringify(caps.dois.v));
+  console.log('         -> the same chapter, run one:', JSON.stringify(caps.r1.v));
+  console.log('         ->                  run three:', JSON.stringify(caps.r3.v));
+  if (caps.r1.t !== caps.r3.t) errors.push('the chapter title changed between runs');
+  if (caps.r1.v === caps.r3.v) errors.push('a later run hears the same street');
+  if (caps.total !== 6) errors.push('there are not six chapters');
+  if (caps.fora) errors.push('a chapter threshold is not a fraction of the target');
+  if (!caps.um.visivel || !/CHAPTER I$/.test(caps.um.n)) errors.push('chapter one did not open the run');
+  if (caps.antes !== 1) errors.push('a chapter fired before its share of the target');
+  if (caps.dois.visto !== 2) errors.push('the chapter did not turn over at its share of the target');
+  if (caps.dois.v === caps.um.v) errors.push('the chapter card did not change');
+  await page.evaluate(() => { S.capVisto = 0; cartaoT = 0; S.energiaTotal = 0; });
+
+  // passing the torch reads the chapters to the next street too
+  const capReset = await page.evaluate(() => {
+    S.capVisto = 4; S.energiaTotal = 62000; S.geradores = 3; S.poluicao = 0; cartaoT = 0;
+    transicionar();
+    // while the epilogue is up no chapter fires over it
+    const durante = { visto: S.capVisto, epi: document.getElementById('sheetEpilogo').classList.contains('aberto') };
+    fecharTudo();
+    cartaoT = 0; desenhar();
+    return { durante, visto: S.capVisto, cartao: document.getElementById('cartaoT').textContent };
+  });
+  console.log('after the torch -> chapters back to', capReset.durante.visto,
+    '| held back while the epilogue is up:', capReset.durante.epi,
+    '| then:', JSON.stringify(capReset.cartao));
+  if (capReset.durante.visto !== 0) errors.push('the chapters did not replay after the torch');
+  if (capReset.durante.epi !== true) errors.push('the epilogue did not open on the second torch');
+  if (capReset.visto !== 1 || capReset.cartao !== CAP1) errors.push('the new run did not open on chapter one');
+
+  // ---- the hard rule: no authored fiction string may contain a digit, ever, so a line
+  // can never be mistaken for the sourced REAL DATA banner ----
+  const digitos = await page.evaluate(() => {
+    const s = [];
+    CAPITULOS.forEach(c => { s.push(c.t, c.n === undefined ? '' : ''); c.v.forEach(v => s.push(v[0], v[1])); });
+    EPILOGO_VOZ.forEach(v => s.push(v[0], v[1]));
+    NOTAS_VOLTA.forEach(v => s.push(v[0], v[1]));
+    ELENCO.forEach(n => s.push(n));
+    ORDINAIS.forEach(o => s.push(o));
+    [1, 2, 3, 5, 6, 9, 10, 40].forEach(t => s.push(caudaMuro(t)));
+    s.push(document.getElementById('sheetMuro').querySelector('.avisoPrestigio').textContent);
+    return { total: s.length, ruins: s.filter(x => /[0-9]/.test(x)) };
+  });
+  console.log('fiction strings checked for digits ->', digitos.total, '| with a digit:', digitos.ruins.length);
+  if (digitos.ruins.length) errors.push('a fiction string contains a digit: ' + JSON.stringify(digitos.ruins));
+
+  await page.evaluate(() => { localStorage.removeItem('proto_savetheworld_muro'); MURO = []; });
+
   // offline pays what the night actually earned, not the rate frozen at bedtime:
   // 20 projects in GO FAST with a rested team wear out while you sleep
   await page.evaluate(() => {
@@ -871,6 +1028,30 @@ function chromiumPath() {
     errors.push('the call banner is sitting on top of the night summary');
   }
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-volta.png') });
+
+  // The player who passed the torch and then quit: zero projects, so the night's summary
+  // is silent by design — and that is exactly the person worth greeting. The note has to
+  // fire independently of the gain banner.
+  await page.evaluate(() => {
+    salvar = function () {};   // the unload handler would write live state over the seed
+    localStorage.setItem('proto_savetheworld', JSON.stringify({
+      energia: 0, energiaTotal: 0, poluicao: 0, geradores: 0, modo: 'carvao', tempoLimpo: 0,
+      u1: false, u2: false, u3: false, u4: false, u5: false, u6: false, u7: false,
+      inovacao: 4, transicoes: 1, introSeen: true, capVisto: 0, salvoEm: Date.now() - 12 * 3600 * 1000
+    }));
+  });
+  await page.reload();
+  await page.waitForFunction(() => typeof S !== 'undefined' && S.transicoes === 1);
+  const semProjetos = await page.evaluate(() => {
+    const o = document.getElementById('offline');
+    return { visivel: o.style.display === 'block', txt: o.innerText, projetos: S.geradores };
+  });
+  console.log('back after passing the torch (no projects) ->', semProjetos.visivel ? 'greeted' : 'SILENT',
+    '|', JSON.stringify(semProjetos.txt));
+  if (semProjetos.projetos !== 0) errors.push('the torch-then-quit seed did not load');
+  if (!semProjetos.visivel) errors.push('a player who passed the torch and quit came back to nothing');
+  if (!/—/.test(semProjetos.txt)) errors.push('the return greeting is not spoken by anybody');
+  if (/impact/.test(semProjetos.txt)) errors.push('the gain banner appeared with no projects');
 
   await page.evaluate(() => localStorage.removeItem('proto_savetheworld'));
 

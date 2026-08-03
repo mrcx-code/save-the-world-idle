@@ -956,6 +956,71 @@ toda sessão começa lendo a última entrada.
   precisa dele. Vale medir uma corrida com `hold: 0.05` antes de calibrar mais.
   **Próximo passo: medir a curva do dia 2, que continua pendente desde a sessão do mundo.**
 
+- **2026-08-02 · a tocha virou epílogo, o muro é a única coisa que sobrevive ao reset, e a
+  corrida ganhou seis capítulos.** Três peças do `LORE.md` aprovadas pelo dono, e só essas.
+  Nada aqui toca cansaço, `metaPrestigio` (50 mil) nem a curva `15 × 1,15^n` — **medido:
+  `node test/sim.js` antes e depois dá saída byte a byte idêntica** (`diff` vazio nas 17
+  linhas da tabela; a vencedora segue `rhythm + hold + world` em 6m27s, 43 projetos, pior
+  saúde do time 75%). Isso é por construção: o `test/formulas.js` lê o `CFG` do
+  `index.html` e o `CFG` não foi tocado.
+
+  **(1) O epílogo.** Passar a tocha era um painel e um reset. Agora, depois do YES, abre
+  uma folha `THE TORCH PASSES` que diz **quem** era, **quanto** a corrida deixou e **quem**
+  pega a tocha: `NIA ran the first year. / 12 projects started on this street. / MARA takes
+  the torch.` A armadilha que o `LORE.md` avisava era real e virou teste: o
+  `transicionar()` zera `S.geradores` **duas linhas** depois do começo, então tudo que o
+  epílogo diz é lido para um objeto local **antes** do wipe — o smoke test falha com a
+  mensagem "the epilogue lost the run it was describing (projects read after the wipe?)"
+  se alguém inverter isso. O sucessor sai do `ELENCO` indexado por `S.transicoes`, que já
+  existia e já sobrevive ao prestígio: **zero campo novo de save** para o epílogo (o
+  `LORE.md` pedia um `S.sparkIdx`; era redundante). Reordenei o fim do `transicionar()`
+  — muro, epílogo, e só então `salvar(); desenhar()` — porque o `desenhar()` dispara o
+  capítulo I e ele não pode aparecer por cima do epílogo.
+
+  **(2) O muro pintado, no lugar de THE LONG TABLE.** O dono recusou a mesa longa ("muito
+  cavalheiro, medieval"), então é um muro de rua: cada tocha deixa um nome, e ele **só
+  cresce**. Chave própria no `localStorage` (`proto_savetheworld_muro`), pelo mesmo motivo
+  que a retenção tem a dela — o prestígio apaga o `S`. **Medido no teste:** apago o
+  `proto_savetheworld` inteiro e o muro continua lá com as mesmas entradas; um registro
+  editado à mão (`[{"nome":"OK"},{"lixo":1},7,null]`) é **reparado para 1 linha** em vez de
+  derrubar o jogo; `"{not an array}"` vira lista vazia; e depois de 60 tochas ele guarda
+  **30** (o `MURO_MAX`), começando na de número 31, então não cresce sem limite.
+
+  **(3) Seis capítulos por corrida.** Limiares são **frações** de `CFG.metaPrestigio`
+  (0 / 4% / 16% / 40% / 76% / 100%), calculadas na hora — o teste rejeita qualquer `frac`
+  fora de [0,1] e confere que o cartão **não** vira a 4% menos um ponto e **vira** exatamente
+  em 4%. O título nunca muda; a voz embaixo é escolhida por `min(S.transicoes, 2)` —
+  **medido:** mesma corrida, capítulo II, corrida 1 ouve `MARA — "I started one too."` e a
+  corrida 3 ouve `SAFI — "Nobody asked permission this time."`. `S.capVisto` é o único
+  campo novo do save e é zerado no `transicionar()`.
+
+  **O que quebrou no caminho, e o que o teste passou a cobrir.** (a) A tarja de volta era
+  gateada em `S.geradores > 0`: quem passava a tocha e fechava o jogo voltava para uma tela
+  **muda** — exatamente a pessoa que mais interessa. A saudação agora dispara sozinha, e o
+  teste semeia um save com **zero projetos** e 12h de ausência e exige que ela apareça sem
+  a linha de ganho. (b) O cartão de capítulo nasceu com a mesma borda **dourada** da tarja
+  REAL DATA, ou seja, ficção com cara de dado com fonte; virou roxa. (c) A regra dura do
+  `LORE.md` — **nenhum dígito em texto de ficção** — virou asserção: **99 strings autoradas
+  conferidas, 0 com dígito**. Os números do epílogo são interpolados da corrida na hora de
+  renderizar; nenhum está escrito na seção de ficção.
+
+  **Da abertura só entrou o nome** (o dono não aprovou a reescrita da intro): uma frase, no
+  parágrafo que já existia — a heroína é **NIA** e a Gran Odete a chamou de *a spark* como
+  reclamação.
+
+  **Exposto de propósito para a agente de estética, para o muro existir no cenário e não só
+  numa folha:** `MURO` (array de `{n, nome, prox, proj, cauda, estilo}`), `muroNomes()`,
+  `muroTotal()`, `MURO_MAX` e `tintaMuro(nome, n)` — `estilo` é um slot de tinta 0–5 estável
+  por entrada, gravado uma vez, para o mesmo nome sair sempre com a mesma cor sem que
+  ninguém precise guardar cor nenhuma.
+
+  **Medido no fim:** smoke verde com **28 asserções novas**, FPS 61–62 (era 61), `sim.js`
+  idêntico. **Próximo passo: a curva do dia 2 continua pendente — e agora tem um instrumento
+  melhor para lê-la, porque o muro é uma coleção incompleta com contagem visível, que é
+  exatamente a aposta de retenção do `LORE.md` §A.5. Dúvida honesta: o cartão de capítulo
+  I dispara em toda abertura de corrida, inclusive quando a pessoa só recarregou a página —
+  não sei ainda se isso vira ritual ou ruído.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
