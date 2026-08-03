@@ -29,10 +29,22 @@ const ANALISE = function (d, w, h) {
   let sL = 0, sC = 0, n = 0;
   const linhaL = new Float64Array(h), linhaN = new Float64Array(h);
   const linhaC = new Float64Array(h), linhaR = new Float64Array(h), linhaG = new Float64Array(h), linhaB = new Float64Array(h);
+  // HOW MUCH OF EACH FIFTH OF THE BOARD IS BARE SKY. `quinto.js` answers this for the game
+  // by comparing every pixel against `skyCanvas`, which is exact and which the board does not
+  // have. Without the same number on the BOARD side, the profile comparison is a floor
+  // against a raw mean: our fifth 3 reads 111 against 83 and it looks like 28 points of
+  // paint, when the board's fifth 3 is 1.6% sky and ours is 49.8% and almost none of it is
+  // paint at all. The heuristic is blue clearly over red and light, plus near-white for
+  // cloud — good for a daylight panel, meaningless at TARDE (an orange sky is not blue) and
+  // at NOITE (nothing clears the threshold), so it is printed only where it means something.
+  const linhaCn = new Float64Array(h), linhaCs = new Float64Array(h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = (y * w + x) * 4;
     const r = d[i], g = d[i + 1], b = d[i + 2];
     const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    if ((b >= r + 12 && b >= g && L > 110) || (r > 200 && g > 205 && b > 205 && b >= r - 6)) {
+      linhaCn[y]++; linhaCs[y] += L;
+    }
     const rl = lin(r), gl = lin(g), bl = lin(b);
     const X = (0.4124 * rl + 0.3576 * gl + 0.1805 * bl) / 0.95047;
     const Y = 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
@@ -44,15 +56,22 @@ const ANALISE = function (d, w, h) {
     linhaC[y] += Math.sqrt(A * A + B2 * B2); linhaR[y] += r; linhaG[y] += g; linhaB[y] += b;
   }
   // the vertical profile in five slices: top of frame down to the ground line
-  const perfil = [], perfilC = [], perfilRGB = [];
+  const perfil = [], perfilC = [], perfilRGB = [], perfilCeu = [], perfilPiso = [], perfilPint = [];
   for (let k = 0; k < 5; k++) {
-    let s = 0, m = 0, c2 = 0, r2 = 0, g2 = 0, b3 = 0;
+    let s = 0, m = 0, c2 = 0, r2 = 0, g2 = 0, b3 = 0, cn = 0, cs = 0;
     for (let y = Math.floor(h * k / 5); y < Math.floor(h * (k + 1) / 5); y++) {
       s += linhaL[y]; m += linhaN[y]; c2 += linhaC[y]; r2 += linhaR[y]; g2 += linhaG[y]; b3 += linhaB[y];
+      cn += linhaCn[y]; cs += linhaCs[y];
     }
     perfil.push(m ? s / m : 0);
     perfilC.push(m ? c2 / m : 0);
     perfilRGB.push(m ? [r2 / m, g2 / m, b3 / m] : [0, 0, 0]);
+    // the floor a strip cannot go below (sky share x sky luma) and, once it is taken off,
+    // the mean value of everything that was actually PAINTED there — the only half of the
+    // profile a brush can move
+    const fr = m ? cn / m : 0, piso = m ? cs / m : 0;
+    perfilCeu.push(fr); perfilPiso.push(piso);
+    perfilPint.push(fr < 0.999 && m ? ((s / m) - piso) / (1 - fr) : 0);
   }
   // and the horizontal one, because "the middle opens" is a horizontal shape
   const colunas = [];
@@ -64,10 +83,11 @@ const ANALISE = function (d, w, h) {
     }
     colunas.push(m ? s / m : 0);
   }
-  return { luma: sL / n, cstar: sC / n, perfil: perfil, colunas: colunas, perfilC: perfilC, perfilRGB: perfilRGB };
+  return { luma: sL / n, cstar: sC / n, perfil: perfil, colunas: colunas, perfilC: perfilC,
+    perfilRGB: perfilRGB, perfilCeu: perfilCeu, perfilPiso: perfilPiso, perfilPint: perfilPint };
 };
 
-function linha(nome, a) {
+function linha(nome, a, ceu) {
   console.log(nome.padEnd(22) + 'luma ' + a.luma.toFixed(1).padStart(6) + '  C* ' + a.cstar.toFixed(1).padStart(5) +
     '  | topo->chao ' + a.perfil.map(v => v.toFixed(0).padStart(3)).join(' ') +
     '  | esq->dir ' + a.colunas.map(v => v.toFixed(0).padStart(3)).join(' '));
@@ -77,6 +97,11 @@ function linha(nome, a) {
   console.log(' '.repeat(22) + 'C* por quinto ' + a.perfilC.map(v => v.toFixed(1).padStart(5)).join(' ') +
     '  | RGB q4 ' + a.perfilRGB[3].map(v => v.toFixed(0)).join(',') +
     '  q5 ' + a.perfilRGB[4].map(v => v.toFixed(0)).join(','));
+  if (ceu) {
+    console.log(' '.repeat(22) + 'ceu por quinto ' + a.perfilCeu.map(v => (v * 100).toFixed(1).padStart(5)).join(' ') +
+      '  | piso ' + a.perfilPiso.map(v => v.toFixed(0).padStart(3)).join(' ') +
+      '  | PINTADO ' + a.perfilPint.map(v => v.toFixed(0).padStart(3)).join(' '));
+  }
 }
 
 (async () => {
@@ -100,7 +125,7 @@ function linha(nome, a) {
     Buffer.from(alvo.png.split(',')[1], 'base64'));
   console.log('board ' + alvo.full[0] + 'x' + alvo.full[1] + ', recorte RUA DO BAIRRO ' +
     CROP.w + 'x' + CROP.h + ' -> board-rua.png');
-  linha('BOARD RUA DO BAIRRO', ANALISE(Uint8ClampedArray.from(alvo.d), alvo.w, alvo.h));
+  linha('BOARD RUA DO BAIRRO', ANALISE(Uint8ClampedArray.from(alvo.d), alvo.w, alvo.h), true);
 
   // ---- the game, same treatment: only the picture, i.e. the world band down to the ground
   // plane, and only below the HUD bar, because the bar is chrome and not the picture ----
@@ -125,7 +150,7 @@ function linha(nome, a) {
       const y0 = topo, y1 = Math.min(cv.height, GROUND + 22);
       return ANALISE(g.getImageData(0, y0, cv.width, y1 - y0).data, cv.width, y1 - y0);
     }, { st: SAO, frac });
-    linha('JOGO ' + nome, r);
+    linha('JOGO ' + nome, r, nome === 'MANHA');
   }
   await browser.close();
 })();
