@@ -1790,7 +1790,10 @@ function rgbS(c) { return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "
 // its rooftops is L 144 at C* 16. So: a hazy warm green when healed, a bleached warm ochre
 // when sick, both a value BELOW the top of the sky and both carrying real chroma. Still
 // light relative to the near plane — that is the value architecture — just not white.
-function horizonC(h) { return mixA([182, 168, 138], [138, 160, 132], h); }
+// ...and it is the SCENARIO'S, for the same reason the sky ramp below is: what the distance
+// dissolves into is the bottom of that place's sky seen through that place's air. A street
+// dissolves into hazy warm green; a coast dissolves into salt light off water.
+function horizonC(h) { const z = ceuP("horizonte"); return mixA(z[0], z[1], h); }
 // aerial perspective: dist 0 = at your feet, 1 = dissolved into the horizon
 function longe(c, dist, h) { return rgbS(mixA(c, horizonC(h), dist)); }
 
@@ -2034,7 +2037,10 @@ function horaAgora() {
   const t = (relogio / DIA_SEG) % 1 * HORAS.length;
   const i = Math.floor(t), f = t - i;
   const s = f * f * (3 - 2 * f);            // smoothstep: the turn, not a cut
-  return { a: HORAS[i % HORAS.length], b: HORAS[(i + 1) % HORAS.length], f: s };
+  // the two indices come out too, because the sky ramp of an hour is the SCENARIO's and has
+  // to be looked up by hour rather than read off the hour object itself
+  const ia = i % HORAS.length, ib = (i + 1) % HORAS.length;
+  return { a: HORAS[ia], b: HORAS[ib], f: s, ia: ia, ib: ib };
 }
 // how dark it is right now, 0..1 — what makes windows and street lamps come on
 function escuridao() { const q = horaAgora(); return lerp(q.a.escuro, q.b.escuro, q.f); }
@@ -2213,7 +2219,10 @@ function pal(h) {
   }
   // thick air eats the bright strip on the horizon: the band is the value architecture, so
   // it is dimmed rather than moved, and it comes straight back when you go steady
-  P.faixa = rgbS(mixA(mixA(horiz, [255, 255, 255], 0.12), hazeLuz(), rq * 0.34));
+  // kept as numbers too, because MATA ATLÂNTICA bakes its light shaft out of this colour and
+  // a bake needs channels, not a string. Same expression, so no frame moves.
+  P.faixaA = mixA(mixA(horiz, [255, 255, 255], 0.12), hazeLuz(), rq * 0.34);
+  P.faixa = rgbS(P.faixaA);
   // the hillside families, sick end shared so a bleached favela is one grey mass with the
   // faintest memory of paint in it — which is exactly what a bleached photograph looks like
   const fam = function (arr, cinza, dist) {
@@ -2250,18 +2259,62 @@ function sombra(cxp, y, w, a) {
 // to 231 at the horizon, and that single inversion was most of why our vertical profile was
 // an upside-down U against the board's 141 101 83 60 66. Brightest at the top; the light
 // separator over the rooftops is `P.faixa`, drawn as its own strip, not the whole sky.
-const CEU_SAO = [[158, 202, 228], [108, 156, 190], [98, 142, 172], [94, 134, 160], [100, 132, 134]];
-const CEU_DOENTE = CEU_SAO.map(desbotar);
+// ---------- THE SKY BELONGS TO THE PLACE, NOT TO THE GAME ----------
+// Wave 20 named this as the blocker for everything left on the board's CENÁRIOS strip:
+// `HORAS` and `skyCanvas` were global, so an ORLA or a CERRADO could only tint the street's
+// ramp, never author one. A coast, a forest and a cerrado are mostly sky, and the colour of
+// that sky is most of what tells you where you are standing.
+//
+// The split is the same one the scenario abstraction already makes everywhere else: the
+// CLOCK stays the game's and the PLACE becomes the scenario's. `HORAS` still owns the four
+// times of day, how dark each one is, and the light it puts on every solid in the world
+// (`escala`, `forca`, `tinta`) — one lighting regime, everywhere, which is a rule of the
+// direction and not a detail. What a scenario authors is the sky ITSELF: the healthy
+// five-stop ramp, the five-stop ramp each hour paints over that, how fast it falls to the
+// horizon, where the sun sits and how big it is, how many stars come out, and the colour
+// distance dissolves into.
+//
+// Defaults are RUA DO BAIRRO's numbers written as the same expressions they were inline, so
+// a scenario that declares no sky computes bit-for-bit what it computed before — `igual.js`
+// is the proof and it was run on both scenarios across this change.
+const CEU_PADRAO = {
+  // The board's CÉU, measured off the RUA DO BAIRRO panel: [149,186,201] at the top of the
+  // frame and [128,149,142] where it meets the rooftops — DARKER as it comes down, because
+  // the light is above and the street recedes into shade.
+  sao: [[158, 202, 228], [108, 156, 190], [98, 142, 172], [94, 134, 160], [100, 132, 134]],
+  horas: null,               // per hour, indexed like HORAS; null = that hour's own ramp
+  curva: 1.15,               // exponent on y: above 1 holds the zenith colour further down
+  mistura: [0.30, 0.55],     // how much of the hour's ramp is in: a + b·health
+  ganhoC: 0.25,              // the daylight-only chroma re-expansion, around the ramp's luma
+  sol: [0.70, 0.17, 0.045],  // x as a share of W, y and radius as shares of GROUND
+  nuvem: 1,                  // 0 turns the cloud decks off: a roofed place has no cloud in it
+  estrelas: 26,
+  horizonte: [[182, 168, 138], [138, 160, 132]]   // sick, healed: what distance dissolves into
+};
+const CEU_CEN = {};
+function ceuCen() { const c = CEN(); return (c && c.ceu) || CEU_PADRAO; }
+function ceuP(k) { const v = ceuCen()[k]; return v === undefined || v === null ? CEU_PADRAO[k] : v; }
+// the bleached end of a scenario's ramp is derived by the same one rule as every palette in
+// the file, and cached per place so `desbotar` is not run five times a bake
+function ceuDoente() {
+  const c = CEN(), id = (c && c.id) || "rua";
+  return CEU_CEN[id] || (CEU_CEN[id] = ceuP("sao").map(desbotar));
+}
+// the ramp one hour paints over the health ramp — the scenario's if it wrote one
+function ceuHora(i) { const hs = ceuCen().horas; return (hs && hs[i]) || HORAS[i].ceu; }
 function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the horizon
-  const f = Math.min(0.999, Math.max(0, t)) * (CEU_SAO.length - 1);
+  const CS = ceuP("sao"), CD = ceuDoente();
+  const f = Math.min(0.999, Math.max(0, t)) * (CS.length - 1);
   const i = Math.floor(f), k = f - i, tc = Math.pow(h, 0.78);
-  const base = mixA(palMix(CEU_DOENTE[i], CEU_SAO[i], h, tc), palMix(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h, tc), k);
+  const base = mixA(palMix(CD[i], CS[i], h, tc), palMix(CD[i + 1], CS[i + 1], h, tc), k);
   // ...and then the hour. The sky is where the four light states are most of the picture,
   // so it takes its OWN ramp per hour rather than a tint over the midday one — a sunset is
   // not noon with orange on it. Health still decides how much colour survives the smoke.
   const q = horaAgora();
-  const hora = mixA(mixA(q.a.ceu[i], q.a.ceu[i + 1], k), mixA(q.b.ceu[i], q.b.ceu[i + 1], k), q.f);
-  const c = mixA(base, hora, 0.30 + 0.55 * h);
+  const ha = ceuHora(q.ia), hb = ceuHora(q.ib);
+  const hora = mixA(mixA(ha[i], ha[i + 1], k), mixA(hb[i], hb[i + 1], k), q.f);
+  const mi = ceuP("mistura");
+  const c = mixA(base, hora, mi[0] + mi[1] * h);
   // AND THEN THE ONE NUMBER THE SKY WAS STILL SHORT ON, WHICH IS NOT VALUE. Sampled off the
   // board: the blue of the RUA DO BAIRRO panel measures C* 16.1 and ours measured 13.3 — the
   // sky is the single largest region of the picture, so three points of chroma there is most
@@ -2277,7 +2330,7 @@ function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the 
   // thing wave 12 bought — the hero stops being more saturated than his own street at NOITE
   // (ratio 1.00 -> 0.90) and his NOITE croma goes 12 -> 17 of 485. Held at zero after dark.
   const yy = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-  const gc = 1 + 0.25 * (1 - lerp(q.a.escuro, q.b.escuro, q.f));
+  const gc = 1 + ceuP("ganhoC") * (1 - lerp(q.a.escuro, q.b.escuro, q.f));
   return [Math.max(0, Math.min(255, yy + (c[0] - yy) * gc)),
           Math.max(0, Math.min(255, yy + (c[1] - yy) * gc)),
           Math.max(0, Math.min(255, yy + (c[2] - yy) * gc))];
@@ -2294,8 +2347,9 @@ function skyCanvas(h) {
   skyKey = key;
   const g = skyCv.getContext("2d");
   const hz = hazeLuz();
+  const curva = ceuP("curva");
   for (let y = 0; y <= GROUND + 1; y++) {
-    const t = Math.pow(y / (GROUND + 1), 1.15);
+    const t = Math.pow(y / (GROUND + 1), curva);
     let c = rampaCeu(h, t);
     // the sky is most of the frame, so this is where the rhythm is actually felt. Haze
     // banks at the horizon and thins out overhead — 8% at the zenith, 42% at the skyline —
@@ -2307,7 +2361,10 @@ function skyCanvas(h) {
   // The sun as a real disc with a corona, not a plus sign. Sick, it is a flat pale wafer
   // showing through smoke — no glow at all, which is most of why the sick sky reads wrong
   // when it is dark instead of blinding.
-  const sunX = Math.round(W * 0.70), sunY = Math.round(GROUND * 0.17), r = Math.max(7, Math.round(GROUND * 0.045));
+  // ...and where it stands is the place's too: the street sees it over the rooftops on the
+  // right, a coast sees it low and out over the water.
+  const so = ceuP("sol");
+  const sunX = Math.round(W * so[0]), sunY = Math.round(GROUND * so[1]), r = Math.max(7, Math.round(GROUND * so[2]));
   const disco = function (cor, rr) {
     g.fillStyle = cor;
     for (let y = -rr; y <= rr; y++) {
@@ -2328,7 +2385,8 @@ function skyCanvas(h) {
   g.globalAlpha = 1;
   if (noite > 0.5) {          // and when it has gone, the stars the board hangs over NOITE
     const nn = (noite - 0.5) * 2;
-    for (let st = 0; st < 26; st++) {
+    const nEst = ceuP("estrelas");
+    for (let st = 0; st < nEst; st++) {
       const sxx = Math.round(hash01(st * 13 + 1) * W);
       const syy = Math.round(hash01(st * 29 + 5) * GROUND * 0.7);
       g.globalAlpha = nn * (0.30 + hash01(st * 7 + 3) * 0.6);
@@ -3064,6 +3122,42 @@ function itemSprite(tipo) {
   const m = ITEM_MAPS[tipo] || ITEM_MAPS.smoke;
   return sprite("item:" + tipo, m, ITEM_C);
 }
+// A DROP HAS TO BE THE THING IT GIVES YOU. The drops were drawn off the board's ITENS sheet —
+// a flower, a water jug, a meal — one per kind of trouble, and the owner asked the only
+// question that matters about them: *"esses itens que os bichos ficam dropando... o que que
+// eles são? Se eles forem alguma moeda do jogo ou algum item do jogo, que ele seja exatamente
+// o visual igual."* He is right and the answer is not a nicer flower. Picking one up adds
+// IMPACT, and impact already has a glyph — the leaf in the top-left counter of the HUD. Three
+// beautiful items that are not that glyph teach the player that there are three currencies
+// when there is one.
+//
+// So the drop is now the HUD's own impact icon, the same 12x12 `ICONS.leaf` map, baked once
+// with the same 1 px dark outline `renderIcon()` gives it in the chrome — literally the same
+// picture in the same colours, on the ground instead of in the bar. What the trouble was is
+// still said, but by the thing that was always saying it: the colour of the four ticks
+// breathing around it and the word that pops on pickup (SHARED! / CLEAN! / CLEAR!).
+const icoCv = {};
+function iconeMundo(nome) {
+  if (icoCv[nome]) return icoCv[nome];
+  const ic = ICONS[nome];
+  const c = document.createElement("canvas");
+  c.width = 14; c.height = 14;
+  const g = c.getContext("2d");
+  g.fillStyle = "#12242e";                       // the chrome's own keyline, so it reads on
+  ic.map.forEach(function (row, y) {             // paving, on grass and on a night street
+    for (let x = 0; x < row.length; x++) {
+      if (row.charAt(x) === ".") continue;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) g.fillRect(x + 1 + dx, y + 1 + dy, 1, 1);
+    }
+  });
+  ic.map.forEach(function (row, y) {
+    for (let x = 0; x < row.length; x++) {
+      const ch = row.charAt(x);
+      if (ch !== ".") { g.fillStyle = ic.pal[ch]; g.fillRect(x + 1, y + 1, 1, 1); }
+    }
+  });
+  return (icoCv[nome] = c);
+}
 
 let mobs = [];
 // The three of them were the last figures in the world still written in flat hex, and being
@@ -3094,17 +3188,62 @@ function drawMobs(smog) {
       cx.translate(0, GROUND); cx.scale(1, squash); cx.translate(0, -GROUND);
       cx.globalAlpha = m.dying / 8;
     }
+    // A TROUBLE THAT HAS REACHED YOU IS DOING SOMETHING TO THE PLACE. It used to stop dead
+    // and stand there bobbing, which is the least alarming thing an obstacle can do, and the
+    // owner asked for the opposite: *"em vez de ficarem parados, eles podem fazer alguma
+    // animação... como se estivessem me atrapalhando ou estragando o mundo ao redor."*
+    // So the parked state gets its own idle per creature, and each one is the creature's own
+    // harm made visible: the smoke BELCHES and darkens the air round itself, the toxic drum
+    // LEAKS and a puddle spreads under it, the money bag SHAKES and throws coins away.
+    // `m.parado` is read and nothing else — movement, the block, hp and spawning are all
+    // untouched, this is the same sprite with something happening around it.
+    const trava = m.parado && m.dying <= 0;
+    const bat = trava ? Math.sin(tick * 0.16 + m.wx * 0.03) : 0;   // its own phase, per mob
     if (m.type === "smog") {
       sombra(sx + 9, GROUND, 13, 0.13);          // it floats, so its shadow is soft and wide
-      { const mp = mobLuz("smog", SMOG_MOB.pal); drawMap(mp._id, SMOG_MOB.map, mp, sx, GROUND - 25 + bob, m.flash > 0); }
+      if (trava) {
+        // it breathes out: three puffs climbing and spreading, drawn under the sprite so the
+        // creature stays the readable shape and only the AIR round it thickens
+        for (let i = 0; i < 3; i++) {
+          const f = ((tick * 0.9 + i * 34) % 100) / 100;
+          const r = Math.round(4 + f * 9);
+          cx.globalAlpha = (1 - f) * 0.34;
+          cx.fillStyle = "#6d6478";
+          cx.fillRect(sx + 9 - r, GROUND - 22 - Math.round(f * 16) - (r >> 1), r * 2, r);
+          cx.globalAlpha = 1;
+        }
+        if (tick % 7 === 0) parts.push({ x: sx + 9, y: GROUND - 26, vx: (Math.random() - 0.5) * 22,
+          vy: -16 - Math.random() * 16, life: 0.9, amb: 1, c: "#8a8194", grav: -6 });
+      }
+      { const mp = mobLuz("smog", SMOG_MOB.pal);
+        drawMap(mp._id, SMOG_MOB.map, mp, sx + Math.round(bat * 1.4), GROUND - 25 + bob - (trava ? Math.round(Math.abs(bat) * 2) : 0), m.flash > 0); }
     } else if (m.type === "barrel") {
       // 20 wide now, drawn one px left so it still stands on the same centre as its
       // siblings (sx+9) — the hit test never looked at the sprite, so this is paint only
       sombra(sx + 9, GROUND, 20, 0.26);
-      { const mp = mobLuz("barrel", BARREL_MOB.pal); drawMap(mp._id, BARREL_MOB.map, mp, sx - 1, GROUND - 22 + (bob ? 1 : 0), m.flash > 0); }
+      if (trava) {
+        // it leaks, and the puddle under it grows and shrinks as it soaks in: two flat
+        // ellipses on the ground plane, kept dark so they never compete with the Cetro
+        const w2 = 10 + Math.round(Math.abs(bat) * 5);
+        cx.globalAlpha = 0.55; cx.fillStyle = "#3d4a1c";
+        cx.fillRect(sx + 9 - w2, GROUND, w2 * 2, 2);
+        cx.fillRect(sx + 9 - w2 + 2, GROUND + 2, w2 * 2 - 4, 1);
+        cx.globalAlpha = 0.75; cx.fillStyle = "#5c6b22";
+        cx.fillRect(sx + 9 - w2 + 3, GROUND, w2 * 2 - 6, 1);
+        cx.globalAlpha = 1;
+        if (tick % 11 === 0) parts.push({ x: sx + 4, y: GROUND - 12, vx: -4, vy: 10,
+          life: 0.5, c: "#7d8f2c", grav: 120 });
+      }
+      { const mp = mobLuz("barrel", BARREL_MOB.pal);
+        drawMap(mp._id, BARREL_MOB.map, mp, sx - 1 + (trava ? Math.round(bat * 1.2) : 0), GROUND - 22 + (bob ? 1 : 0), m.flash > 0); }
     } else {
       sombra(sx + 9, GROUND, 18, 0.26);
-      { const mp = mobLuz("cash", CASH_MOB.pal); drawMap(mp._id, CASH_MOB.map, mp, sx, GROUND - 16 - (bob ? 0 : 1), m.flash > 0); }
+      if (trava && tick % 9 === 0) {              // it shakes and throws what it is hoarding
+        parts.push({ x: sx + 9, y: GROUND - 12, vx: (Math.random() - 0.5) * 46,
+          vy: -34 - Math.random() * 14, life: 0.6, c: "#c9a563", grav: 150 });
+      }
+      { const mp = mobLuz("cash", CASH_MOB.pal);
+        drawMap(mp._id, CASH_MOB.map, mp, sx + (trava ? Math.round(bat * 2) : 0), GROUND - 16 - (bob ? 0 : 1) - (trava ? Math.round(Math.abs(bat)) : 0), m.flash > 0); }
     }
     cx.globalAlpha = 1;
     cx.restore();
@@ -3794,6 +3933,8 @@ function faixaVerde(speed, passo, larg, hMin, hMax, corpo, topo, linha, sem) {
 // different from the next one:
 //
 //   paleta   — the colour families, as overrides on top of `PALETA_BASE`
+//   ceu      — the sky itself: the health ramp, a ramp per hour, the fall to the horizon,
+//              the sun, the stars, and the colour distance dissolves into (`CEU_PADRAO`)
 //   chaoCor  — the two ends of the ground slab's own gradient
 //   fundo    — the skyline: ridges, separator band, town, landmarks
 //   meio     — the mid-distance content that fills the wedge between the framing mass
@@ -3803,10 +3944,12 @@ function faixaVerde(speed, passo, larg, hMin, hMax, corpo, topo, linha, sem) {
 //   moldura  — the framing mass that closes the edges and the top corners
 //   fios     — what crosses the sky overhead
 //
-// Everything ELSE is deliberately shared and stays in `drawScene()`: the sky ramp and its
-// four hours, the clouds and the cirrus, the weather that carries the rhythm, the particle
-// field, the hero, the monsters and the HUD. A scenario is a place, not a renderer — the
-// light, the arc and the boy read the same wherever you are, which is the only reason a
+// Everything ELSE is deliberately shared and stays in `drawScene()`: the CLOCK and the light
+// it puts on every solid, the clouds and the cirrus, the weather that carries the rhythm, the
+// particle field, the hero, the monsters and the HUD. A scenario is a place, not a renderer —
+// one lighting regime everywhere is a rule of the direction, so an hour is the game's and
+// only the sky that hour is looking at belongs to the place. The
+// arc and the boy read the same wherever you are, which is the only reason a
 // second one costs a few hundred lines instead of a second game.
 //
 // RUA DO BAIRRO is scenario #1 and its hooks are the nineteen waves of measured drawing that
@@ -3871,7 +4014,10 @@ CENARIOS.rua = {
     // furthest away — it fought the hero for the eye. More haze, and its windows are a
     // texture on a mass now instead of black holes punched through it.
     const cityC = P.cidade;
-    const spacing = 420, speed = 0.16;
+    // and the town being rebuilt was on screen even less often than the matriz — 420 px of
+    // spacing for 68 px of towers, i.e. one frame in six. The windows coming on as the world
+    // heals is one of the few things in the picture that answers the economy directly.
+    const spacing = 250, speed = 0.16;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed) + 40;
@@ -3931,14 +4077,33 @@ CENARIOS.rua = {
     // They stand ON the separator band, not behind it. Rooted at GROUND-8 like the skyline
     // they were simply eaten by the tree line — distant things belong higher on the picture
     // plane, and a silhouette whose feet sit on the light strip is the value architecture.
-    const spacing = 460, speed = 0.15, base = GROUND - 29;
+    // WAVE 21: ONE LANDMARK EVERY 460 SCREEN PIXELS IS ONE LANDMARK EVERY THREE SCREENFULS.
+    // `test/mundo.js` put the number on it: the matriz was on the screen in 4 frames out of
+    // 10 and took 3.7% of the picture at its very best, and the massif with the figure — the
+    // single most Brazilian silhouette in the file — was simply never up when anyone looked.
+    // The owner asked *cadê o Brasil* and the honest answer was "two screens back". Spacing
+    // more than halves and every landmark is drawn 1.55x, which is also the RIGHT way to
+    // close sky: waves 11-14 closed it with a wall at the edges, and a picture closes its sky
+    // properly by putting the place INTO it.
+    // 250 was tried first and `mundo.js` caught the hole: at worldX 3800 the landmark lands
+    // at sx −70 with 71 px of width, i.e. one column of it on the screen, and that frame
+    // measured 0.18% marco and 28.5% sky — the emptiest of the ten. 210 is shorter than the
+    // frame minus a landmark's width, so there is always one up.
+    const spacing = 210, speed = 0.15, base = GROUND - 29, E = 1.55;
     const corpo = P.marcoC, claro = P.marcoL, escuro = P.marcoE;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed);
-      if (sx > W + 20 || sx < -110) continue;
-      // px(colour, x, y, w, h) — y is the height of the rect's BOTTOM above the horizon line
-      const px = function (c, x, y, w2, h2) { cx.fillStyle = c; cx.fillRect(sx + x, base - y - h2, w2, h2); };
+      if (sx > W + 20 || sx < -170) continue;
+      // px(colour, x, y, w, h) — y is the height of the rect's BOTTOM above the horizon line.
+      // Both ends of every span are scaled and THEN rounded, so neighbouring rects still meet
+      // exactly and a scaled monument has no seams in it.
+      const px = function (c, x, y, w2, h2) {
+        const x0 = Math.round(x * E), x1 = Math.round((x + w2) * E);
+        const y0 = Math.round(y * E), y1 = Math.round((y + h2) * E);
+        cx.fillStyle = c;
+        cx.fillRect(sx + x0, base - y1, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+      };
       const mixTelha = P.marcoRL;
       // an arched opening — a rect with a half-round head. Every door and window in the
       // board's CENTRO HISTÓRICO is one of these, and a square hole reads as a modern block.
@@ -4049,35 +4214,41 @@ CENARIOS.rua = {
   // the tree line, so the frame reads city → hillside → forest → the street he is running
   // on. Warm, ordinary, and the thing the whole game is asking you to save.
   {
-    const speed = 0.21, spacing = 340, base = GROUND - 27;
+    // WAVE 21: AND THIS IS THE ONE THAT MATTERS MOST, so it is the one that grows most. The
+    // hillside was on screen in 4 frames out of 10 at 2.8% of the picture — a brown lump
+    // forty rows tall sitting under a wall of leaves — and it is the thing the whole game is
+    // asking you to save. Every house is a third bigger, the slope is half again as tall, the
+    // stretches that have one go from 38% to 78%, and they repeat every 230 screen pixels
+    // instead of every 340.
+    const speed = 0.21, spacing = 230, base = GROUND - 27, CEL = 16, AND = 14;
     const paredes = P.parede, luzP = P.paredeL, telha = P.telha, telhaL = P.telhaL;
     const traco = P.traco, caixa = P.caixa, morro = P.morro;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed);
-      if (sx > W + 20 || sx < -140) continue;
-      if (hash01(k * 37 + 11) > 0.62) continue;         // not every stretch has one
+      if (sx > W + 20 || sx < -12 * CEL) continue;
+      if (hash01(k * 37 + 11) > 0.78) continue;         // not every stretch has one
       const altos = [];
-      for (let c = 0; c < 10; c++) {                    // the slope they are built on
-        const t = c / 9;
-        altos.push(3 + Math.round(28 * Math.pow(Math.sin(t * Math.PI), 0.7) * (0.72 + hash01(k * 7 + c) * 0.45)));
+      for (let c = 0; c < 11; c++) {                    // the slope they are built on
+        const t = c / 10;
+        altos.push(4 + Math.round(44 * Math.pow(Math.sin(t * Math.PI), 0.7) * (0.72 + hash01(k * 7 + c) * 0.45)));
         cx.fillStyle = morro;
-        cx.fillRect(sx + c * 12, base - altos[c] - 4, 13, altos[c] + 6);
+        cx.fillRect(sx + c * CEL, base - altos[c] - 5, CEL + 1, altos[c] + 7);
       }
-      for (let c = 0; c < 10; c++) {
-        const alto = altos[c], degrau = Math.round(hash01(k * 5 + c * 3) * 7);
-        for (let j = 0; j * 11 < alto; j++) {
+      for (let c = 0; c < 11; c++) {
+        const alto = altos[c], degrau = Math.round(hash01(k * 5 + c * 3) * 9);
+        for (let j = 0; j * AND < alto; j++) {
           const s2 = hash01(k * 53 + c * 9 + j * 3);
-          const x = sx + c * 12 + (s2 > 0.6 ? 1 : 0), y = base - j * 11 - degrau;
+          const x = sx + c * CEL + (s2 > 0.6 ? 1 : 0), y = base - j * AND - degrau;
           const ci = Math.floor(s2 * 6) % 6, ti = Math.floor(s2 * 17) % 3;
-          cx.fillStyle = paredes[ci]; cx.fillRect(x, y - 9, 12, 9);
-          cx.fillStyle = luzP[ci]; cx.fillRect(x + 10, y - 9, 2, 9);
-          cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 12, 14, 3);
-          cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 12, 14, 1);
-          cx.fillStyle = traco; cx.fillRect(x + 2, y - 5, 3, 5);            // a door onto the steps
+          cx.fillStyle = paredes[ci]; cx.fillRect(x, y - 12, CEL, 12);
+          cx.fillStyle = luzP[ci]; cx.fillRect(x + CEL - 3, y - 12, 3, 12);
+          cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 16, CEL + 2, 4);
+          cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 16, CEL + 2, 2);
+          cx.fillStyle = traco; cx.fillRect(x + 2, y - 7, 4, 7);            // a door onto the steps
           cx.fillStyle = (h > 0.5 || acendeu(k * 17 + 3)) ? "rgba(253,231,157,.85)" : traco;
-          cx.fillRect(x + 7, y - 7, 3, 3);                                  // one window
-          if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 8, y - 15, 4, 3); }  // water tank
+          cx.fillRect(x + 9, y - 9, 4, 4);                                  // one window
+          if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 10, y - 20, 5, 4); }  // water tank
         }
       }
     }
@@ -4712,7 +4883,21 @@ CENARIOS.rua = {
     // ground on all three axes (MANHÃ luma 25 → 29, croma 74 → 81, dE 18 → 21 of 485).
     // Open sky also went THROUGH the held 31.2% to 30.1%. So 0.092·W is the limit: past it
     // the frame stops being two buildings and becomes a tunnel again.
-    const wBase = W * 0.092, wSwell = W * 0.16, wLobo = W * 0.021;
+    // WAVE 21: THE SWELL IS CUT BY MORE THAN HALF, AND THE REASON IS A BENCH THAT DID NOT
+    // EXIST UNTIL NOW. Waves 11 to 14 had exactly one framing number — open sky, target 23.6%
+    // — and every cheap way to move that number is to put mass in front of the sky. So the
+    // proscenium grew, each step measured, each step an improvement by the only measure on
+    // the bench, and nobody ever asked how much of the WORLD was left. `test/mundo.js` asks
+    // it: at 0.092 + 0.16·W the frame measured **24.4% proscenium and 50.8% world**, with the
+    // matriz visible in 4 frames out of 10 at 3.7% of the picture at its very best and the
+    // painted morro in 4 out of 10 at 2.8%. The owner read that off the screen without any
+    // bench at all — *cadê o Brasil?* — and he was right: the massif, the cliff lift, the
+    // matriz, the arcade, the morro and the town are all still drawn and none of them can be
+    // seen. A frame that hits its sky target by hiding the game is worse than one that misses.
+    // The BASE does not move — it is bounded by the mob queue and wave 14 measured that bound
+    // — so the cut is all in the swell, which is the part that closes the TOP of the frame
+    // where the landmarks and the hillside live: 0.252·W at the top edge becomes 0.167·W.
+    const wBase = W * 0.092, wSwell = W * 0.075, wLobo = W * 0.021;
     const perfil = function (y, fase) {
       const t = y / fim;
       return Math.max(0, Math.round(wBase + wSwell * Math.pow(1 - t, 2.2)
@@ -4830,7 +5015,14 @@ CENARIOS.rua = {
     // debt is real and it is left standing, because the only place left to repay it where
     // anyone can see is the middle of the top edge, which is the one thing this wave exists
     // to open.
-    const dTopo = W * 0.72, dMeio = W * 0.045, alcance = W * 0.34;
+    // WAVE 21, THE SAME CUT: 0.72·W is 115 rows of leaf in each top corner of a 282-row
+    // canvas, and `alcance` 0.34·W carries it a third of the way across. Between that and the
+    // columns' swell the top of the frame — which is exactly where the massif, the matriz and
+    // the hillside stand — was closed on both sides. The corners STAY dark, because wave 14's
+    // value gain was real and the board's own panel has dark corners; they stop being a third
+    // of the picture. 0.40·W over 0.26·W puts the deepest leaf at 64 rows and pulls the grade
+    // back to a corner instead of a lid.
+    const dTopo = W * 0.40, dMeio = W * 0.045, alcance = W * 0.26;
     // twelve steps of that grade, built once for the pass, so it is still two cached colour
     // strings per column and not two string builds per column
     const rampaK = [], rampaM = [];
@@ -5448,6 +5640,689 @@ CENARIOS.praca = {
   }
 };
 
+// ---------- MATA ATLÂNTICA ----------
+// THE LIGHT SHAFT, BAKED. A forest is a dark room with one window in it, and the window is
+// the far end of the trail. It is drawn as an APERTURE and never as a hole cut in the
+// foliage: the trees tile in world space and the shaft is fixed to the screen, and wave 20
+// paid for the rule that anything whose SHAPE reads the screen while its content tiles in
+// the world will pump as it scrolls. A wash laid over the top of the mid distance has no
+// shape of its own to pump — it is the air between you and the trees, lit — and it costs one
+// `drawImage` a frame because it is baked on the same keys the sky is.
+let mataLuzCv = null, mataLuzKey = "";
+function mataLuz(h, P) {
+  const key = W + "," + GROUND + "," + Math.round(h * 48) + "," + horaKey() + "," + ritmoQ();
+  if (mataLuzCv && mataLuzKey === key) return mataLuzCv;
+  if (!mataLuzCv) mataLuzCv = document.createElement("canvas");
+  mataLuzCv.width = W; mataLuzCv.height = GROUND + 8;
+  mataLuzKey = key;
+  const g = mataLuzCv.getContext("2d");
+  const alt = GROUND + 8;
+  const img = g.createImageData(W, alt);
+  const d = img.data, c = P.faixaA;
+  // TRIED AND MEASURED AND CUT BY FOUR FIFTHS: the first cut opened at GROUND·0.28, spread to
+  // 0.39·W and peaked at alpha 0.86, and the frame came out 122 against a board panel of 53 —
+  // a forest with a searchlight in it. A shaft is a thing you notice at the end of the path,
+  // not the light the picture is lit by; the picture is lit by the hour like everywhere else.
+  const topo = GROUND * 0.44, pe = GROUND + 4, eixo = W * 0.46;
+  for (let y = 0; y < alt; y++) {
+    if (y < topo) continue;
+    const t = Math.min(1, (y - topo) / (pe - topo));
+    // it opens as it comes down — a gap in the canopy overhead, a pool of light on the path —
+    // and it dies just past the ground line, because the trail at your feet is in shade
+    const meia = W * (0.045 + 0.23 * Math.pow(t, 0.85));
+    // AND ITS PEAK IS HALF WAY UP, NOT AT THE GROUND LINE. Measured: with the peak at t 0.74
+    // the fourth fifth of the frame came out 90 against the panel's 48, because that is where
+    // the pool and the trail land on top of each other. The board's corridor is brightest
+    // across its MIDDLE (62, 57) and its two bottom fifths are the darkest thing in it.
+    const vert = Math.pow(Math.min(1, t / 0.55), 1.2) * (1 - 0.92 * Math.max(0, (t - 0.55) / 0.45));
+    if (vert <= 0) continue;
+    for (let x = 0; x < W; x++) {
+      const u = (x - eixo) / meia;
+      const f = 1 - u * u;                       // a parabola, so the pool has no edge to it
+      if (f <= 0) continue;
+      const a = Math.round(255 * Math.min(0.40, f * f * vert * 0.42));
+      if (a <= 0) continue;
+      const i = (y * W + x) * 4;
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = a;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return mataLuzCv;
+}
+// a trunk drawn as a column of bark: the same per-row span the street's proscenium uses,
+// with a lit right edge because there is one sun in this file and it is up and to the right
+function troncoCol(x, larg, y0, y1, K, C, L2) {
+  cx.fillStyle = K; cx.fillRect(x - 1, y0, larg + 2, y1 - y0);
+  cx.fillStyle = C; cx.fillRect(x, y0, larg, y1 - y0);
+  cx.fillStyle = L2; cx.fillRect(x + larg - 1, y0, 1, y1 - y0);
+}
+
+CENARIOS.mata = {
+  id: "mata", nome: "MATA ATLÂNTICA",
+
+  // THE FIRST SKY IN THIS FILE THAT IS NOT THE STREET'S, AND THE REASON THE PARAMETER EXISTS.
+  // Measured off the board's own MATA ATLÂNTICA panel: it has NO open sky anywhere — 0.5% of
+  // the top fifth and 0.0% of the three below it, against the RUA panel's 36.7% — and the
+  // whole picture reads luma 53.1 against the street's 81.4. What stands in for sky is the
+  // CLEARING: the brightest thing in that panel is a warm pale olive at the far end of the
+  // trail, [149,150,87], and the picture gets DARKER as it goes up into the leaves.
+  // So this ramp runs the opposite way from every other sky here — deep humid teal overhead,
+  // warm gold-green down where the path runs out to the light — and `curva` at 1.8 holds the
+  // dark end most of the way down so the bright band stays a slot at the end of the path
+  // instead of becoming half the picture. The sun is small and sits in that slot.
+  ceu: {
+    // AND IT IS DARK ALMOST ALL THE WAY DOWN. The first cut ran the ramp from a mid teal to
+    // the clearing over the whole height, and every gap between the crowns came out a pale
+    // sage — a hazy empty middle in a picture whose panel has no sky in it at all. Four of
+    // the five stops now sit under L 90, so a hole in the canopy reads as deep shade behind
+    // the leaves, and only the last stop carries the light at the end of the path.
+    sao: [[34, 50, 46], [38, 58, 50], [46, 68, 52], [92, 110, 76], [176, 180, 124]],
+    horas: [
+      // MANHÃ — the humid morning light in a forest is green before it is anything else
+      [[38, 56, 52], [44, 64, 54], [52, 76, 58], [106, 124, 84], [194, 196, 134]],
+      // TARDE — the gold comes down the trail and the leaves overhead go bronze
+      [[42, 42, 48], [52, 48, 46], [70, 60, 48], [134, 106, 68], [214, 176, 106]],
+      // PÓS-CHUVA — the whole forest turns to mist and the shaft is the only thing with body
+      [[40, 50, 52], [46, 58, 58], [56, 70, 68], [96, 110, 100], [148, 160, 136]],
+      // NOITE — no street lamps out here, so the ramp does not climb toward a skyline; it
+      // only lifts a little at the gap, which is the moon on the far end of the path
+      [[6, 12, 18], [8, 16, 24], [12, 22, 30], [20, 34, 40], [38, 56, 58]]
+    ],
+    curva: 1.80,
+    sol: [0.46, 0.80, 0.030],
+    nuvem: 0,
+    estrelas: 7,
+    // WHAT THE DISTANCE DISSOLVES INTO IS NOT THE CLEARING, AND THE FIRST CUT GOT THAT WRONG.
+    // Deep in a forest the air between you and the next tree is dark green, not bright: the
+    // panel's middle fifths mean 57 and 62 and its brightest large area is 116. Authored at
+    // the clearing's own value (L 152) every plane in the picture washed toward it and the
+    // whole frame came out pale — measured at 122 against a board panel of 53. The clearing
+    // is a LIGHT, and a light belongs to the sky ramp and to the shaft, not to the air.
+    horizonte: [[178, 166, 140], [96, 106, 62]]
+  },
+
+  // The forest's colours are the board's FOLHAS family pushed warm — the mata panel's own
+  // dominant greens sample at [27,37,23], [38,40,22] and [55,56,21], which are OLIVES and not
+  // the street's cooler leaf green. Every plane goes down in value against the street's and
+  // the far one goes UP, because in here the distance is the light.
+  paleta: {
+    mataFar:  [[60, 76, 38], 0.30],
+    mataFarL: [[92, 108, 52], 0.26],
+    mataFarK: [[34, 42, 23], 0.16],
+    mataMid:  [[46, 60, 26], 0.14],
+    mataMidL: [[78, 96, 42], 0.11],
+    mataMidK: [[24, 32, 17], 0.07],
+    mataNear:  [[30, 44, 20], 0.03],
+    mataNearL: [[56, 74, 30], 0.02],
+    mataNearK: [[13, 19, 10], 0.01],
+    // the frame is leaves at the top and BARK at the sides, so the two halves of the
+    // proscenium finally mean two different materials: `coluna*` is canopy, `muro*` is trunk
+    colunaC: [[15, 25, 10], 0],
+    colunaL: [[29, 43, 16], 0],
+    colunaB: [[50, 68, 26], 0.02],
+    muroC: [[33, 25, 13], 0],
+    muroM: [[43, 33, 17], 0],
+    muroK: [[14, 10, 6], 0],
+    muroL: [[63, 49, 25], 0],
+    muroS: [[29, 23, 13], 0],
+    // the forest floor: leaf litter over damp earth, warmer and darker than the street's stone
+    // and the floor is the DARK END of the value architecture, which in this place is a real
+    // number and not a habit: the panel's two bottom fifths mean RGB 54,49,20 and 48,49,28,
+    // i.e. L 48 — the darkest thing in the picture, because everything standing between the
+    // trail and the sun is standing on it
+    trilha:  [[72, 56, 32], 0],
+    trilhaL: [[98, 80, 46], 0],
+    sulcoA:  [[46, 34, 20], 0],
+    sulcoB:  [[118, 100, 64], 0],
+    gramaA:  [[62, 80, 34], 0],
+    gramaB:  [[42, 58, 25], 0],
+    folha:   [[88, 108, 46], 0],
+    rodape:  [[18, 26, 13], 0],
+    frenteC: [[18, 28, 13], 0],
+    frenteL: [[40, 56, 22], 0]
+  },
+  chaoCor: [[42, 32, 19], [80, 64, 39]],
+
+  // the canopy's envelope, declared once so the drawing and the rival ranking agree on where
+  // the architecture is. Deeper than the square's: a forest is roofed, a praça is shaded.
+  copaY: function (x) {
+    const u = x / (W - 1);
+    const quina = Math.pow(Math.abs(u - 0.46) * 2, 1.5);
+    const meioT = Math.round(GROUND * 0.31), fundoT = Math.round(GROUND * 0.62);
+    return meioT + (fundoT - meioT) * Math.min(1, quina);
+  },
+  molduraAte: function (x) { return Math.round(this.copaY(x)) - 6; },
+
+  // no ridge, no town, no belfry: what a forest has on its horizon is more forest. This is
+  // the furthest plane — thin hazy trunks standing in the clearing light, almost the colour
+  // of it, which is the only thing that says the trees keep going after the ones you can see.
+  fundo: function (A) {
+    const h = A.h, P = A.P;
+    // the far wall. TRIED AND CUT: a flat 55%-alpha band of `mataFar` across the top of it,
+    // which is how you paint a hazy distance in a scene that HAS a distance — in here it just
+    // put a pale film over the whole middle of the picture. What a forest has at that depth
+    // is more trunks, thinner and closer together, and the air between them is already doing
+    // the work through each entry's own `dist`.
+    {
+      const passo = 7, vel = 0.10;
+      const k0 = Math.floor(worldX * vel / passo) - 1;
+      for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+        const sx = Math.round(k * passo - worldX * vel);
+        const s = hash01(k * 41 + 7);
+        if (s > 0.88) continue;
+        const larg = 1 + (s > 0.62 ? 1 : 0);
+        const topo = GROUND - 62 - Math.round(hash01(k * 19 + 3) * 26);
+        // and they are DARK, not lit: a lit edge on a one-pixel trunk a hundred rows long is
+        // a pale streak, and forty pale streaks is a picket fence
+        cx.fillStyle = P.mataFarK;
+        cx.fillRect(sx, topo, larg, GROUND - 14 - topo);
+      }
+    }
+    // THE SEPARATOR BAND IS STILL HERE, because it is the direction's value architecture and
+    // not the street's furniture — light above, mid behind, a bright strip on the horizon
+    // line, dark ground, hero across it. What changes is that in a forest the strip is not
+    // the whole horizon: it is the end of the path. So the same two rows are drawn, faded off
+    // toward both edges by a fixed screen-space window, which is an aperture and cannot pump.
+    const eixo = W * 0.46, meia = W * 0.42;
+    cx.fillStyle = P.faixa;
+    for (let x = 0; x < W; x++) {
+      const u = (x - eixo) / meia, f = 1 - u * u;
+      if (f <= 0) continue;
+      cx.globalAlpha = 0.50 * f;
+      cx.fillRect(x, GROUND - 26, 1, 18);
+      cx.globalAlpha = 0.80 * f;
+      cx.fillRect(x, GROUND - 12, 1, 5);
+    }
+    cx.globalAlpha = 1;
+  },
+
+  // THE MIDDLE DISTANCE IS THE FOREST ITSELF, and it closes the frame everywhere rather than
+  // leaving a wedge — a square has fronts around it and a street has façades raking to a
+  // vanishing point, and a forest has neither. Trunks and crowns on two parallax speeds, all
+  // of it rooted in world space and none of it reading its size off the screen.
+  // TRIED AND THROWN OUT: one crown per block on two planes, each crown carrying a trunk all
+  // the way down to the understory. The trunks came out evenly spaced, pale and 150 px long,
+  // and the screenshot read the middle of the picture as a rank of organ pipes. A forest at
+  // that distance is FOLIAGE — the trunks are behind it and mostly lost — so the wall is four
+  // overlapping bands of crown at four depths, and a trunk appears under two crowns in five
+  // and stops a few rows down, in the band's own dark key rather than in its lit green.
+  meio: function (A) {
+    const h = A.h, P = A.P;
+    // ...and the second try, one ellipse per block, was not better: an ellipse whose columns
+    // run from `cy - d` to `cy + 0.6d` is a lens, and eleven lenses in a row read as drips
+    // hanging off nothing. What makes a distance read as TREES is a dark trunk with a cluster
+    // of lobes on the end of it — the same union-per-column the square's big tree is built
+    // from, at three depths — plus the dapple: the board's canopy is speckled with light
+    // caught on the leaves that face the gap, and a green mass with no speckle in it is a
+    // hedge however well its silhouette is drawn.
+    const LOBOS = [[0, -0.34, 1.00], [-0.64, 0.04, 0.74], [0.63, 0.01, 0.70],
+                   [-0.24, 0.40, 0.64], [0.30, 0.38, 0.62]];
+    const ouro = h > 0.45 ? wc("#a88148") : null;
+    const arv = function (vel, passo, y0f, y1f, esc, cCA, cLA, cKA, sem, pe) {
+      // FOUR TONES, PICKED PER COLUMN, AND A HOLE IN ONE COLUMN IN FIVE. One flat body with a
+      // lit strip along the top is how you paint a boulder: the screenshot read the far crowns
+      // as pale rocks with a keyline round them. Every leaf shape in the board's canopy is
+      // defined by a HOLE and not by an outline, which is the finding the square's big tree
+      // already paid for — it is applied here to a mass a fifth the size and thirty of them.
+      const cC = rgbS(cCA), cL = rgbS(cLA), cK = rgbS(cKA);
+      const cM = rgbS(mixA(cCA, cKA, 0.40));
+      const k0 = Math.floor(worldX * vel / passo) - 1;
+      for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+        const sx = Math.round(k * passo - worldX * vel) + (passo >> 1);
+        const s = hash01(k * sem + 3);
+        if (s > 0.93) continue;                     // a gap, so the wall breathes
+        const R = esc * (0.72 + hash01(k * 23 + 4) * 0.62);
+        const cy = Math.round(GROUND * (y0f + hash01(k * 31 + 7) * (y1f - y0f)));
+        const tw = Math.max(1, Math.round(R * 0.15));
+        cx.fillStyle = cK;
+        cx.fillRect(sx - (tw >> 1), cy, tw, Math.round(GROUND * pe) - cy);
+        const meia = Math.round(R * 1.45);
+        for (let dx = -meia; dx <= meia; dx++) {
+          const xx = sx + dx;
+          if (xx < 0 || xx >= W) continue;
+          let t0 = 1e9, b0 = -1e9;
+          for (let l = 0; l < 5; l++) {
+            const lr = LOBOS[l][2] * R, u = (dx - LOBOS[l][0] * R) / lr;
+            if (Math.abs(u) >= 1) continue;
+            const hh = lr * Math.sqrt(1 - u * u) * 0.82;
+            t0 = Math.min(t0, cy + LOBOS[l][1] * R - hh);
+            b0 = Math.max(b0, cy + LOBOS[l][1] * R + hh);
+          }
+          if (b0 < t0) continue;
+          const nt = Math.round(t0 - Math.sin(dx * 0.9 + k) * 1.3 - Math.sin(dx * 0.33 + 2) * 2.0);
+          const nb = Math.round(b0 + Math.sin(dx * 0.7 + 1) * 1.6);
+          const t2 = hash01(k * 71 + dx * 11 + 3);
+          const corpo = t2 > 0.74 ? cL : t2 > 0.34 ? cC : cM;
+          const vao = (hash01(k * 131 + dx * 5 + 7) > 0.80 && nb - nt > 9)
+            ? nt + 3 + Math.round(hash01(k * 17 + dx * 3) * (nb - nt - 8)) : -1;
+          const tiras = vao < 0 ? [[nt, nb]] : [[nt, vao], [vao + 3, nb]];
+          for (let s2 = 0; s2 < tiras.length; s2++) {
+            const a2 = tiras[s2][0], b2 = tiras[s2][1];
+            if (b2 - a2 < 1) continue;
+            cx.fillStyle = cK; cx.fillRect(xx, a2 - 1, 1, b2 - a2 + 2);
+            cx.fillStyle = corpo; cx.fillRect(xx, a2, 1, b2 - a2);
+            cx.fillStyle = dx > R * 0.3 ? cL : corpo;
+            cx.fillRect(xx, a2, 1, s2 === 0 ? 2 : 1);
+          }
+          // the dapple: one lit leaf at most per column, on the column's own hash, warm where
+          // the world has come back far enough to have anything gold in it
+          const d2 = hash01(k * 97 + dx * 7 + 3);
+          if (d2 > 0.88 && nb - nt > 5) {
+            const dy = nt + 3 + Math.round(hash01(k * 41 + dx * 3) * (nb - nt - 5));
+            cx.fillStyle = (ouro && d2 > 0.975) ? ouro : cL;
+            cx.fillRect(xx, dy, 1, 1 + (d2 > 0.96 ? 1 : 0));
+          }
+        }
+      }
+    };
+    arv(0.16, 12, 0.30, 0.52,  8, P.mataFarA, P.mataFarLA, P.mataFarKA, 47, 0.92);
+    arv(0.28, 16, 0.36, 0.62, 11, P.mataFarA, P.mataFarLA, P.mataFarKA, 53, 0.96);
+    arv(0.44, 21, 0.30, 0.66, 15, P.mataMidA, P.mataMidLA, P.mataMidKA, 61, 1.00);
+  },
+
+  // the understory, and then the light. Three planes separated by value like everywhere else
+  // in this file, and the shaft laid over the middle distance BEFORE them, so the air in
+  // front of the far trees is lit and the bushes at your feet are not.
+  veg: function (A) {
+    const h = A.h, P = A.P;
+    cx.drawImage(mataLuz(h, P), 0, 0);
+    faixaVerde(0.34, 15, 16, 14, 28, P.mataFar, P.mataFarL, null, 41);
+    faixaVerde(0.52, 19, 20, 11, 22, P.mataMid, P.mataMidL, P.mataMidK, 11);
+    faixaVerde(0.74, 25, 27, 8, 17, P.mataNear, P.mataNearL, P.mataNearK, 23);
+    cx.fillStyle = P.rodape; cx.fillRect(0, GROUND - 2, W, 2);
+  },
+
+  // LEAF LITTER OVER DAMP EARTH. Same eight courses stepping down in value toward the viewer
+  // that the street and the square both use — the construction is the value architecture and
+  // not a paving pattern — but what is laid into them is fallen leaf, a root crossing the
+  // path and a patch of moss, instead of a stone or a worn flag.
+  chao: function (A) {
+    const h = A.h, P = A.P;
+    cx.drawImage(chaoCanvas(h), 0, GROUND);
+    const SOMBRA_MATA = [30, 22, 10];
+    let y = GROUND;
+    for (let i = 0; i < 8 && y < H; i++) {
+      const alt = 3 + (i >> 1), larg = 11 + i * 3, vel = 0.55 + i * 0.075;
+      const t = Math.min(0.72, 0.72 * i / 5);
+      const nS = function (c) {
+        const m = mixA(c, SOMBRA_MATA, t), g = 1 + 0.85 * t;
+        const yy = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2];
+        return [cl255(yy + (m[0] - yy) * g), cl255(yy + (m[1] - yy) * g), cl255(yy + (m[2] - yy) * g)];
+      };
+      const terra = rgbS(nS(P.trilhaA)), poeira = rgbS(nS(P.trilhaLA));
+      const escuro = rgbS(nS(mixA(P.trilhaA, P.sulcoAA, 0.60)));
+      const folhaS = rgbS(nS(mixA(P.trilhaLA, P.sulcoBA, 0.35)));
+      const musgo = rgbS(nS(mixA(P.trilhaA, P.gramaAA, 0.72)));
+      cx.fillStyle = terra; cx.fillRect(0, y, W, alt);
+      const desl = worldX * vel, k0 = Math.floor(desl / larg) - 1;
+      for (let k = k0; k < k0 + Math.ceil(W / larg) + 2; k++) {
+        const gx = Math.round(k * larg - desl);
+        const r2 = hash01(k * 31 + i * 7);
+        if (r2 > 0.70) {                                   // a fallen leaf, lit along its spine
+          const lw = larg - 4 - Math.round(r2 * 3);
+          cx.fillStyle = escuro; cx.fillRect(gx, y, lw + 1, alt);
+          cx.fillStyle = folhaS; cx.fillRect(gx, y, lw, Math.max(1, alt - 1));
+          cx.fillStyle = poeira; cx.fillRect(gx + 1, y, Math.max(1, lw - 2), 1);
+        } else if (r2 > 0.44) {                            // a root crossing the path
+          cx.fillStyle = escuro; cx.fillRect(gx, y + (alt > 2 ? 1 : 0), larg - 2, 1);
+        } else if (h > 0.35 && r2 < 0.16) {                // moss, only where it is coming back
+          cx.fillStyle = musgo; cx.fillRect(gx + 2, y, Math.max(2, larg >> 2), Math.max(1, alt - 1));
+        }
+      }
+      y += alt;
+    }
+    // ferns and seedlings leaning over the edge of the path
+    const gk0 = Math.floor(worldX / 9) - 1;
+    for (let k = gk0; k < gk0 + Math.ceil(W / 9) + 2; k++) {
+      const gx = Math.round(k * 9 - worldX);
+      const gr = hash01(k * 17 + 9);
+      if (gr < 0.62) {
+        const gw = (Math.floor(tick / 14) + k) % 2;
+        cx.fillStyle = P.folha;
+        cx.fillRect(gx + gw, GROUND - 3, 1, 3); cx.fillRect(gx + 2 - gw, GROUND - 5, 1, 5);
+        cx.fillStyle = P.gramaB; cx.fillRect(gx + 1, GROUND - 2, 1, 2);
+      } else if (gr < 0.72 && h > 0.4) {                   // a heliconia, the one hot colour
+        cx.fillStyle = wc("#3e4721"); cx.fillRect(gx + 1, GROUND - 6, 1, 6);
+        cx.fillStyle = wc("#da7a29"); cx.fillRect(gx, GROUND - 8, 3, 2);
+        cx.fillStyle = wc("#f3a03d"); cx.fillRect(gx, GROUND - 8, 1, 1);
+      }
+    }
+  },
+
+  // what stands on the forest floor, one draw per 48px world segment. A forest is a place you
+  // pass THROUGH rather than one you are in, so the mix is trees, deadwood and stone, with
+  // people only where the world has come back far enough for anyone to be working out here.
+  segmentos: function (A) {
+    const h = A.h, P = A.P;
+    const seg = 48;
+    const k0 = Math.floor(worldX / seg) - 1;
+    for (let k = k0; k < k0 + Math.ceil(W / seg) + 2; k++) {
+      const sx = Math.round(k * seg - worldX);
+      const r = hash01(k);
+      const alive = r < h * 0.95 + 0.02;
+      const kind = Math.floor(hash01(k * 7 + 3) * 10);
+      const sway = ((Math.floor(tick / 18) + k) % 2);
+      if (kind < 2) {
+        // THE TREE THAT LEAVES THE FRAME. A mata tree is not a lollipop on a stick — its
+        // crown is above the top of the picture and what you get at eye level is the trunk
+        // and the buttress roots it stands on. That is also what keeps it out of the boy's
+        // way: the mass is over his head or below his knee, never beside him.
+        const cxT = sx + 22;
+        const larg = 7 + Math.floor(hash01(k * 11 + 4) * 4);
+        sombra(cxT, GROUND, larg + 16);
+        // A NEAR TRUNK IS A SILHOUETTE, and the first cut lit it like masonry: `muroM` body
+        // with `muroL` down the edge put two pale brown columns straight through the middle
+        // of the frame, over the one light the picture has. The body is the dark end of the
+        // family and only the last row of the right-hand edge takes the sun.
+        const K = P.muroK, C = alive ? P.muroC : P.muroS, L2 = P.muroM;
+        const Cs = rgbS(mixA(alive ? P.muroCA : P.muroSA, P.muroKA, 0.45));   // the shaded fin
+        const topoT = Math.round(this.copaY(cxT)) - 4;
+        // the buttresses first: two fins flaring out of the foot of the trunk
+        for (let s = 0; s < 2; s++) {
+          const dir = s ? 1 : -1;
+          const n = 7 + Math.floor(hash01(k * 19 + s) * 5);
+          for (let i = 0; i < n; i++) {
+            const bx = cxT + dir * ((larg >> 1) + i);
+            const alt = Math.round((n - i) * 1.7) + 3;
+            cx.fillStyle = K; cx.fillRect(bx, GROUND - alt - 1, 1, alt + 1);
+            cx.fillStyle = i < 2 ? C : Cs;
+            cx.fillRect(bx, GROUND - alt, 1, alt);
+          }
+        }
+        troncoCol(cxT - (larg >> 1), larg, topoT, GROUND, K, C, L2);
+        // BARK RUNS THE LENGTH OF A TRUNK. The first cut drew a dark bar right across the
+        // trunk every five or six rows and the screenshot read it for exactly what it was —
+        // a ladder. Fissures are broken vertical runs, three or four of them, each stopping
+        // and starting on its own hash, which is the difference between wood and masonry.
+        for (let f = 0; f < 2; f++) {
+          const fx2 = cxT - (larg >> 1) + 2 + Math.round(f * (larg - 4) / 1.6);
+          for (let y = topoT + 2; y < GROUND - 2; y++) {
+            // in runs of three or four rows, not row by row: a fissure that switches on and
+            // off every other pixel is a dotted line, and a dotted line down a trunk is a zip
+            if (((Math.floor(y / 3) * 7 + f * 31 + k) % 11) < 4) continue;
+            cx.fillStyle = K;
+            cx.fillRect(fx2, y, 1, 1);
+          }
+        }
+        if (h > 0.5) {
+          cx.fillStyle = wc("#767f34");
+          for (let i = 0; i < 4; i++) {
+            const ly = GROUND - 22 - i * 13 - (k % 7);
+            if (ly < topoT + 6) break;
+            cx.fillRect(cxT - (larg >> 1), ly, 2, 3 + (i & 1));
+          }
+        }
+        // a bromeliad in the fork, which is the one thing that says ATLANTIC forest fastest
+        if (h > 0.45 && hash01(k * 37 + 2) > 0.45) {
+          const by = GROUND - 46 - Math.round(hash01(k * 43) * 20);
+          const bx = cxT + (larg >> 1);
+          cx.fillStyle = wc("#3e4721");
+          for (let i = -3; i <= 3; i++) cx.fillRect(bx + i, by - 3 + Math.abs(i), 1, 4 - (Math.abs(i) >> 1));
+          cx.fillStyle = wc("#da7a29"); cx.fillRect(bx - 1, by - 4, 2, 2);
+        }
+      } else if (kind < 6) {
+        // A TREE FERN, and it is the piece of furniture that says "mata atlântica" and not
+        // "any wood": a slim scaly trunk with a crown of fronds arching off the top of it.
+        const cxT = sx + 16, alt = 26 + Math.floor(hash01(k * 23 + 6) * 14);
+        sombra(cxT, GROUND, 16);
+        cx.fillStyle = P.mataNearK; cx.fillRect(cxT - 2, GROUND - alt, 5, alt);
+        cx.fillStyle = P.muroM; cx.fillRect(cxT - 1, GROUND - alt, 3, alt);
+        for (let y = GROUND - 4; y > GROUND - alt; y -= 3) {
+          cx.fillStyle = P.muroK; cx.fillRect(cxT - 1, y, 3, 1);
+        }
+        if (alive) {
+          const cyT = GROUND - alt;
+          for (let f = 0; f < 7; f++) {
+            const ang = -2.7 + f * 0.45, n = 9 + (f % 3) * 3;
+            for (let i = 0; i < n; i++) {
+              const fx = Math.round(cxT + Math.cos(ang) * i * 1.5 + sway * (f > 3 ? 1 : 0));
+              const fy = Math.round(cyT + Math.sin(ang) * i * 1.1 + i * i * 0.045);
+              cx.fillStyle = P.mataNearK; cx.fillRect(fx, fy - 1, 2, 3);
+              cx.fillStyle = f > 2 ? P.mataNearL : P.mataNear; cx.fillRect(fx, fy, 2, 1);
+            }
+          }
+        }
+      } else if (kind === 6) {
+        // deadwood: a fallen trunk going back to the forest, with fungus on it and, once the
+        // world is well, seedlings coming up out of it — a nurse log, which is the arc told
+        // by one prop instead of by a colour
+        const bx = sx + 4, by = GROUND - 7;
+        sombra(bx + 20, GROUND, 42, 0.18);
+        cx.fillStyle = P.muroK; cx.fillRect(bx - 1, by - 1, 44, 9);
+        cx.fillStyle = P.muroM; cx.fillRect(bx, by, 42, 7);
+        cx.fillStyle = P.muroL; cx.fillRect(bx, by, 42, 1);
+        cx.fillStyle = P.muroK; cx.fillRect(bx + 40, by, 2, 7);
+        if (h > 0.35) {
+          cx.fillStyle = wc("#525d2a"); cx.fillRect(bx + 2, by - 1, 30, 2);      // moss along it
+          cx.fillStyle = wc("#767f34"); cx.fillRect(bx + 4, by - 2, 12, 1);
+        }
+        for (let i = 0; i < 3; i++) {                                            // bracket fungus
+          if (hash01(k * 29 + i) < 0.45) continue;
+          const fx = bx + 6 + i * 12;
+          cx.fillStyle = wc("#a88148"); cx.fillRect(fx, by + 2, 5, 2);
+          cx.fillStyle = wc("#e3b970"); cx.fillRect(fx, by + 2, 5, 1);
+        }
+        if (h > 0.55) for (let i = 0; i < 3; i++) {
+          const fx = bx + 9 + i * 13;
+          cx.fillStyle = wc("#3e4721"); cx.fillRect(fx, by - 6, 1, 6);
+          cx.fillStyle = wc("#767f34"); cx.fillRect(fx - 1, by - 8, 3, 2);
+        }
+      } else if (kind === 7) {
+        // a boulder with the forest growing over it: TERRA in shade, and green winning
+        const bx = sx + 12, larg = 22, alt = 13;
+        sombra(bx + 11, GROUND, 26, 0.18);
+        for (let x = 0; x < larg; x++) {
+          const u = (x - larg / 2) / (larg / 2);
+          const d = Math.round(Math.sqrt(Math.max(0, 1 - u * u)) * alt);
+          if (d < 1) continue;
+          cx.fillStyle = P.mataNearK; cx.fillRect(bx + x, GROUND - d - 1, 1, d + 1);
+          cx.fillStyle = x > larg * 0.55 ? P.muroL : P.muroM; cx.fillRect(bx + x, GROUND - d, 1, d);
+        }
+        if (h > 0.4) {
+          cx.fillStyle = wc("#3e4721"); cx.fillRect(bx + 3, GROUND - alt - 1, larg - 8, 3);
+          cx.fillStyle = wc("#525d2a"); cx.fillRect(bx + 5, GROUND - alt - 2, larg - 13, 2);
+        }
+      } else if (kind === 8) {
+        // the trail furniture a protected forest actually has: a marker post, and somebody
+        // out here working when the world is far enough along for anyone to be
+        cx.fillStyle = P.muroK; cx.fillRect(sx + 18, GROUND - 22, 4, 22);
+        cx.fillStyle = P.muroM; cx.fillRect(sx + 19, GROUND - 22, 2, 22);
+        cx.fillStyle = wc(h > 0.5 ? "#767f34" : "#a88148"); cx.fillRect(sx + 15, GROUND - 24, 10, 4);
+        cx.fillStyle = wc("#22190d"); cx.fillRect(sx + 15, GROUND - 24, 10, 1);
+        if (h > 0.55 && hash01(k * 41 + 5) > 0.45) pessoa(hash01(k * 31 + 6) > 0.5 ? "chapeu" : "bone", sx + 34, GROUND);
+      } else {
+        // undergrowth: a clump of heliconia and a spray of ferns, which is what the gaps in
+        // that panel are full of
+        const bx = sx + 8;
+        for (let f = 0; f < 5; f++) {
+          const fx = bx + f * 7, alt = 10 + Math.floor(hash01(k * 13 + f) * 9);
+          cx.fillStyle = P.mataNearK; cx.fillRect(fx, GROUND - alt, 2, alt);
+          cx.fillStyle = P.mataNear; cx.fillRect(fx, GROUND - alt, 1, alt);
+          for (let i = 0; i < 4; i++) {
+            const dy = GROUND - alt + i * 3;
+            cx.fillStyle = i & 1 ? P.mataNearL : P.mataNear;
+            cx.fillRect(fx - 3 - (i & 1), dy, 3, 2); cx.fillRect(fx + 2, dy + 1, 3, 2);
+          }
+        }
+        if (h > 0.5 && hash01(k * 53 + 3) > 0.5) {
+          cx.fillStyle = wc("#da7a29"); cx.fillRect(bx + 12, GROUND - 20, 2, 5);
+          cx.fillStyle = wc("#f3a03d"); cx.fillRect(bx + 12, GROUND - 20, 2, 2);
+        }
+      }
+      // A PROJECT IS SOMETHING SOMEBODY BUILT, and in a forest it is a nursery: a shaded
+      // frame of seedlings in GO STEADY, a generator smoking beside it in GO FAST. Same two
+      // states, same mechanic, nothing new — the square's rule, in the square's place.
+      if (S.geradores > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
+        const px0 = sx + 14, py = GROUND - 2;
+        cx.fillStyle = wc("#3a2718"); cx.fillRect(px0, py - 6, 2, 6); cx.fillRect(px0 + 20, py - 6, 2, 6);
+        cx.fillStyle = wc("#4a3524"); cx.fillRect(px0 - 1, py - 8, 24, 2);
+        if (S.modo === "carvao") {
+          cx.fillStyle = wc("#585c4b"); cx.fillRect(px0 + 5, py - 16, 10, 8);
+          cx.fillStyle = wc("#787d66"); cx.fillRect(px0 + 5, py - 16, 10, 1);
+          cx.fillStyle = wc("#2a2b1a"); cx.fillRect(px0 + 7, py - 22, 3, 7);
+          cx.fillStyle = "rgba(150,145,130,.62)";
+          const p = (tick % 36) / 36;
+          cx.fillRect(px0 + 7 + p * 6, py - 25 - p * 14, 4 - p * 2, 3);
+        } else {
+          for (let i = 0; i < 5; i++) {
+            const mx = px0 + 1 + i * 4;
+            cx.fillStyle = wc("#5c3b1f"); cx.fillRect(mx, py - 5, 3, 5);
+            cx.fillStyle = wc("#3e4721"); cx.fillRect(mx, py - 8, 3, 3);
+            cx.fillStyle = wc("#767f34"); cx.fillRect(mx + 1, py - 10, 1, 3);
+          }
+          cx.fillStyle = wc("#71a39c"); cx.fillRect(px0 + 22, py - 9, 5, 8);
+          cx.fillStyle = wc("#dad8c0"); cx.fillRect(px0 + 22, py - 9, 5, 1);
+        }
+      }
+    }
+  },
+
+  // THE FRAME OF A FOREST IS TWO TRUNKS AND A ROOF. The street's proscenium is two masonry
+  // columns because a street is a corridor between buildings, and the square's is one canopy
+  // because a praça is a room with a tree in it. A mata is both at once, and it is the only
+  // panel on that strip whose top fifth (51) is DARKER than its middle (62) — the leaves are
+  // over you. So the same per-row span the street uses, with bark on the outside and leaf on
+  // the inside, and the square's canopy loop overhead with the light kept in one slot.
+  moldura: function (A) {
+    const h = A.h, P = A.P;
+    const escuro = P.colunaC, meio = P.colunaL, borda = P.colunaB;
+    const fim = GROUND + 12;
+    // A TRUNK IS NOT AN ARCH. The street's swell balloons at the top because its columns are
+    // buildings in perspective; a trunk is the same thickness all the way up, and the wave 14
+    // finding holds here for the same reason it held there — the moment the two sides meet
+    // over the middle the picture is a keyhole. So the profile is nearly constant, and what
+    // makes it read as wood instead of a wall is the slow wander of the two long sines.
+    const wBase = W * 0.086, wSwell = W * 0.055, wLobo = W * 0.020;
+    const perfil = function (y, fase) {
+      const t = y / fim;
+      return Math.max(0, Math.round(wBase + wSwell * Math.pow(1 - t, 1.4)
+        + Math.sin(y * 0.017 + fase) * wLobo * 1.6
+        + Math.sin(y * 0.058 + fase * 1.7) * wLobo
+        + Math.sin(y * 0.51 + fase * 3.3) * wLobo * 0.5));
+    };
+    const lado = function (dir, fase) {
+      for (let y = -2; y < fim; y++) {
+        const w2 = perfil(y, fase);
+        if (w2 <= 0) continue;
+        const wm = Math.min(w2 - 2, Math.round(w2 * 0.62));      // how much of the span is wood
+        if (wm > 1) {
+          const mx = dir > 0 ? 0 : W - wm;
+          const fz = y + (dir > 0 ? 340 : 348);
+          cx.fillStyle = (fz % 7) < 3 ? P.muroC : P.muroM;
+          cx.fillRect(mx, y, wm, 1);
+          // the fissures run the LENGTH of a trunk, so they are broken vertical runs and not
+          // storey lines: a bark texture that bands horizontally is masonry with the serial
+          // numbers filed off, which is what the first cut of this was
+          if ((fz % 23) < 2) { cx.fillStyle = P.muroK; cx.fillRect(mx, y, wm, 1); }
+          const nf = 3;
+          for (let i = 0; i < nf; i++) {
+            const fx2 = dir > 0 ? Math.round(wm * (0.18 + i * 0.28)) : W - wm + Math.round(wm * (0.16 + i * 0.28));
+            const on = ((y * 7 + i * 29 + (dir > 0 ? 0 : 11)) % 19) > 4;
+            if (!on) continue;
+            cx.fillStyle = i === nf - 1 && dir > 0 ? P.muroL : P.muroK;
+            cx.fillRect(fx2, y, 1, 1);
+          }
+          // the sun is up and to the right: the right-hand trunk is lit on its outer face,
+          // the left-hand one on the face that turns toward the slot
+          cx.fillStyle = P.muroL;
+          cx.fillRect(dir > 0 ? wm - 1 : W - wm, y, 1, 1);
+        }
+        const fw = w2 - wm, fx = dir > 0 ? wm : W - w2;
+        const banda = ((y >> 2) + (dir > 0 ? 0 : 1)) & 1;
+        cx.fillStyle = banda ? escuro : meio;
+        cx.fillRect(fx, y, fw, 1);
+        if (((y * 7 + (dir > 0 ? 0 : 3)) % 11) < 3) {
+          cx.fillStyle = banda ? meio : escuro;
+          cx.fillRect(fx + (dir > 0 ? Math.round(fw * 0.3) : 1), y, Math.max(2, fw >> 2), 1);
+        }
+        cx.fillStyle = borda;
+        cx.fillRect(dir > 0 ? w2 - 2 : W - w2, y, 2, 1);
+      }
+    };
+    lado(1, 0); lado(-1, 2.1);
+    // ---- THE CANOPY ----
+    const desl = worldX * 0.05;
+    const cor = [escuro, meio, borda];
+    for (let x = 0; x < W; x++) {
+      const u = x / (W - 1);
+      const quina = Math.pow(Math.abs(u - 0.46) * 2, 1.5);
+      const base = this.copaY(x);
+      const dente = hash01(Math.floor(x + desl) * 3.7 + 11) * 6 - 1;
+      const folha = Math.sin((x + desl) * 0.55) * 3.0 + Math.sin((x + desl) * 0.21 + 1.3) * 4.0
+        + Math.sin((x + desl) * 0.9 + 2.6) * 1.6 + dente;
+      const d = Math.round(base + folha);
+      if (d <= 0) continue;
+      cx.fillStyle = cor[0]; cx.fillRect(x, 0, 1, d);
+      // A CANOPY THIRTY ROWS DEEP AND ONE COLOUR IS A LID, and a lid is the one thing no
+      // panel on that board has. The square's canopy is a fringe and gets away with it; this
+      // one is a third of the picture. So two runs of clumps are laid through it, each taken
+      // from a COARSE cell of columns rather than per column — a per-column hash is noise and
+      // a nine-column cell is a clump — with the top edge wobbled so the clump is not a box.
+      const wx = Math.floor(x + desl);
+      for (let j = 0; j < 2; j++) {
+        const cel = Math.floor((x + desl) / (9 + j * 7));
+        const hy = Math.round(hash01(cel * 13.7 + j * 5 + 1) * Math.max(1, d - 8)
+          + Math.sin((x + desl) * 0.8 + cel) * 1.6);
+        const hh = 4 + Math.round(hash01(cel * 7.1 + j) * 6);
+        if (hy < 0 || hy + hh > d) continue;
+        cx.fillStyle = cor[1]; cx.fillRect(x, hy, 1, hh);
+        cx.fillStyle = cor[2]; cx.fillRect(x, hy, 1, 1);
+      }
+      cx.fillStyle = cor[1]; cx.fillRect(x, d - 5, 1, 4);
+      // the lit hem only where the mass behind it earns it — a bright line a hundred pixels
+      // long against open sky is the block waves 16 and 18 paid for twice
+      if (quina > 0.30) { cx.fillStyle = cor[2]; cx.fillRect(x, d - 1, 1, 1); }
+      // BACKLIT LEAVES, which is the one thing the board's canopy has that the square's has
+      // not: its top fifth carries pale gold and pale blue specks where the light gets
+      // through. One pixel per column at most, on the column's own hash, so it is a scatter.
+      const s = hash01(wx * 11.3 + 5);
+      if (s > 0.88 && d > 12) {
+        const hy = 3 + Math.round(hash01(wx * 5.1) * (d - 8));
+        cx.fillStyle = s > 0.965 ? P.faixa : P.mataFarL;
+        cx.fillRect(x, hy, 1, 1 + (s > 0.965 ? 1 : 0));
+      }
+    }
+  },
+
+  // WHAT CROSSES A FOREST OVERHEAD IS NOT CABLE. The street has poles and wire because that
+  // is what says "this street" fastest; a mata hangs LIANAS out of the canopy, and the board
+  // draws them in the panel's own middle band. Same catenary loop, rooted in the canopy hem
+  // instead of on two poles, with a leaf every few pixels down the rope.
+  fios: function (A) {
+    const h = A.h, P = A.P;
+    const passo = 58, vel = 0.58;
+    const k0 = Math.floor(worldX * vel / passo) - 1;
+    for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
+      const x0 = Math.round(k * passo - worldX * vel);
+      const s = hash01(k * 17 + 3);
+      if (s > 0.86) continue;
+      const larg = 14 + Math.round(hash01(k * 23 + 5) * 22);
+      const y0 = Math.round(this.copaY(x0)) - 4;
+      const y1 = Math.round(this.copaY(x0 + larg)) - 4;
+      const barriga = 16 + Math.round(s * 26);
+      for (let x = Math.max(0, x0); x <= Math.min(W - 1, x0 + larg); x++) {
+        const t = (x - x0) / larg;
+        const y = Math.round(lerp(y0, y1, t) + Math.sin(t * Math.PI) * barriga);
+        cx.fillStyle = P.mataNearK; cx.fillRect(x, y, 1, 2);
+        cx.fillStyle = P.mataNear; cx.fillRect(x, y, 1, 1);
+        if (h > 0.4 && ((x - x0) % 7) === 3) {
+          cx.fillStyle = P.mataNearL; cx.fillRect(x, y + 2, 2, 1);
+        }
+      }
+      // and one rope hanging free off the belly of it
+      if (s < 0.44) {
+        const hx = x0 + Math.round(larg * 0.5);
+        const hy = Math.round(lerp(y0, y1, 0.5)) + barriga;
+        const n = 8 + Math.round(hash01(k * 29 + 1) * 16);
+        for (let i = 0; i < n; i++) {
+          cx.fillStyle = i > n - 4 ? P.mataNear : P.mataNearK;
+          cx.fillRect(hx + ((i >> 2) & 1), hy + i, 1, 1);
+        }
+      }
+    }
+  }
+};
+
 
 function drawScene() {
   const h = worldHealth();
@@ -5465,6 +6340,13 @@ function drawScene() {
   // the sky is most of the frame. Now lobes with a sunlit crown and a shaded belly, and the
   // lower they hang the smaller and hazier they get, which puts distance in the sky too.
   const nubB = P.nuvB, nubT = P.nuvT, nubD = P.nuvD;
+  // ...and whether there is any cloud at all is the place's, for the same reason the ramp is.
+  // Cloud is a fact about the SKY, and MATA ATLÂNTICA's panel has no sky in it — 0.5% of its
+  // top fifth and 0.0% of the four below — so a cumulus drifting through a gap in the canopy
+  // is not atmosphere, it is a bug you can see. `nuvem: 0` is the whole of that decision, and
+  // it is 1 everywhere else, so the street and the square keep their skies to the pixel.
+  const nuvemQ = ceuP("nuvem");
+  if (nuvemQ) {
   // A HIGH STRATUM, above the cumulus. The cumulus sit one every 34 px of screen and there
   // are only four of them across a 130 px frame, all of them in one bank low in the sky, so
   // everything above that bank was bare gradient — and that is 38% of the picture. Every one
@@ -5556,6 +6438,7 @@ function drawScene() {
     cx.fillStyle = nubB;                                  // a wisp trailing off downwind
     cx.fillRect(sx + w0, cy - 3, Math.round(w0 * 0.22), 2);
     cx.globalAlpha = 1;
+  }
   }
   // THE PLACE, DRAWN. Everything from here to the wires is the scenario's, not the
   // street's: `A` is the frame's resolved state (health, palette, rhythm, smoke) and each
@@ -5821,8 +6704,27 @@ const VIDA_TOPO = { smog: 30, barrel: 27, cash: 21 };   // world px above ground
 // its own dark keyline, and now below the light source instead of above it. The hit flash
 // keeps a higher floor because two frames of white is the confirmation that you connected.
 // Empty pips take the same factor as full ones, so the read "how much is left" is untouched.
+// A PLAIN RED HEALTH BAR, WHICH IS WHAT EVERY GAME HAS. The readout was a row of white pips
+// — one block per hit point, blocks going out one at a time — and the owner named the two
+// things wrong with it in one line: *"a vida dos bichinhos parece que são pontinhos brancos,
+// pode ser uma barrinha vermelha padrão em vez de ser blocada, ela vai diminuindo."* It did
+// not read as health, and it was white.
+//
+// The white was already a known defect with a number on it: floored at 0.26 for the night,
+// the untouched #e8edf6 pips were the brightest thing in the whole ground band — measured at
+// 183 px over luma 200 in a NOITE frame against 78 for everything else, peaking at 237, which
+// is ABOVE the Cetro's resting hub (195.6) and above its crystal (214.7) and inverts the one
+// rule the lighting wave set. Dimming them was a patch on the symptom. A red fill on a dark
+// track fixes it at the root, because the board's own ACENTO reds sit around L 90 — a bar can
+// be unmistakable without being the light source in the frame.
+//
+// It still takes the hour the same way, in VALUE only and on a floor: this is game signal, so
+// it must not take the hour's TINT (a bar that goes blue at midnight has joined the world it
+// is supposed to sit on top of), and it must not glow at midnight either.
+// It reads `m.hp` and `m.hpMax` and nothing else — no hp value, no spawn, no block changes.
 const PIP_PISO = 0.67, PIP_PISO_FLASH = 0.82;
-let pipPasso = -1, PIP_CHEIO = "#e8edf6", PIP_VAZIO = "#4a4458", PIP_FLASH = "#ffffff";
+let pipPasso = -1, VIDA_CHEIO = "#c2361f", VIDA_BAIXO = "#8d2418", VIDA_LUZ = "#e0603a",
+    VIDA_TRILHO = "#3a2028", PIP_FLASH = "#ffffff";
 function pipLuzPasso() {
   const k = horaKey() >> 2;                        // same 24 steps a day as everything else
   if (k === pipPasso) return;
@@ -5832,8 +6734,10 @@ function pipLuzPasso() {
     const c = hexA(hex), f = 1 - (1 - piso) * e;
     return rgbS([cl255(c[0] * f), cl255(c[1] * f), cl255(c[2] * f)]);
   };
-  PIP_CHEIO = dim("#e8edf6", PIP_PISO);
-  PIP_VAZIO = dim("#4a4458", PIP_PISO);
+  VIDA_CHEIO = dim("#c2361f", PIP_PISO);
+  VIDA_BAIXO = dim("#8d2418", PIP_PISO);           // the last third goes darker, not brighter
+  VIDA_LUZ = dim("#e0603a", PIP_PISO);             // one lit row along the top of the fill
+  VIDA_TRILHO = dim("#3a2028", PIP_PISO);
   PIP_FLASH = dim("#ffffff", PIP_PISO_FLASH);
 }
 function desenharVidaMob(m) {
@@ -5841,14 +6745,21 @@ function desenharVidaMob(m) {
   const sx = Math.round(m.wx - worldX);
   if (sx < -20 || sx > W + 20) return;
   pipLuzPasso();
-  const n = m.hpMax, larg = n * 3 - 1;
+  // one width for every monster, so "half a bar" means the same thing whatever you are
+  // looking at — with pips the bar's LENGTH was the monster's max hp, which read as "this one
+  // is wider" rather than as "this one takes more hits"
+  const larg = 20, alt = 3;
   const x0 = sx + 5 - (larg >> 1), y = GROUND - (VIDA_TOPO[m.type] || 22);
+  const frac = Math.max(0, Math.min(1, m.hp / m.hpMax));
+  const cheio = Math.round(larg * frac);
   cx.fillStyle = "#10121c";                       // keyline: it has to read on any ground
-  cx.fillRect(x0 - 1, y - 1, larg + 2, 5);
-  for (let i = 0; i < n; i++) {
-    const cheio = i < m.hp;
-    cx.fillStyle = cheio ? (m.flash > 0 ? PIP_FLASH : PIP_CHEIO) : PIP_VAZIO;
-    cx.fillRect(x0 + i * 3, y, 2, 3);
+  cx.fillRect(x0 - 1, y - 1, larg + 2, alt + 2);
+  cx.fillStyle = VIDA_TRILHO;                     // the empty track it drains along
+  cx.fillRect(x0, y, larg, alt);
+  if (cheio > 0) {
+    cx.fillStyle = m.flash > 0 ? PIP_FLASH : (frac <= 0.34 ? VIDA_BAIXO : VIDA_CHEIO);
+    cx.fillRect(x0, y, cheio, alt);
+    if (m.flash <= 0) { cx.fillStyle = VIDA_LUZ; cx.fillRect(x0, y, cheio, 1); }
   }
 }
 
@@ -5894,10 +6805,20 @@ function desenharMundo() {
     if (sx < -12 || sx > W + 12) return;
     const y = GROUND - 16 + Math.round(Math.sin(animT * 5 + d.wx * 0.1) * 2);
     const fim = Math.max(0, Math.min(1, (CFG.dropVida - d.t) / 2));
-    // the board's ITENS sheet, one per kind of trouble; the tick colour is the item's own
+    // the tick colour still says which trouble left it; the ICON says what it gives you
     const cor = d.type === "cash" ? "#f3a03d" : d.type === "barrel" ? "#71a39c" : "#f2d2dc";
     cx.globalAlpha = fim;
-    cx.drawImage(itemSprite(d.type), sx - 4, y - 2);
+    cx.drawImage(iconeMundo("leaf"), sx - 5, y - 3);
+    // ...and a small plus beside it, so it reads as a PICKUP and not as scenery: the world is
+    // already full of leaves and this is the only one you can take
+    // ...in the board's ACENTO gold and NOT in the chrome's cream: #fdf6e6 measures L 244,
+    // which would put a pickup above the Cetro's hub (195.6) and its crystal (214.7) in a
+    // night frame, and the Cetro being the brightest warm thing after dark is a rule this
+    // file has held since the lighting wave. #eba748 is L 175 and unmistakably a plus.
+    cx.fillStyle = "#12242e";
+    cx.fillRect(sx + 6, y - 2, 5, 5);
+    cx.fillStyle = "#eba748";
+    cx.fillRect(sx + 8, y - 1, 1, 3); cx.fillRect(sx + 7, y, 3, 1);
     // four ticks breathing around it: pixel-art for "pick me up"
     cx.globalAlpha = fim * pulso;
     cx.fillStyle = cor;
@@ -5908,8 +6829,9 @@ function desenharMundo() {
   });
   // how much of a trouble is left, over its head. Damage was already in the game — hits
   // came off `hp` — but nothing ever showed it, so it read as if nothing was happening
-  // until the thing suddenly popped. Pips, not a bar: at two to five hits you can count
-  // them at a glance, and the *number* of pips is what says "this one is the big one".
+  // until the thing suddenly popped. It was pips for a while, on the argument that at two to
+  // five hits you can count them; the owner wanted the thing every game has and he was right
+  // twice over — see `desenharVidaMob`.
   mobs.forEach(function (m) { desenharVidaMob(m); });
   // a trouble standing in the way: two ticks at its feet say "this one is tappable"
   mobs.forEach(function (m) {
