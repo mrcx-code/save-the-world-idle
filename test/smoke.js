@@ -82,15 +82,16 @@ function chromiumPath() {
 
   // a seen hint does not come back; and "got it" advances to the next step that state allows
   const guiaAvanca = await page.evaluate(() => {
-    // tap already seen, and now a couple of projects are running: the rhythm step is next
-    S.guiaVistos = ['tap']; S.geradores = 2; S.energia = 0; S.transicoes = 0;
+    // tap already seen, and some impact is on the board: the rhythm step is next
+    // (projects are gone, so the trigger is total impact, not a project count)
+    S.guiaVistos = ['tap']; S.energiaTotal = 60; S.energia = 0; S.transicoes = 0;
     esconderGuia(); cartaoT = 0; fecharTudo();
     desenhar();
     const primeiro = guiaAtual, apontaRitmo = document.getElementById('modeQuick').classList.contains('guiaAlvo');
     dispensarGuia();                                   // "got it"
     const aposOk = { atual: guiaAtual, visto: S.guiaVistos.slice() };
     // with tap+rhythm seen and no money, nothing else qualifies — the bubble stays down
-    esconderGuia(); S.geradores = 0; desenhar();
+    esconderGuia(); S.energiaTotal = 0; desenhar();
     return { primeiro, apontaRitmo, aposOk, quieto: guiaAtual };
   });
   console.log('  advance -> next step:', JSON.stringify(guiaAvanca.primeiro), '| points at rhythm:', guiaAvanca.apontaRitmo,
@@ -208,14 +209,14 @@ function chromiumPath() {
 
   // with a sheet open a scene tap only dismisses it — no stray swing
   const comFolha = await page.evaluate(async () => {
-    abrir('sheetProjects');
+    abrir('sheetUpgrades');
     await new Promise(r => setTimeout(r, 250));
     const antes = S.energiaTotal;
     const cv = document.getElementById('scene');
     cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 400 }));
     cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     await new Promise(r => setTimeout(r, 250));
-    return { ganho: S.energiaTotal - antes, aberta: document.getElementById('sheetProjects').classList.contains('aberto') };
+    return { ganho: S.energiaTotal - antes, aberta: document.getElementById('sheetUpgrades').classList.contains('aberto') };
   });
   console.log('scene tap with a sheet open -> closed:', !comFolha.aberta, '| swing:', comFolha.ganho.toFixed(2));
   if (comFolha.aberta) errors.push('a scene tap did not close the open sheet');
@@ -447,80 +448,7 @@ function chromiumPath() {
   if (recursos.passou.recurso !== 1) errors.push('pass-over collection left no resource');
   if (!recursos.passou.aindaLa) errors.push('a drop still ahead of the hero was collected too early');
 
-  // ---- special projects: a combo of resources funds a one-time, within-run bonus ----
-  const esp = await page.evaluate(async () => {
-    fecharTudo();
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
-    S.geradores = 20; S.poluicao = 30; S.modo = 'limpo'; S.tempoLimpo = 300; S.especiais = {};
-    const g = CFG.especiais.find(e => e.id === 'garden');   // 12 flowers + 6 water -> +6% production
-    // one short of the water it needs: not affordable, button off
-    S.recursos = { flor: g.custo.flor, agua: g.custo.agua - 1, refeicao: 0 };
-    desenhar();
-    const pobre = { pode: podeEspecial(g), completou: completarEspecial('garden'),
-      botao: document.getElementById('btnEsp_garden').disabled, feito: !!S.especiais.garden };
-    // exactly the right combo: affordable
-    S.recursos = { flor: g.custo.flor, agua: g.custo.agua, refeicao: 3 };
-    desenhar();
-    const prodAntes = prodPorSegundo(), cansacoAntes = S.poluicao;
-    const podeAgora = podeEspecial(g), botaoOn = !document.getElementById('btnEsp_garden').disabled;
-    const ok = completarEspecial('garden');
-    const prodDepois = prodPorSegundo();
-    // spends exactly the cost, leaves the rest, and cannot be built twice
-    const rest = { flor: S.recursos.flor, agua: S.recursos.agua, refeicao: S.recursos.refeicao };
-    const denovo = completarEspecial('garden');
-    // it survives to the sheet as "built", and the multiplier is real and mode-neutral
-    const cardFeito = document.getElementById('esp_garden').classList.contains('feito');
-    S.especiais = {}; S.recursos = { flor: 0, agua: 0, refeicao: 0 }; S.poluicao = 0; S.geradores = 0;
-    return { pobre, podeAgora, botaoOn, ok, denovo, prodAntes, prodDepois, cansacoAntes,
-      cansacoDepois: cansacoAntes, mult: g.prod, rest, custo: g.custo, cardFeito };
-  });
-  console.log('special project (garden) -> one short: affordable', esp.pobre.pode, '| button off', esp.pobre.botao,
-    '| built anyway', esp.pobre.feito);
-  console.log('  right combo -> affordable', esp.podeAgora, '| built', esp.ok, '| twice', esp.denovo,
-    '| prod', esp.prodAntes.toFixed(1), '->', esp.prodDepois.toFixed(1), '(×' + esp.mult + ')',
-    '| resources left', JSON.stringify(esp.rest));
-  if (esp.pobre.pode || esp.pobre.completou || esp.pobre.feito) errors.push('a special project was affordable without its full combo');
-  if (!esp.pobre.botao) errors.push('the build button was enabled without the resources');
-  if (!esp.podeAgora || !esp.botaoOn || !esp.ok) errors.push('the right combo did not fund the special project');
-  if (esp.denovo) errors.push('a one-time special project was built twice');
-  if (Math.abs(esp.prodDepois / esp.prodAntes - esp.mult) > 1e-6) errors.push('the special project bonus did not apply to production');
-  if (esp.rest.flor !== 0 || esp.rest.agua !== 0 || esp.rest.refeicao !== 3) errors.push('completing the project spent the wrong resources');
-  if (!esp.cardFeito) errors.push('a built special project is not marked built on the sheet');
-
-  // THE hard rule: building a special project may never touch tiredness
-  const espCansaco = await page.evaluate(() => {
-    S.geradores = 20; S.poluicao = 100; S.modo = 'limpo'; S.especiais = {};
-    S.recursos = { flor: 50, agua: 50, refeicao: 50 };
-    const antes = S.poluicao;
-    CFG.especiais.forEach(e => completarEspecial(e.id));   // build every one
-    const depois = S.poluicao, feitos = Object.keys(S.especiais).filter(k => S.especiais[k]).length;
-    S.especiais = {}; S.recursos = { flor: 0, agua: 0, refeicao: 0 }; S.poluicao = 0; S.geradores = 0;
-    return { antes, depois, feitos, total: CFG.especiais.length };
-  });
-  console.log('  built all', espCansaco.feitos, 'of', espCansaco.total, '-> tiredness', espCansaco.antes, '->', espCansaco.depois);
-  if (espCansaco.feitos !== espCansaco.total) errors.push('not every special project could be built');
-  if (espCansaco.depois !== espCansaco.antes) errors.push('BUILDING A SPECIAL PROJECT TOUCHED TIREDNESS');
-
-  // the panel opens from the projects sheet, in the sheet language
-  const espPainel = await page.evaluate(async () => {
-    fecharTudo(); abrir('sheetProjects');
-    await new Promise(r => setTimeout(r, 150));
-    document.getElementById('abrirEspeciais').click();
-    await new Promise(r => setTimeout(r, 200));
-    return { aberto: document.getElementById('sheetEspeciais').classList.contains('aberto'),
-      projFechou: !document.getElementById('sheetProjects').classList.contains('aberto'),
-      cards: document.querySelectorAll('#listaEspeciais .especialCard').length,
-      linha: document.getElementById('recursoLinha').textContent };
-  });
-  console.log('  panel opens from projects ->', espPainel.aberto, '| cards', espPainel.cards,
-    '| resource line', JSON.stringify(espPainel.linha));
-// obsolete:   if (!espPainel.aberto) errors.push('the special projects panel did not open');
-  if (espPainel.cards !== espCansaco.total) errors.push('the special projects panel is missing cards');
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-especiais.png') });
-  // hand the next block back the world state it expects (10 projects, GO STEADY, rested)
-  await page.evaluate(() => { fecharTudo(); S.especiais = {}; S.recursos = { flor: 0, agua: 0, refeicao: 0 };
-    S.geradores = 10; S.poluicao = 0; S.modo = 'limpo'; });
-
+  // obsolete: special projects removed by owner request — feature and test.
   // ---- the community call: show up inside the window and the street works with you ----
   await page.evaluate(async () => {
     mobs.length = 0; drops.length = 0; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
@@ -529,7 +457,7 @@ function chromiumPath() {
   });
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-chamada.png') });
   const chamado = await page.evaluate(async () => {
-    const aviso = document.getElementById('alerta').textContent;
+    const aviso = ''/*obsolete: alert strip removed*/;
     const semMutirao = prodPorSegundo();
     const r = document.getElementById('scene').getBoundingClientRect();
     const cv = document.getElementById('scene');
@@ -558,372 +486,8 @@ function chromiumPath() {
   // if (perdida.aberta) errors.push('a missed call never closed');
   if (perdida.perdeu) errors.push('missing a call took something away');
 
-  // ---- what a project is, and buying more than one of them ----
-  // the sheet has to say what you GET, not only what you pay
-  const explica = await page.evaluate(() => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
-    S.geradores = 12; S.energia = 0; S.poluicao = 0; S.modo = 'limpo'; S.tempoLimpo = 200;
-    S.u1 = S.u3 = false; S.qtdCompra = 1;
-    desenhar();
-    const antes = prodPorSegundo();
-    const previsto = taxaDeUmProjeto();
-    S.geradores++;
-    const real = prodPorSegundo() - antes;
-    S.geradores--;
-    return { previsto, real, linha1: document.getElementById('oQueEh').textContent,
-      linha2: document.getElementById('oQueDa').textContent, total: antes };
-  });
-  console.log('project explained ->', JSON.stringify(explica.linha1));
-  console.log('                  ->', JSON.stringify(explica.linha2));
-  if (Math.abs(explica.previsto - explica.real) > 1e-9) errors.push('the advertised rate per project is not the real one');
-  if (explica.linha1.indexOf('12 projects') < 0) errors.push('the sheet does not connect running projects to the rate');
-  if (!/forever/.test(explica.linha2)) errors.push('the sheet does not say a project is permanent');
-  if (!/15%/.test(explica.linha2)) errors.push('the sheet does not say the price climbs');
-
-  // MAX buys exactly what the money covers, and buying one at a time lands identically
-  const max = await page.evaluate(() => {
-    const guarda = JSON.stringify(S);
-    S.geradores = 12; S.energia = 0;
-    // fund exactly 7 projects, plus a little that cannot buy an eighth
-    let fundo = 0;
-    for (let i = 0; i < 7; i++) fundo += Math.ceil(15 * Math.pow(1.15, 12 + i));
-    const oitavo = Math.ceil(15 * Math.pow(1.15, 19));
-    S.energia = fundo + oitavo - 1;
-    S.qtdCompra = 'max'; desenhar();
-    const rotulo = document.getElementById('btnGerador').textContent;
-    const n = comprarGerador('max');
-    const depoisMax = { n, ger: S.geradores, energia: S.energia };
-
-    // same balance, bought one at a time
-    S.geradores = 12; S.energia = fundo + oitavo - 1;
-    let um = 0;
-    while (comprarGerador(1) > 0) um++;
-    const depoisUm = { n: um, ger: S.geradores, energia: S.energia };
-
-    // nothing affordable: MAX must buy zero and must not go negative
-    S.geradores = 12; S.energia = 1; desenhar();
-    const rotuloPobre = document.getElementById('btnGerador').textContent;
-    const desabilitado = document.getElementById('btnGerador').disabled;
-    const zero = comprarGerador('max');
-    const pobre = { zero, ger: S.geradores, energia: S.energia, rotuloPobre, desabilitado };
-
-    // x10 buys exactly ten when ten are affordable
-    S.geradores = 0; S.energia = 1e6; S.qtdCompra = 10; desenhar();
-    const dez = comprarGerador(10);
-
-    Object.assign(S, JSON.parse(guarda));
-    return { rotulo, depoisMax, depoisUm, pobre, dez, esperado: 7, sobra: oitavo - 1 };
-  });
-  console.log('buy MAX ->', JSON.stringify(max.rotulo), '| bought', max.depoisMax.n,
-    'leaving', Math.round(max.depoisMax.energia), '(expected', max.esperado, '/', max.sobra + ')');
-  console.log('one at a time ->', max.depoisUm.n, 'leaving', Math.round(max.depoisUm.energia),
-    '| x10 bought', max.dez, '| broke:', JSON.stringify(max.pobre.rotuloPobre));
-  if (max.depoisMax.n !== max.esperado) errors.push('MAX did not buy every project the money covered');
-  if (Math.abs(max.depoisMax.energia - max.sobra) > 1e-6) errors.push('MAX left the wrong remainder');
-  if (max.depoisMax.n !== max.depoisUm.n || max.depoisMax.ger !== max.depoisUm.ger) {
-    errors.push('MAX and one-at-a-time bought different amounts');
-  }
-  if (Math.abs(max.depoisMax.energia - max.depoisUm.energia) > 1e-6) errors.push('MAX and one-at-a-time spent different money');
-  if (max.pobre.zero !== 0 || max.pobre.ger !== 12) errors.push('MAX bought something it could not afford');
-  if (max.pobre.energia < 0) errors.push('buying drove the balance negative');
-  if (!max.pobre.desabilitado || !/NOT ENOUGH/.test(max.pobre.rotuloPobre)) errors.push('the buy button lied about being affordable');
-  if (max.dez !== 10) errors.push('x10 did not buy ten');
-
-  // ---- the rhythm: the one decision this prototype exists to measure ----
-  // Mid-game, GO STEADY with the ramp fully climbed: the panel has to show that switching
-  // buys a burst now and costs almost everything later.
-  const ritmo = await page.evaluate(() => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null; modoAviso = null;
-    S.geradores = 43; S.energia = 40000; S.energiaTotal = 30000; S.poluicao = 0;
-    S.u1 = S.u3 = S.u6 = true; S.modo = 'limpo'; S.tempoLimpo = 200;
-    desenhar();
-    const txt = id => document.getElementById(id).textContent;
-    return {
-      titA: txt('rTitA'), titB: txt('rTitB'),
-      agoraA: taxaAgora('limpo'), fimA: taxaAssentada('limpo'),
-      agoraB: taxaAgora('carvao'), fimB: taxaAssentada('carvao'),
-      mostraTaxaA: txt('rTaxaA'), mostraFimA: txt('rFimA'), mostraSaudeA: txt('rSaudeA'),
-      mostraTaxaB: txt('rTaxaB'), mostraFimB: txt('rFimB'), mostraSaudeB: txt('rSaudeB'),
-      aviso: txt('avisoRampa'), avisoVisivel: document.getElementById('avisoRampa').className.includes('mostra'),
-      rampa: rampaAtual(), chip: txt('modeNome') + ' ' + txt('modeSub'), tend: txt('tendencia')
-    };
-  });
-  console.log('rhythm panel · now', ritmo.mostraTaxaA, '/ settles', ritmo.mostraFimA, '/ team', ritmo.mostraSaudeA);
-  console.log('             · switch', ritmo.mostraTaxaB, '/ settles', ritmo.mostraFimB, '/ team', ritmo.mostraSaudeB);
-  console.log('             · chip:', JSON.stringify(ritmo.chip), '| warning:', JSON.stringify(ritmo.aviso));
-  if (!(ritmo.agoraB > ritmo.agoraA)) errors.push('GO FAST is not shown as faster right now');
-  if (!(ritmo.fimB < ritmo.fimA)) errors.push('the panel does not show that GO FAST settles lower');
-  if (ritmo.mostraFimB === ritmo.mostraTaxaB) errors.push('now and settles read the same for GO FAST');
-  if (!/100% . 5%/.test(ritmo.mostraSaudeB)) errors.push('the projected team health for GO FAST is wrong: ' + ritmo.mostraSaudeB);
-  if (!ritmo.avisoVisivel) errors.push('the ramp-reset warning did not show while a ramp was built');
-  if (ritmo.aviso.indexOf(ritmo.rampa.toFixed(2)) < 0) errors.push('the warning does not name the ramp being lost');
-  if (!/STEADY/.test(ritmo.chip)) errors.push('the mode chip does not name the rhythm');
-
-  // the numbers must be the real ones: what the panel promises, stepping the economy delivers
-  const honesto = await page.evaluate(() => {
-    const guarda = JSON.stringify(S);
-    S.modo = 'carvao'; S.tempoLimpo = 0; S.poluicao = 0;
-    const previsto = cansacoEm('carvao', 60), eq = cansacoEq('carvao');
-    for (let i = 0; i < 60; i++) simular(1);
-    const real = S.poluicao;
-    Object.assign(S, JSON.parse(guarda));
-    return { previsto, real, eq };
-  });
-  console.log('projection vs stepping the economy for 60s ->', honesto.previsto.toFixed(2),
-    'vs', honesto.real.toFixed(2), '| equilibrium', Math.round(honesto.eq));
-  if (Math.abs(honesto.previsto - honesto.real) > 0.5) errors.push('the tiredness projection does not match simular()');
-
-  // the switch itself has to land: flash, floats with real numbers, a line that stays up
-  await page.evaluate(() => { fecharTudo(); });
-  await page.waitForTimeout(250);
-  const trocou = await page.evaluate(() => {
-    floats.length = 0;
-    const antes = prodPorSegundo(), rampaAntes = S.tempoLimpo;
-    definirModo('carvao');
-    const f = document.getElementById('flash');
-    return {
-      classe: f.className, opacidade: parseFloat(getComputedStyle(f).opacity),
-      pop: document.getElementById('modeQuick').className,
-      textos: floats.map(x => x.txt), aviso: document.getElementById('alerta').textContent,
-      rampaAntes, rampaDepois: S.tempoLimpo, antes, depois: prodPorSegundo()
-    };
-  });
-  console.log('switch to GO FAST -> flash', JSON.stringify(trocou.classe), 'opacity',
-    trocou.opacidade.toFixed(2), '| floats', JSON.stringify(trocou.textos));
-  console.log('                  ->', JSON.stringify(trocou.aviso));
-  if (!/fast/.test(trocou.classe) || !(trocou.opacidade > 0.1)) errors.push('the switch did not flash the screen');
-  if (!trocou.textos.some(t => /GO FAST/.test(t))) errors.push('the switch did not announce itself');
-  if (!trocou.textos.some(t => /RAMP LOST/.test(t))) errors.push('the switch did not report the ramp it threw away');
-  if (!trocou.textos.some(t => />/.test(t) && /\/s/.test(t))) errors.push('the switch did not show the rate before and after');
-// obsolete:   if (!/TEAM SINKS/.test(trocou.aviso)) errors.push('the strip did not explain the cost of GO FAST');
-  if (trocou.rampaDepois !== 0) errors.push('switching did not reset the ramp');
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-troca.png') });
-
-  // the mode chip is a state readout, and it says when it is hurting
-  const chip = await page.evaluate(async () => {
-    S.poluicao = 700; desenhar();
-    const q = document.getElementById('modeQuick'), t = document.getElementById('tendencia');
-    const cabe = el => el.scrollWidth <= el.clientWidth + 1;
-    const doendo = { cls: q.className, sub: document.getElementById('modeSub').textContent,
-      tend: t.textContent, cabeChip: cabe(q), cabeTend: cabe(t) };
-    definirModo('limpo');
-    await new Promise(r => setTimeout(r, 250));
-    return { doendo, curando: { cls: document.getElementById('modeQuick').className,
-      sub: document.getElementById('modeSub').textContent, tend: t.textContent,
-      cabeTend: cabe(t), aviso: document.getElementById('alerta').textContent } };
-  });
-  console.log('mode chip tiring ->', JSON.stringify(chip.doendo.cls), chip.doendo.sub, '|', chip.doendo.tend);
-  console.log('mode chip healing ->', JSON.stringify(chip.curando.cls), chip.curando.sub, '|', chip.curando.tend);
-  if (!/doi/.test(chip.doendo.cls)) errors.push('the mode chip does not show that GO FAST is hurting');
-  if (/doi/.test(chip.curando.cls)) errors.push('the mode chip still says it hurts in GO STEADY');
-  if (!chip.doendo.cabeChip) errors.push('the mode chip text overflows its button');
-  if (!chip.doendo.cabeTend || !chip.curando.cabeTend) errors.push('the team trend line is cut off');
-// obsolete:   if (!/BACK TO 90%/.test(chip.curando.aviso)) errors.push('the strip did not say when the team recovers');
-
-  // the mode line has to fade on its own and hand the strip back
-  const decaiu = await page.evaluate(async () => {
-    for (let i = 0; i < 60; i++) { if (modoAviso) modoAviso.t -= 0.1; }
-    if (modoAviso && modoAviso.t <= 0) modoAviso = null;
-    desenhar();
-    return document.getElementById('alerta').textContent;
-  });
-  if (/GO STEADY —/.test(decaiu)) errors.push('the mode line never goes away');
-
-  // NOTES records this regression once already: no panel may cover the control block.
-  // Measured against #controls, not one row inside it, so re-planning the block cannot
-  // quietly move the thing the test is protecting.
-  const cobre = await page.evaluate(async () => {
-    document.getElementById('openProjects').click();
-    await new Promise(r => setTimeout(r, 350));
-    const s = document.getElementById('sheetProjects').getBoundingClientRect();
-    const m = document.getElementById('controls').getBoundingClientRect();
-    const f = document.getElementById('fato').getBoundingClientRect();
-    const h = getComputedStyle(document.documentElement).getPropertyValue('--hControles');
-    return { fundoFolha: s.bottom, topoMenu: m.top, altura: s.height, jan: window.innerHeight,
-      hVar: parseFloat(h), hReal: m.height, fundoFato: f.bottom };
-  });
-  console.log('projects sheet bottom', Math.round(cobre.fundoFolha), 'vs controls top', Math.round(cobre.topoMenu),
-    '| sheet height', Math.round(cobre.altura), 'of', cobre.jan);
-  console.log('  --hControles', Math.round(cobre.hVar), 'measured from a', Math.round(cobre.hReal),
-    'px control block | REAL DATA ends at', Math.round(cobre.fundoFato));
-  if (cobre.fundoFolha > cobre.topoMenu) errors.push('the projects sheet covers the control block');
-  if (cobre.fundoFato > cobre.topoMenu) errors.push('the REAL DATA ticker covers the control block');
-  // the variable has to keep coming from the real block, not from a hardcoded number
-  if (!(cobre.hVar >= cobre.hReal && cobre.hVar <= cobre.hReal + 24)) {
-    errors.push('--hControles is no longer measured from the control block');
-  }
-
-  // ...and it has to be re-measured on resize, which is the other half of that rule
-  const aposResize = await page.evaluate(async () => {
-    const c = document.getElementById('controls');
-    const antes = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles'));
-    const cresce = document.createElement('div');   // a row growing by 40px, the way a button that gains a line would
-    cresce.style.height = '40px';
-    c.appendChild(cresce);
-    window.dispatchEvent(new Event('resize'));
-    await new Promise(r => setTimeout(r, 120));
-    const depois = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles'));
-    const alto = c.getBoundingClientRect().height;
-    c.removeChild(cresce);
-    window.dispatchEvent(new Event('resize'));
-    await new Promise(r => setTimeout(r, 120));
-    return { antes, depois, alto,
-      volta: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hControles')) };
-  });
-  console.log('  a button that grows ->', Math.round(aposResize.antes), '->', Math.round(aposResize.depois),
-    '(block', Math.round(aposResize.alto) + 'px), back to', Math.round(aposResize.volta));
-  if (!(aposResize.depois >= aposResize.alto)) errors.push('--hControles did not follow a control block that grew');
-  if (!(aposResize.depois >= aposResize.antes + 38)) errors.push('--hControles did not grow with the block');
-  if (Math.abs(aposResize.volta - aposResize.antes) > 1) errors.push('--hControles did not come back down');
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-ritmo.png') });
-  await page.evaluate(() => {
-    fecharTudo();
-    S.geradores = 0; S.poluicao = 0; S.modo = 'carvao'; S.tempoLimpo = 0;
-    S.u1 = S.u3 = S.u6 = false; modoAviso = null; desenhar();
-  });
-
-  // ---- the special skill: AUTO-FIRE ----
-  // locked until the first torch, and it cannot be bought by wishing
-  const trava = await page.evaluate(() => {
-    fecharTudo();
-    S.geradores = 0; S.energia = 999999; S.energiaTotal = 0; S.poluicao = 0; S.modo = 'carvao';
-    S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
-    S.skillAuto = false; S.transicoes = 0; foco = 0; canalizando = 0;
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null; modoAviso = null;
-    desenhar();
-    comprarSkill();                       // should refuse: no torch has been passed
-    return { comprou: S.skillAuto, botao: document.getElementById('btnSkillAuto').disabled,
-      nota: document.getElementById('skillTrava').textContent,
-      rotulo: document.getElementById('skillsNota').textContent };
-  });
-  console.log('skill before the first torch -> bought:', trava.comprou, '| button off:', trava.botao,
-    '|', JSON.stringify(trava.rotulo));
-  if (trava.comprou) errors.push('the skill was bought before any torch was passed');
-  if (!trava.botao) errors.push('the locked skill still offered its buy button');
-  if (!/torch/.test(trava.nota)) errors.push('the skills sheet does not say how it unlocks');
-
-  // after a torch it can be learned, and focus does NOT accrue on its own
-  const compra = await page.evaluate(async () => {
-    S.transicoes = 1; desenhar();
-    const antes = S.energia;
-    comprarSkill();
-    const parado = foco;
-    await new Promise(r => setTimeout(r, 700));   // nothing happening: no focus may appear
-    return { tem: S.skillAuto, gasto: antes - S.energia, focoParado: parado, focoDepois: foco,
-      texto: document.getElementById('focoTexto').textContent };
-  });
-  console.log('skill learned ->', compra.tem, '| cost', compra.gasto,
-    '| focus while idle:', compra.focoParado, '->', compra.focoDepois);
-  if (!compra.tem) errors.push('the skill could not be learned after a torch');
-  if (compra.gasto !== 2000 && compra.gasto <= 0) errors.push('the skill was free');
-  if (compra.focoDepois > 0) errors.push('focus accrued with nothing happening — it is passive after all');
-
-  // focus comes from showing up: clearing a trouble, picking a drop up, answering a call
-  const fontes = await page.evaluate(() => {
-    foco = 0; canalizando = 0; drops.length = 0;
-    soltarDrop({ type: 'smog' }, 40);
-    const porMob = foco;
-    coletarDrop(drops[0], false);
-    const porDrop = foco - porMob;
-    foco = 0; drops.length = 0;
-    soltarDrop({ type: 'cash' }, 40);
-    const antesAuto = foco;
-    coletarDrop(drops[0], true);           // the neighbours picking it up gives no focus
-    const porAuto = foco - antesAuto;
-    return { porMob, porDrop, porAuto };
-  });
-  console.log('focus per trouble', fontes.porMob, '| per drop picked up', fontes.porDrop,
-    '| per drop the neighbours take', fontes.porAuto);
-  if (fontes.porMob <= 0) errors.push('clearing a trouble gave no focus');
-  if (fontes.porDrop <= 0) errors.push('picking a drop up gave no focus');
-  if (fontes.porAuto !== 0) errors.push('focus can be farmed without touching anything');
-
-  // full focus arms it, and it fires on its own with no input at all
-  const fogo = await page.evaluate(async () => {
-    foco = 0; canalizando = 0; drops.length = 0; mobs.length = 0;
-    S.geradores = 0; S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
-    ganharFoco(CFG.focoMax);
-    const armou = canalizando, aviso = (desenhar(), document.getElementById('alerta').textContent);
-    const t0 = performance.now(), e0 = S.energiaTotal;
-    await new Promise(r => setTimeout(r, 1000));
-    const disparos = (S.energiaTotal - e0) / ganhoClique();
-    return { armou, aviso, disparos, segundos: (performance.now() - t0) / 1000,
-      botao: document.getElementById('btnClique').className, restante: canalizando };
-  });
-  console.log('armed for', fogo.armou.toFixed(1), 's ->', Math.round(fogo.disparos),
-    'shots with no input in', fogo.segundos.toFixed(2), 's |', JSON.stringify(fogo.aviso));
-  if (fogo.armou <= 0) errors.push('full focus did not arm the wand');
-  if (fogo.disparos < 5) errors.push('the wand did not fire on its own');
-  if (fogo.disparos > CFG_TIROS * 1.6) errors.push('the wand fired faster than CFG says');
-// obsolete:   if (!/CHANNELLING/.test(fogo.aviso)) errors.push('the strip did not announce the channelling');
-  if (!/canal/.test(fogo.botao)) errors.push('the attack button does not show it is channelling');
-
-  // holding at the same time must not double the wand's own rate
-  const junto = await page.evaluate(async () => {
-    foco = 0; canalizando = 0; ganharFoco(CFG.focoMax);
-    const e0 = S.energiaTotal;
-    const bc = document.getElementById('btnClique');
-    bc.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 1000));
-    bc.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    const total = (S.energiaTotal - e0) / ganhoClique();
-    return { total };
-  });
-  console.log('wand + holding ->', Math.round(junto.total), 'shots/s (wand alone was',
-    Math.round(fogo.disparos) + ', hold alone ~7)');
-  if (junto.total > CFG_TIROS + 8 + 4) errors.push('holding and channelling doubled each other up');
-
-  // it stops on its own when the focus runs out
-  const parou = await page.evaluate(async () => {
-    for (let i = 0; i < 400; i++) atualizarWand(0.05);   // 20s: past any channel
-    const e0 = S.energiaTotal;
-    await new Promise(r => setTimeout(r, 500));
-    return { canalizando, foco, ganhouDepois: S.energiaTotal - e0 };
-  });
-  console.log('after the channel ->', parou.canalizando, 'left | focus', parou.foco,
-    '| still earning:', parou.ganhouDepois.toFixed(2));
-  if (parou.canalizando > 0 || parou.foco > 0) errors.push('the channel never ended');
-  if (parou.ganhouDepois > 0.5) errors.push('the wand kept firing after its focus ran out');
-
-  // THE hard constraint: a shot the wand fired may never touch tiredness
-  const cansaco = await page.evaluate(() => {
-    S.u2 = true; S.modo = 'limpo'; S.poluicao = 100;
-    foco = 0; canalizando = 0; ganharFoco(CFG.focoMax);
-    const antes = S.poluicao;
-    for (let i = 0; i < 200; i++) atualizarWand(0.05);   // a whole channel of auto shots
-    const depoisAuto = S.poluicao;
-    S.poluicao = 100;
-    for (let i = 0; i < 20; i++) clicar();               // the same count, by hand
-    const depoisMao = S.poluicao;
-    S.u2 = false; S.modo = 'carvao'; S.poluicao = 0;
-    return { antes, depoisAuto, depoisMao };
-  });
-  console.log('tiredness after a full auto channel:', cansaco.antes, '->', cansaco.depoisAuto,
-    '| after 20 taps by hand:', cansaco.depoisMao);
-  if (cansaco.depoisAuto !== cansaco.antes) errors.push('AUTO-FIRE moved tiredness — the known failure shape');
-  if (cansaco.depoisMao >= cansaco.antes) errors.push('U2 stopped healing on a real tap');
-
-  // and it survives the torch, which is what makes it a skill and not an upgrade
-  const skillFicou = await page.evaluate(() => {
-    S.u1 = true; S.geradores = 9; S.energiaTotal = CFG.metaPrestigio + 1000; S.poluicao = 0;
-    transicionar();
-    return { skill: S.skillAuto, u1: S.u1, projetos: S.geradores, foco: foco, sabedoria: S.inovacao };
-  });
-  console.log('after passing the torch -> skill kept:', skillFicou.skill, '| upgrades reset:',
-    !skillFicou.u1, '| projects', skillFicou.projetos, '| focus', skillFicou.foco);
-  if (!skillFicou.skill) errors.push('the skill did not survive the torch');
-  if (skillFicou.u1 || skillFicou.projetos !== 0) errors.push('the torch stopped resetting the run');
-  if (skillFicou.foco !== 0) errors.push('focus carried across the torch');
-  await page.evaluate(() => { abrir('sheetSkills'); });
-  await page.waitForTimeout(350);
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-skills.png') });
-  await page.evaluate(() => {
-    fecharTudo();
-    S.skillAuto = false; S.transicoes = 0; S.inovacao = 0; foco = 0; canalizando = 0;
-    S.energia = 0; S.energiaTotal = 0; S.geradores = 0; S.poluicao = 0; S.modo = 'carvao';
-    R.tochas = 0; desenhar();
-  });
-
+  // obsolete: projects + the rhythm panel removed by owner request — feature and test.
+  // obsolete: the AUTO-FIRE skill was removed by owner request — feature and test.
   // ---- coming back on another day is worth something ----
   const dias = await page.evaluate(() => {
     localStorage.setItem('proto_savetheworld_retencao',
@@ -942,6 +506,8 @@ function chromiumPath() {
     R = { dias: [], segundos: 0, tochas: 0 }; carregarRetencao();
     mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
     S.geradores = 0; S.poluicao = 0; S.modo = 'carvao';
+    // the torch used to wipe these; it is a no-op now, so the test resets them itself
+    S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
   });
 
   // every upgrade buyable and applied
@@ -980,165 +546,8 @@ function chromiumPath() {
   await page.waitForTimeout(500);
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-game.png') });
 
-  // retention: long-press the torch opens the counters, a normal tap still passes it
-  const ret = await page.evaluate(async () => {
-    const bt = document.getElementById('openTorch');
-    bt.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 700));
-    bt.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    bt.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 250));
-    return {
-      stats: document.getElementById('sheetStats').classList.contains('aberto'),
-      torch: document.getElementById('sheetTorch').classList.contains('aberto'),
-      dias: R.dias.length, segundos: R.segundos
-    };
-  });
-  console.log('long-press torch -> stats:', ret.stats, '| torch sheet:', ret.torch,
-    '| days:', ret.dias, '| seconds played:', ret.segundos.toFixed(1));
-// obsolete:   if (!ret.stats) errors.push('long-press did not open the retention panel');
-// obsolete:   if (ret.torch) errors.push('long-press also passed the torch');
-// obsolete:   if (ret.dias < 1 || ret.segundos <= 0) errors.push('retention did not record the session');
-
-  // a corrupted record must not take the game down with it
-  const sobreviveu = await page.evaluate(() => {
-    try {
-      localStorage.setItem('proto_savetheworld_retencao', '{broken');
-      R = { dias: [], segundos: 0, tochas: 0 };
-      carregarRetencao(); mostrarRetencao();
-      return R.dias.length === 1 && R.segundos === 0;
-    } catch (e) { return false; }
-  });
-// obsolete:   if (!sobreviveu) errors.push('a corrupted retention record broke the game');
-  await page.evaluate(() => localStorage.removeItem('proto_savetheworld_retencao'));
-  // obsolete: sheetStats no longer opens (retention panel removed by owner request)
-  await page.evaluate(() => fecharTudo());
-  await page.waitForTimeout(300);
-
-  // passing the torch asks in-game, not through a browser dialog
-  page.on('dialog', async d => { errors.push('BROWSER DIALOG: ' + d.message()); await d.dismiss(); });
-  const pergunta = await page.evaluate(async () => {
-    S.energiaTotal = 62000; S.energia = 5000; S.geradores = 12; S.poluicao = 40;
-    desenhar();
-    document.getElementById('openTorch').click();
-    await new Promise(r => setTimeout(r, 250));
-    document.getElementById('btnPrestigio').click();
-    await new Promise(r => setTimeout(r, 300));
-    return {
-      aberto: document.getElementById('sheetConfirm').classList.contains('aberto'),
-      ganha: document.getElementById('confirmaGanha').textContent,
-      perde: document.getElementById('confirmaPerde').textContent
-    };
-  });
-  console.log('pass the torch ->', pergunta.aberto ? 'panel' : 'NO PANEL',
-    '|', pergunta.ganha, '|', pergunta.perde);
-  if (!pergunta.aberto) errors.push('prestige did not open the confirm panel');
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-torch.png') });
-
-  // NOT YET must back out without spending anything
-  const recuou = await page.evaluate(async () => {
-    document.getElementById('btnConfirmaNao').click();
-    await new Promise(r => setTimeout(r, 300));
-    return { total: S.energiaTotal, sabedoria: S.inovacao };
-  });
-  if (recuou.total < 62000 || recuou.sabedoria !== 0) errors.push('NOT YET passed the torch anyway');
-
-  // YES resets the run, banks wisdom and counts the torch
-  const passou = await page.evaluate(async () => {
-    document.getElementById('btnPrestigio').click();
-    await new Promise(r => setTimeout(r, 300));
-    document.getElementById('btnConfirmaSim').click();
-    await new Promise(r => setTimeout(r, 300));
-    return { total: S.energiaTotal, sabedoria: S.inovacao, projetos: S.geradores, tochas: R.tochas };
-  });
-  console.log('confirmed ->  wisdom:', passou.sabedoria, '| impact reset to:', Math.round(passou.total),
-    '| projects:', passou.projetos, '| torches counted:', passou.tochas);
-  if (passou.sabedoria <= 0) errors.push('passing the torch banked no wisdom');
-  if (passou.projetos !== 0) errors.push('passing the torch did not reset the run');
-  if (passou.tochas !== 1) errors.push('passing the torch was not counted');
-
-  // ---- the epilogue: the torch names a successor and says what the run left behind ----
-  // The projects count is read BEFORE transicionar() wipes it; if that ever regresses it
-  // shows up here as a zero.
-  const epi = await page.evaluate(() => ({
-    aberto: document.getElementById('sheetEpilogo').classList.contains('aberto'),
-    corpo: document.getElementById('epilogoCorpo').innerText,
-    wisdom: document.getElementById('epilogoWisdom').textContent,
-    voz: document.getElementById('epilogoVoz').innerText,
-    botao: document.getElementById('btnEpilogo').textContent,
-    muroBtn: document.getElementById('btnEpilogoMuro').textContent
-  }));
-  console.log('epilogue ->', epi.aberto ? 'open' : 'NOT OPEN', '|',
-    JSON.stringify(epi.corpo.replace(/\n/g, ' / ')), '|', JSON.stringify(epi.botao));
-  console.log('         ->', JSON.stringify(epi.voz), '|', JSON.stringify(epi.wisdom));
-  if (!epi.aberto) errors.push('passing the torch showed no epilogue');
-  if (!/NIA ran the first year/.test(epi.corpo)) errors.push('the epilogue did not name the spark');
-  if (!/12 projects/.test(epi.corpo)) errors.push('the epilogue lost the run it was describing (projects read after the wipe?)');
-  if (!/MARA/.test(epi.corpo) || !/MARA/.test(epi.botao)) errors.push('the epilogue named no successor');
-  if (!/—/.test(epi.voz)) errors.push('the epilogue line is not spoken by anybody');
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-epilogo.png') });
-
-  // ---- the wall: written by the torch, and it only ever grows ----
-  const muro1 = await page.evaluate(async () => {
-    document.getElementById('btnEpilogoMuro').click();
-    await new Promise(r => setTimeout(r, 250));
-    return {
-      aberto: document.getElementById('sheetMuro').classList.contains('aberto'),
-      corpo: document.getElementById('muroCorpo').innerText.replace(/\n+/g, ' · '),
-      n: MURO.length, nomes: muroNomes(), ultimo: MURO[MURO.length - 1],
-      guardado: localStorage.getItem('proto_savetheworld_muro')
-    };
-  });
-  console.log('the wall ->', muro1.n, 'name(s):', JSON.stringify(muro1.corpo));
-  if (!muro1.aberto) errors.push('the wall did not open');
-  if (!muro1.n) errors.push('the torch wrote no name on the wall');
-  if (!muro1.ultimo || muro1.ultimo.nome !== 'NIA' || muro1.ultimo.proj !== 12) {
-    errors.push('the wall entry does not describe the run that just ended: ' + JSON.stringify(muro1.ultimo));
-  }
-  if (!muro1.guardado) errors.push('the wall was not written to its own storage key');
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-muro.png') });
-
-  // it must survive the thing that wipes everything else: the game save going away
-  const muro2 = await page.evaluate(() => {
-    localStorage.removeItem('proto_savetheworld');
-    MURO = []; carregarMuro();
-    const u = MURO[MURO.length - 1] || {};
-    return { n: MURO.length, nome: u.nome, proj: u.proj };
-  });
-  console.log('wall after the game save is wiped ->', muro2.n, 'entries, last:', JSON.stringify(muro2.nome), muro2.proj, 'projects');
-  if (muro2.n !== muro1.n || muro2.nome !== 'NIA') errors.push('the wall did not survive losing the game save');
-
-  // a hand-edited wall must be repaired, never thrown
-  const muro3 = await page.evaluate(() => {
-    const bom = localStorage.getItem('proto_savetheworld_muro');
-    try {
-      localStorage.setItem('proto_savetheworld_muro', '[{"nome":"OK"},{"lixo":1},7,null]');
-      MURO = []; carregarMuro(); mostrarMuro();
-      const meio = MURO.length;
-      localStorage.setItem('proto_savetheworld_muro', '{not an array}');
-      MURO = []; carregarMuro(); mostrarMuro();
-      const vazio = MURO.length;
-      localStorage.setItem('proto_savetheworld_muro', bom);
-      MURO = []; carregarMuro();
-      return { meio: meio, vazio: vazio, voltou: MURO.length };
-    } catch (e) { return { erro: String(e) }; }
-  });
-  console.log('hand-edited wall -> junk rows dropped, kept', muro3.meio, '| not-an-array ->', muro3.vazio,
-    '| the real one still loads:', muro3.voltou);
-  if (muro3.erro || muro3.meio !== 1 || muro3.vazio !== 0 || muro3.voltou !== muro1.n) {
-    errors.push('a corrupted wall broke the game: ' + JSON.stringify(muro3));
-  }
-  // and it is capped, so a very long-lived device cannot grow localStorage forever
-  const muroCap = await page.evaluate(() => {
-    const bom = localStorage.getItem('proto_savetheworld_muro');
-    for (let i = 0; i < 60; i++) escreverNoMuro('X', 'Y', i, i + 1);
-    const n = MURO.length, primeiro = MURO[0].n;
-    localStorage.setItem('proto_savetheworld_muro', bom); MURO = []; carregarMuro();
-    return { n: n, primeiro: primeiro, max: MURO_MAX };
-  });
-  console.log('wall cap -> after 60 torches it holds', muroCap.n, '(max', muroCap.max + ') starting at', muroCap.primeiro);
-  if (muroCap.n !== muroCap.max) errors.push('the wall is not capped');
-
+  // obsolete: the retention panel and the torch long-press were removed by owner request.
+  // obsolete: torch, epilogue and the wall removed by owner request — feature and test.
   // ---- chapter cards: thresholds are fractions of the target, never hardcoded ----
   const caps = await page.evaluate(async () => {
     const meta = CFG.metaPrestigio;
@@ -1184,7 +593,7 @@ function chromiumPath() {
     S.capVisto = 4; S.energiaTotal = 62000; S.geradores = 3; S.poluicao = 0; cartaoT = 0;
     transicionar();
     // while the epilogue is up no chapter fires over it
-    const durante = { visto: S.capVisto, epi: document.getElementById('sheetEpilogo').classList.contains('aberto') };
+    const durante = { visto: S.capVisto, epi: document.getElementById('sheetUpgrades').classList.contains('aberto') };
     fecharTudo();
     cartaoT = 0; desenhar();
     return { durante, visto: S.capVisto, cartao: document.getElementById('cartaoT').textContent };
@@ -1192,22 +601,18 @@ function chromiumPath() {
   console.log('after the torch -> chapters back to', capReset.durante.visto,
     '| held back while the epilogue is up:', capReset.durante.epi,
     '| then:', JSON.stringify(capReset.cartao));
-  if (capReset.durante.visto !== 0) errors.push('the chapters did not replay after the torch');
-  if (capReset.durante.epi !== true) errors.push('the epilogue did not open on the second torch');
-  if (capReset.visto !== 1 || capReset.cartao !== CAP1) errors.push('the new run did not open on chapter one');
+// obsolete:   if (capReset.durante.visto !== 0) errors.push('the chapters did not replay after the torch');
+// obsolete:   if (capReset.durante.epi !== true) errors.push('the epilogue did not open on the second torch');
+// obsolete:   if (capReset.visto !== 1 || capReset.cartao !== CAP1) errors.push('the new run did not open on chapter one');
 
   // ---- the hard rule: no authored fiction string may contain a digit, ever, so a line
   // can never be mistaken for the sourced REAL DATA banner ----
   const digitos = await page.evaluate(() => {
     const s = [];
     CAPITULOS.forEach(c => { s.push(c.t, c.n === undefined ? '' : ''); c.v.forEach(v => s.push(v[0], v[1])); });
-    EPILOGO_VOZ.forEach(v => s.push(v[0], v[1]));
     NOTAS_VOLTA.forEach(v => s.push(v[0], v[1]));
-    GUIA.forEach(g => s.push(g.voz[0], g.voz[1].replace(/<[^>]+>/g, '')));
-    ELENCO.forEach(n => s.push(n));
+    GUIA.forEach(g => s.push(g.voz.replace(/<[^>]+>/g, '')));
     ORDINAIS.forEach(o => s.push(o));
-    [1, 2, 3, 5, 6, 9, 10, 40].forEach(t => s.push(caudaMuro(t)));
-    s.push(document.getElementById('sheetMuro').querySelector('.avisoPrestigio').textContent);
     return { total: s.length, ruins: s.filter(x => /[0-9]/.test(x)) };
   });
   console.log('fiction strings checked for digits ->', digitos.total, '| with a digit:', digitos.ruins.length);
@@ -1241,10 +646,9 @@ function chromiumPath() {
   // await page.waitForFunction(() => !!chamada, null, { timeout: 15000 })
   //   .catch(() => errors.push('no call was waiting after a night away'));
   const volta = await page.evaluate(() => {
-    const a = document.getElementById('alerta').getBoundingClientRect();
     const o = document.getElementById('offline');
-    return { dobrada: chamada && chamada.dobrada, aviso: document.getElementById('alerta').textContent,
-      topoAlerta: a.top, fundoOffline: o.getBoundingClientRect().bottom,
+    return { dobrada: chamada && chamada.dobrada, aviso: ''/*obsolete: alert strip removed*/,
+      topoAlerta: 0, fundoOffline: o.getBoundingClientRect().bottom,
       offlineVisivel: o.style.display === 'block' };
   });
   console.log('back after a night ->', JSON.stringify(volta.aviso), '| doubled:', volta.dobrada,
@@ -1283,35 +687,7 @@ function chromiumPath() {
 
   await page.evaluate(() => localStorage.removeItem('proto_savetheworld'));
 
-  // ---- the STREET progress moved to a vertical bar on the right edge ----
-  // Same state drives it (worldHealth via ruaPct); it now grows in HEIGHT, not width, and it
-  // must sit clear of the control block and to the right of the world. A silent regression
-  // would be setting width again (no visible fill) — so the fill height is what is checked.
-  const rua = await page.evaluate(async () => {
-    const guarda = JSON.stringify(S);
-    const settle = () => new Promise(r => setTimeout(r, 360));   // clear the .3s height transition
-    S.inovacao = 0;
-    S.energiaTotal = CFG.metaPrestigio * 0.05; desenhar(); await settle();
-    const baixo = document.getElementById('barRua').getBoundingClientRect().height;
-    S.energiaTotal = CFG.metaPrestigio * 0.95; desenhar(); await settle();
-    const barra = document.getElementById('barRua');
-    const alto = barra.getBoundingClientRect().height;
-    const track = barra.parentElement.getBoundingClientRect();
-    const box = document.getElementById('barraRua').getBoundingClientRect();
-    const ctr = document.getElementById('controls').getBoundingClientRect();
-    const pct = document.getElementById('ruaPct').textContent;
-    Object.assign(S, JSON.parse(guarda)); desenhar();
-    return { baixo, alto, trackH: track.height, boxRight: box.right, boxBottom: box.bottom,
-      janW: window.innerWidth, ctrTop: ctr.top, pct };
-  });
-  console.log('street bar -> fill', Math.round(rua.baixo), '->', Math.round(rua.alto),
-    'px of', Math.round(rua.trackH), '| readout', rua.pct,
-    '| right edge', Math.round(rua.boxRight), 'of', rua.janW, '| bottom', Math.round(rua.boxBottom),
-    'vs controls top', Math.round(rua.ctrTop));
-// obsolete:   if (!(rua.alto > rua.baixo + 10)) errors.push('the street bar does not grow in height with progress');
-  if (rua.boxRight > rua.janW) errors.push('the street bar runs off the right edge');
-  if (rua.boxRight < rua.janW - 60) errors.push('the street bar is not pinned to the right side');
-  if (rua.boxBottom > rua.ctrTop) errors.push('the street bar overlaps the control block');
+  // obsolete: the STREET bar was removed by owner request — element, style and test.
 
   const fps = await page.evaluate(() => new Promise(res => {
     let n = 0; const t0 = performance.now();
