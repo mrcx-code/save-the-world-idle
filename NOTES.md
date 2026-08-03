@@ -2848,6 +2848,38 @@ toda sessão começa lendo a última entrada.
   ticker, chips do topo) ainda usam a sombra dura em bloco; se o dono quiser coerência total
   com os botões novos, suavizar essas também — deixei fora deste passe por serem "painéis",
   não "botões".
+- **2026-08-03 · Herói procedural → 24 frames autorados (sprites HD).** O payoff do pipeline
+  de personagem: o herói não é mais montado à mão (perna/braço/poncho + `vara`/`CETRO`), é
+  blitado de frames de sprite. **Pipeline de build:** `test/inline-hero.js` lê os 24 PNGs de
+  `assets/hero/`, faz **knockout do matte magenta** (a franja era anel de pixels opacos
+  r≈b altos, g baixo — 402 na borda vs 29 no miolo em `idle_0`, medido; alpha já era binário,
+  0/255, sem semi), **apara as margens transparentes**, re-encoda e emite o bloco base64
+  `HERO_B64` que é *splicado* no `index.html` entre marcadores. Carregados em `Image()` como
+  `HERO_SPR = {idle:4, walk:6, atk1:4, atk2:4, sp:6}`. **`drawHero()` reescrito**: escolhe a
+  animação do estado existente na prioridade `jumpT>0` (special, frame
+  `floor((1−jumpT/JUMPF)*6)` clamp 0..5, mantendo o arco `alto` e o `impacto()` no toque),
+  senão `attackT>0` (atk1 se `attackType 0`, atk2 se `1`, frame por `1−attackT/9`), senão
+  `walk` pelo `animT` (~9fps, ciclo de 6). Blit **ancorado no pé**: centro-base em
+  `(HX, GROUND−alto)`, `imageSmoothingEnabled=true` só no herói (downscale HD limpo sobre o
+  mundo pixelado) e restaurado pra `false` depois. Sombra de contato mantida via `sombra()`.
+  A bolha de magia (`lancarMagia`/`magias`) segue disparando na detecção de golpe — intocada.
+  **Aposentado:** `HERO_MAP`, `RUN`, `CETRO`, `heroLuzPasso`/`hc`/`cc`/`rodaCanvas`/`vara` e o
+  estado do bake por hora. **Mantidos** de propósito: `HERO_COLORS`/`HERO_MINI` (o postal de
+  intro `drawLoreArt` ainda usa) e `luzPersonagem`/`hexA` (o *mundo* — NPC, deco, mobs — usa).
+  **Medido:** 24 frames; conteúdo aparado ~117×162 (idle) a ~237×163 (special_4). `index.html`
+  **418 KB → 1,52 MB** (bloco base64 = 1,12 MB — acima do "algumas centenas de KB" esperado,
+  mas são os frames que são; sem fetch em runtime, um arquivo só). Altura do herói na tela
+  **≈44 px de mundo** (escala `HERO_TARGET/walk[0].naturalHeight` = 44/153 ≈ 0,288), ou seja
+  **~15,6%** de `H=282` no viewport 390×844 — igual ao procedural. `smoke.js` **verde** nos
+  incrementos (leap `jumpT` + onda de choque preservados), **FPS 61**, `sim.js`
+  **byte-idêntico** ao baseline. Prints lidos: parado, correndo, conjurando (atk1) e no topo
+  do salto (special, com o BLOOM e o burst verde) — casa com os frames (menino de pele escura,
+  cabelo cacheado com flor, poncho creme, calça verde, cajado), **sem franja magenta** e pé
+  limpo no chão. **Frame que pediu cuidado:** os `special_*` variam muito de altura (135→181
+  de conteúdo) — com escala uniforme o leap naturalmente renderiza mais alto, que é o certo;
+  não forcei altura fixa por frame. **Próximo passo:** se o dono achar o herói grande demais,
+  `HERO_TARGET` é um botão só; e dá pra usar `idle` num estado parado de verdade se um dia
+  existir (hoje o mundo sempre rola, então `walk` é o default, como antes).
 
 ## Would cut with one more day
 
