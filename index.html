@@ -3859,14 +3859,43 @@ function drawScene() {
   cx.fillStyle = P.trilha;
   cx.fillRect(0, GROUND, W, 8);
   {
-    // the joint has to be a real value step below the stone or the whole thing reads as
-    // horizontal stripes instead of paving — that was the first attempt and it was wrong
-    const junta = rgbS(mixA(P.sulcoAA, [24, 20, 12], 0.45));
-    const faces = [P.trilha, P.trilhaL, rgbS(mixA(P.trilhaA, P.sulcoAA, 0.30)),
-      rgbS(mixA(P.trilhaA, P.sulcoAA, 0.60))];
+    // THE STREET DESCENDS INTO SHADE TOWARD THE VIEWER, AND THAT IS PAINT, NOT A GRADE.
+    // Measured against the board, the bottom fifth of our picture reads 99 against its 66,
+    // and the attribution is not "the paving" — it is `trilhaL`, the lit top edge of every
+    // stone: 13.4% of that fifth at L 165, paying 22 of the 99 on its own, with the four
+    // stone faces behind it. The board's near pavement measures [113,87,48], L 89.5 at
+    // C* 27.5, because a street recedes AWAY from the viewer into the light — the far
+    // courses catch the horizon, the ones at your feet are in the shadow of everything
+    // standing behind you. So the eight courses stop being one flat value: each one steps
+    // down toward the viewer, mixed toward the ACENTO dark rather than toward grey, because
+    // the two things the board's mean RGB says out loud (q4 69,59,35 and q5 81,65,35
+    // against our 115,116,94 and 107,99,67) are DARKER and WARMER, in that order.
+    // The joint has to stay a real value step below the stone or the whole thing reads as
+    // horizontal stripes instead of paving — that was the first attempt and it was wrong —
+    // so it walks down with the course instead of sitting still under it.
+    const SOMBRA_RUA = [38, 24, 10];
     let y = GROUND;
     for (let i = 0; i < 8 && y < H; i++) {
       const alt = 3 + (i >> 1), larg = 9 + i * 2, vel = 0.55 + i * 0.075;
+      // the ramp is spent over the courses you can SEE: eight are laid but the last two fall
+      // under the REAL DATA banner, so a ramp indexed to 7 puts most of its depth where
+      // nobody is looking. Full depth by the sixth course, held after that.
+      const t = Math.min(0.52, 0.52 * i / 5);
+      // and the chroma is paid for on the way down, the same way wave 14 paid for the
+      // proscenium's: a straight mix toward the dark holds the hue but not C*, which falls
+      // with L on its own — the first cut of this ramp took the bottom fifth from C* 20.4 to
+      // 19.8 against the board's 21.6, and the board's shaded pavement is its MOST saturated
+      // fifth, not its least. So the residual chroma is re-expanded around the result's own
+      // Rec.709 luma, which is a saturation move and moves the value by zero.
+      const nS = function (c) {
+        const m = mixA(c, SOMBRA_RUA, t), g = 1 + 0.85 * t;
+        const yy = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2];
+        return [cl255(yy + (m[0] - yy) * g), cl255(yy + (m[1] - yy) * g), cl255(yy + (m[2] - yy) * g)];
+      };
+      const junta = rgbS(nS(mixA(P.sulcoAA, [24, 20, 12], 0.45)));
+      const faces = [rgbS(nS(P.trilhaA)), rgbS(nS(P.trilhaLA)),
+        rgbS(nS(mixA(P.trilhaA, P.sulcoAA, 0.30))), rgbS(nS(mixA(P.trilhaA, P.sulcoAA, 0.60)))];
+      const topo = rgbS(nS(P.trilhaLA));
       const desl = worldX * vel, k0 = Math.floor(desl / larg) - 1;
       cx.fillStyle = junta; cx.fillRect(0, y, W, alt);
       for (let k = k0; k < k0 + Math.ceil(W / larg) + 2; k++) {
@@ -3874,7 +3903,7 @@ function drawScene() {
         const r2 = hash01(k * 31 + i * 7);
         cx.fillStyle = faces[Math.floor(r2 * 4) & 3];
         cx.fillRect(gx, y, larg - 2, alt - 1);                 // the stone, joints all round it
-        if (alt > 3) { cx.fillStyle = P.trilhaL; cx.fillRect(gx, y, larg - 2, 1); }
+        if (alt > 3) { cx.fillStyle = topo; cx.fillRect(gx, y, larg - 2, 1); }
       }
       y += alt;
     }

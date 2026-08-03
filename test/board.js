@@ -28,6 +28,7 @@ const ANALISE = function (d, w, h) {
   const f = function (t) { return t > 0.008856 ? Math.cbrt(t) : (7.787 * t + 16 / 116); };
   let sL = 0, sC = 0, n = 0;
   const linhaL = new Float64Array(h), linhaN = new Float64Array(h);
+  const linhaC = new Float64Array(h), linhaR = new Float64Array(h), linhaG = new Float64Array(h), linhaB = new Float64Array(h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = (y * w + x) * 4;
     const r = d[i], g = d[i + 1], b = d[i + 2];
@@ -40,13 +41,18 @@ const ANALISE = function (d, w, h) {
     const A = 500 * (fx - fy), B2 = 200 * (fy - fz);
     sL += L; sC += Math.sqrt(A * A + B2 * B2); n++;
     linhaL[y] += L; linhaN[y]++;
+    linhaC[y] += Math.sqrt(A * A + B2 * B2); linhaR[y] += r; linhaG[y] += g; linhaB[y] += b;
   }
   // the vertical profile in five slices: top of frame down to the ground line
-  const perfil = [];
+  const perfil = [], perfilC = [], perfilRGB = [];
   for (let k = 0; k < 5; k++) {
-    let s = 0, m = 0;
-    for (let y = Math.floor(h * k / 5); y < Math.floor(h * (k + 1) / 5); y++) { s += linhaL[y]; m += linhaN[y]; }
+    let s = 0, m = 0, c2 = 0, r2 = 0, g2 = 0, b3 = 0;
+    for (let y = Math.floor(h * k / 5); y < Math.floor(h * (k + 1) / 5); y++) {
+      s += linhaL[y]; m += linhaN[y]; c2 += linhaC[y]; r2 += linhaR[y]; g2 += linhaG[y]; b3 += linhaB[y];
+    }
     perfil.push(m ? s / m : 0);
+    perfilC.push(m ? c2 / m : 0);
+    perfilRGB.push(m ? [r2 / m, g2 / m, b3 / m] : [0, 0, 0]);
   }
   // and the horizontal one, because "the middle opens" is a horizontal shape
   const colunas = [];
@@ -58,13 +64,19 @@ const ANALISE = function (d, w, h) {
     }
     colunas.push(m ? s / m : 0);
   }
-  return { luma: sL / n, cstar: sC / n, perfil: perfil, colunas: colunas };
+  return { luma: sL / n, cstar: sC / n, perfil: perfil, colunas: colunas, perfilC: perfilC, perfilRGB: perfilRGB };
 };
 
 function linha(nome, a) {
   console.log(nome.padEnd(22) + 'luma ' + a.luma.toFixed(1).padStart(6) + '  C* ' + a.cstar.toFixed(1).padStart(5) +
     '  | topo->chao ' + a.perfil.map(v => v.toFixed(0).padStart(3)).join(' ') +
     '  | esq->dir ' + a.colunas.map(v => v.toFixed(0).padStart(3)).join(' '));
+  // buying value must not cost chroma: the same five slices in C*, and the mean RGB of the
+  // two the board keeps in shade, because "darker" and "darker AND warmer" are not the same
+  // instruction and only the second one is what the board did
+  console.log(' '.repeat(22) + 'C* por quinto ' + a.perfilC.map(v => v.toFixed(1).padStart(5)).join(' ') +
+    '  | RGB q4 ' + a.perfilRGB[3].map(v => v.toFixed(0)).join(',') +
+    '  q5 ' + a.perfilRGB[4].map(v => v.toFixed(0)).join(','));
 }
 
 (async () => {
