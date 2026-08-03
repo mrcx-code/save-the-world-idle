@@ -1908,6 +1908,111 @@ toda sessão começa lendo a última entrada.
   em letra maiúscula, então talvez a resposta certa seja "está no limite" e a próxima onda
   deva ir gastar o esforço no céu aberto de 32,6%.**
 
+- **2026-08-03 · visual — o céu, e a descoberta de que o alvo de 25% foi lido no recorte
+  errado.** Três incrementos, cada um com `node test/smoke.js` verde. **FPS 61 do começo ao
+  fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado — **medido: `node test/sim.js`
+  byte a byte idêntico nos três commits**.
+
+  **(0) A bancada, primeiro, porque ninguém tinha medido o CÉU do board — só a área dele.**
+  `test/ceu.js` é novo. `medir.js` conta **céu nu** (pixel que ainda carrega o que
+  `skyCanvas` pôs ali), que responde "quanto do quadro está sem autoria" e nada sobre a
+  autoria do resto; `board.js` tira média do quadro inteiro, e uma vez que o chão entra na
+  média o céu some dentro dela. Esta separa **céu de nuvem dentro do céu** e relata a
+  relação: fração, separação de valor, croma de cada um, tamanho das peças, altura do banco.
+
+  **O board, RUA DO BAIRRO:** nuvem é **26,3% do céu dele** e **4,9% do quadro**, a
+  **L 220 contra 171 do céu atrás, separação 49**, com o céu a **C\* 16,1** e as nuvens a
+  **C\* 12,5 — as nuvens do board NÃO são neutras**. Nós: nuvem **19,1% do céu**, **7,1% do
+  quadro**, L 190 contra 145, **separação 45**, céu a **C\* 13,5**, nuvem a C\* 11,0. Ou
+  seja: **MENOS nuvem que o board em relação ao céu, MAIS área pintada, e a separação de
+  valor já estava certa** — que é exatamente por que duas ondas mexendo no VALOR da nuvem
+  foram recusadas pelo print. O que faltava era distribuição e croma.
+
+  **(1) Uma classe de tamanho num banco só não é o que o board tem.** O cúmulo saiu de um
+  espaçamento de 34 px com uma classe (w0 25–84 px, ou seja **metade da largura do quadro**)
+  para **três classes por hash própria** — dois terços pequena, um quarto média, um décimo o
+  aglomerado grande — num espaçamento de **12 px**. Mesmo laço, mesmos lóbulos, nenhum objeto
+  novo, nenhuma chamada de desenho nova. **Medido: céu aberto no visível 32,6% → 30,6%
+  (a dívida da onda 14 paga, e abaixo dos 31,2% de antes dela), céu aberto em `CEU alto`
+  47,1% → 38,0%, `CEU alto` dE 11,3 → 13,4, nuvem 24,0% do céu, separação 45 → 53.**
+
+  **(2) Uma silhueta carimbada dez vezes é uma fileira de bolinhas.** Dois conjuntos de
+  lóbulos e um esticão vertical no bojo, escolhidos por hash. **Medido: céu aberto 30,6% →
+  30,4%; o menino à MANHÃ 21/78/16 → 20/78/16 de 485; o resto parado no dígito.** Pequeno,
+  e relatado como pequeno — o argumento é o print, onde a cadeia deixou de ser um colar de
+  contas do mesmo tamanho.
+
+  **(3) O céu estava três de croma abaixo do board, e nunca esteve abaixo em valor.** Céu do
+  board **C\* 16,1**, o nosso **13,3**. O céu é a maior região do quadro, então aqueles três
+  pontos são a maior parte do **16,3 contra 19,5** do quadro inteiro. Três ondas já pagaram
+  céu na moeda do valor e foram recusadas pelo print, então esta **não toca em valor**: a
+  croma residual da rampa é **reexpandida em torno da luma Rec.709 dela mesma**, o mesmo
+  movimento neutro em luma das ondas 12 e 13 no menino e na copa grande. **Medido: C\* do
+  quadro 16,3 → 17,5 (board 19,5), com o perfil vertical parado no dígito — 136 125 111 115
+  99 antes e depois. C\* do céu 13,3 → 17,1.** E o arco doente→são **abre** em vez de
+  fechar: DOENTE/MANHÃ C\* 8,1 → 8,6 contra SÃ 17,9 → 18,8, com a rua doente seguindo a
+  **mais clara** das duas (139,0 contra 115,0).
+
+  **E é ganho SÓ DE DIA, e isso está medido, não suposto.** Rodado liso no relógio inteiro
+  ele leva o quadro da NOITE de C\* 9,8 para 10,8 e **inverte o que a onda 12 comprou**: o
+  menino deixa de ser mais saturado que a própria rua à noite (razão 1,00 → **0,90**) e a
+  croma dele vai 12 → 17 de 485. Zerado depois do escuro.
+
+  **E o pelotão o alcançou outra vez à MANHÃ, exatamente como na onda 13**, então o piso da
+  reexpansão dele foi de **1,32 para 1,50** — a direção diz desde a primeira linha que ele
+  não dessatura com o mundo, e isso vale nos dois sentidos. **O menino, de 485, fora da
+  moldura, começo → fim da onda:** MANHÃ **23/73/16 → 21/89/13**; NOITE **54/12/11 →
+  52/9/6**. Razão C\* dele / C\* do quadro **1,50** à MANHÃ e **1,08** à NOITE. Poncho
+  **123,4** no dígito, Cetro seguindo a coisa mais quente do quadro (miolo 195,6 / cristal
+  214,7). A dívida da onda 14 é paga em luma (23 → 21) e em dE (16 → 13, contra os 12 de
+  antes da onda 14) e **não** em croma (73 → 89) — a atribuição é o céu mais saturado atrás
+  dele, e está aqui em vez de escondida.
+
+  **A descoberta que muda o alvo das próximas ondas: os 25% foram lidos no recorte errado.**
+  As ondas 11 a 14 perseguiram "o board dá cerca de um quarto da imagem ao céu aberto", que
+  foi lido num prato **2,15:1 deitado** enquanto nós compomos um **0,85:1 em pé**. Tela alta
+  sobre rua que rola de lado mostra mais céu, necessariamente. `ceu.js` agora recorta o board
+  **na nossa proporção**, centrado na rua: **RUA DO BAIRRO a 0,85:1 dá 30,5% de céu, 22,6%
+  dele nuvem, ou seja 23,6% de céu aberto**; o painel MANHÃ a 0,85:1 dá 26,2% / 20,9%. Nós
+  estamos em **30,4%**. A distância é real e é de ~7 pontos, mas **o alvo certo é 23,6%, não
+  25%**, e ele é mais duro, não mais fácil. E o caminho para lá **não é mais nuvem**: já
+  temos **25,1% do céu em nuvem contra os 22,6% do board na mesma proporção** — essa alavanca
+  acabou honestamente.
+
+  **O que a bancada RECUSOU confirmar, e fica escrito.** A hipótese que motivou o incremento
+  (1) era tamanho de peça, e **as duas métricas de tamanho que construí não a confirmam**:
+  corrida de linha p90 ficou em 42 px antes e depois, e as peças conexas foram de **15 peças
+  de largura mediana 12** para **11 de mediana 11** — ou seja **menos** peças e não mais.
+  As duas medem mal aqui: o cirro entra na conta, os cúmulos vizinhos se fundem pela base
+  chapada, e o limiar de "nuvem" é mediana+22 e anda quando a população anda. O que se moveu
+  sem ambiguidade foi cobertura, estrutura e croma. **Confiei no print, que é a regra deste
+  projeto desde a onda 11, e o print é claro: antes eram dois borrões moles, agora é uma
+  cadeia de oito nacos brancos nítidos em alturas diferentes, como o board.**
+
+  **Tentei e desfiz, os dois medidos:** (a) O ganho de croma do céu rodando no relógio
+  inteiro — número melhor no quadro (C\* 17,5 e a NOITE de 8,8 para 9,9) e **desfeito**,
+  porque desfaz a razão 1,00 da onda 12 à NOITE. (b) Tirar o cirro alto, na teoria de que o
+  painel RUA DO BAIRRO não tem cirro nenhum (só o TARDE do board tem): **céu aberto visível
+  de 28,5% para 30,1% e `CEU alto` de 37,3% para 42,5% no mesmo controle pareado** — o cirro
+  compra 1,6 ponto de céu aberto e 5,2 em `CEU alto` e fica.
+
+  **Conferido em três níveis de saúde e quatro horas** (`test/cruz.js`): sem erro de console,
+  rua doente segue ocre lavada e **não escura**, o cúmulo doente sai bege-quente em vez de
+  branco, e à NOITE o banco vira massa cinza-escura contra o azul com o Cetro seguindo a
+  única coisa quente do quadro.
+
+  **Medido no fim:** smoke verde nos três commits, **FPS 61**, `sim.js` idêntico.
+  **Próximo passo: o céu chegou. Nos eixos que o board dá para medir ele está lá — nuvem
+  25,1% do céu contra 22,6%, separação de valor 53 contra 47, croma do céu 17,1 contra 16,9,
+  croma da nuvem 11,3 contra 12,1 — e o quinto de cima do quadro está em 136 contra 141.
+  A maior distância medida que sobra saiu do céu e desceu: contra o board o nosso perfil é
+  136 125 111 115 99 contra 141 101 83 60 66, e os quintos 4 e 5 estão 55 e 33 pontos acima.
+  Isso é a rua, os telhados e a faixa separadora, não o céu. Dúvida honesta: a onda 13 já
+  desceu o calçamento quatro degraus e ganhou 10 pontos no quinto 5; faltam 33, e não sei se
+  isso se paga com tinta ou se o quinto 4 do board está em 60 porque a rua dele está entre
+  dois prédios altos e a nossa não — que é a mesma pergunta de largura que o print recusou
+  duas vezes, agora pela vertical.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
