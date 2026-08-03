@@ -1758,7 +1758,14 @@ const PALETA_BASE = {
   brilho:  [[218, 216, 192], 0],
   junco:   [[66, 92, 42], 0],
   frenteC: [[34, 48, 24], 0],
-  frenteL: [[64, 84, 36], 0]
+  frenteL: [[64, 84, 36], 0],
+  // the masonry half of the proscenium: TERRA/ACENTO, held at the same value as the foliage
+  // it stands beside, because the frame is near, dark and low in contrast by construction
+  muroC: [[48, 38, 26], 0],
+  muroM: [[62, 50, 34], 0],
+  muroK: [[26, 20, 14], 0],
+  muroL: [[88, 70, 46], 0],
+  muroS: [[46, 40, 30], 0]
 };
 const PALETA = {};
 for (const k in PALETA_BASE) {
@@ -4093,18 +4100,48 @@ function drawScene() {
         + Math.sin(y * 0.031 + fase * 1.7) * wLobo * 1.3
         + Math.sin(y * 0.62 + fase * 3.3) * wLobo * 0.55));   // the leaf scallop
     };
+    // THE MASONRY. This block has said "dark foliage AND DARK MASONRY crowding both edges"
+    // since the day it was written and has only ever drawn leaves, and now that the swell has
+    // made the columns wide enough to be a third of the picture at the top of the frame, a
+    // flat green mass that size is not a wall, it is a hole. So the OUTER 60% of each column
+    // is masonry and the inner 40% is the same foliage as before, standing in front of it:
+    // storey lines every seventeen rows, a shuttered opening per storey set toward the
+    // street, and lit panes on the same rule the whole world runs on (a source keeps its own
+    // colour; everything else takes the hour). It adds no object and no draw call — it is the
+    // same per-row span, split in two.
+    const aceso = h > 0.5 || escuridao() > 0.4;
     const lado = function (dir, fase) {
       for (let y = -2; y < fim; y++) {
         const w2 = perfil(y, fase);
         if (w2 <= 0) continue;
-        const x0 = dir > 0 ? 0 : W - w2;
+        const wm = Math.min(w2 - 2, Math.round(w2 * 0.60));   // how much of the span is wall
+        if (wm > 1) {
+          const mx = dir > 0 ? 0 : W - wm;
+          const fz = y + (dir > 0 ? 340 : 348);        // the two sides are not the same building
+          const piso = fz % 17, andar = Math.floor(fz / 17);
+          cx.fillStyle = (andar + (dir > 0 ? 0 : 1)) & 1 ? P.muroC : P.muroM;
+          cx.fillRect(mx, y, wm, 1);
+          if (piso === 0) { cx.fillStyle = P.muroK; cx.fillRect(mx, y, wm, 1); }        // the floor line
+          else if (piso === 1) { cx.fillStyle = P.muroL; cx.fillRect(mx, y, wm, 1); }   // the light off it
+          // one opening per storey, toward the street, and not on every floor of every front
+          if (wm >= 8 && piso >= 5 && piso <= 11 && hash01(andar * 13 + (dir > 0 ? 0 : 7)) > 0.3) {
+            const jx = dir > 0 ? wm - 7 : W - wm + 3;
+            cx.fillStyle = P.muroK; cx.fillRect(jx, y, 4, 1);
+            if (piso === 11) { cx.fillStyle = P.muroL; cx.fillRect(jx, y, 4, 1); }      // the sill
+            else if (piso >= 6) {
+              cx.fillStyle = aceso ? "rgba(253,231,157,.55)" : P.muroS;
+              cx.fillRect(jx + 1, y, 2, 1);
+            }
+          }
+        }
         // texture, not stripes: a coarse checker of two greens broken by a third
+        const fw = w2 - wm, fx = dir > 0 ? wm : W - w2;
         const banda = ((y >> 2) + (dir > 0 ? 0 : 1)) & 1;
         cx.fillStyle = banda ? escuro : meio;
-        cx.fillRect(x0, y, w2, 1);
+        cx.fillRect(fx, y, fw, 1);
         if (((y * 7 + (dir > 0 ? 0 : 3)) % 11) < 3) {
           cx.fillStyle = banda ? meio : escuro;
-          cx.fillRect(x0 + (dir > 0 ? Math.round(w2 * 0.3) : 1), y, Math.max(2, w2 >> 2), 1);
+          cx.fillRect(fx + (dir > 0 ? Math.round(fw * 0.3) : 1), y, Math.max(2, fw >> 2), 1);
         }
         cx.fillStyle = borda;                                 // the light that gets round it
         cx.fillRect(dir > 0 ? w2 - 2 : W - w2, y, 2, 1);
