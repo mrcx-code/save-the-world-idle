@@ -2295,6 +2295,28 @@ const BARREL_MOB = { pal: {
 // lit side and a shaded side. These are hand-shaded maps — deep shadow into the lower left,
 // base green through the middle, light and a rim on the upper right where the sun is —
 // baked like the characters, so a whole forest costs one drawImage each.
+// THE BIG STREET TREE'S FIVE GREENS, HAZED. Turning that tree off is the cleanest
+// attribution in this file: it buys the whole of the wave-11 framing (visible open sky
+// 34.9% -> 31.2%, CEU baixo 61.1% -> 50.1%, y86-107 dE 9.1 -> 12.5) and it charges the
+// hero croma 73 -> 149 of 485 at MANHÃ, dE 29 -> 40, luma 35 -> 49. The framing is worth
+// keeping and the bill is not, and the two come apart, because what rivals him is not the
+// tree's MASS — a flat mass scores near zero, which is the whole reason the framing measure
+// had to be rewritten in wave 11 — it is the tree's SATURATION standing against open sky.
+// So the mass stays to the pixel and the colour steps back one plane: this crown is the one
+// green in the picture with nothing but sky behind it, which is exactly the thing aerial
+// perspective acts on. Same five colours, same construction, one desaturation, done once at
+// load and in BASE colours so `wc` still applies the hour exactly once.
+// A MIX TOWARD BRILHO WAS THE FIRST CUT AND THE PRINT REFUSED IT. It measured well — at 0.42
+// his croma went 149 -> 100 — but it works by LIGHTENING, so the crown came out paler than
+// the ridges behind it, and a near tree paler than the far hill inverts the depth of the
+// whole picture. This is the same move with the value left alone: each colour is pulled
+// toward its own Rec.709 luma, so the crown stays exactly as dark against the sky as it was
+// and only its saturation steps back.
+const COPA_ALTA = ["#26301a", "#3a4623", "#4d5a2c", "#6d7c38", "#8f9850"].map(function (s) {
+  const c = hexA(s), y = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  return "#" + mixA(c, [y, y, y], 0.38)
+    .map(function (v) { return ("0" + Math.round(v).toString(16)).slice(-2); }).join("");
+});
 const TREE_MAP = [
   "........KKKKKK........",
   "......KKDBBBHHHWK.....",
@@ -3852,8 +3874,9 @@ function drawScene() {
         // this crown is the only green in the picture with nothing but open sky behind it, so
         // at the bright palette it was the most saturated block in the frame and the hero's
         // chroma rank went from 92/485 to 185/485 for it. Measured on the dark one below.
-        const K = wc("#26301a"), D = wc("#3a4623"), B = wc("#4d5a2c"),
-              Hh = wc("#6d7c38"), Wl = wc("#8f9850");
+        // hazed one plane back — see COPA_ALTA, where the attribution is written down
+        const K = wc(COPA_ALTA[0]), D = wc(COPA_ALTA[1]), B = wc(COPA_ALTA[2]),
+              Hh = wc(COPA_ALTA[3]), Wl = wc(COPA_ALTA[4]);
         for (let dx = -24; dx <= 24; dx++) {
           let t0 = 1e9, b0 = -1e9;
           for (let l = 0; l < 5; l++) {
