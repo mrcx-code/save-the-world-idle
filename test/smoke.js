@@ -130,7 +130,7 @@ function chromiumPath() {
     GUIA.forEach(g => marcarGuia(g.id)); esconderGuia(); fecharTudo();
     S.energia = 0; S.energiaTotal = 0; S.geradores = 0; S.poluicao = 0; S.modo = 'carvao';
     S.tempoLimpo = 0; S.transicoes = 0; S.inovacao = 0; S.capVisto = 0;
-    S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
+    S.u1 = S.u2 = S.u3 = false;
     R.tochas = 0; cartaoT = 0; desenhar();
   });
 
@@ -427,18 +427,18 @@ function chromiumPath() {
     mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
     S.geradores = 0; S.poluicao = 0; S.modo = 'carvao';
     // the torch used to wipe these; it is a no-op now, so the test resets them itself
-    S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
+    S.u1 = S.u2 = S.u3 = false;
   });
 
   // every upgrade buyable and applied
   await page.evaluate(() => { S.energia = 999999; desenhar(); });
   await page.tap('#openUpgrades');
   await page.waitForTimeout(350);
-  for (const id of ['btnU1', 'btnU2', 'btnU3', 'btnU4', 'btnU5', 'btnU6', 'btnU7']) {
+  for (const id of ['btnU1', 'btnU2', 'btnU3']) {
     await page.tap('#' + id);
     await page.waitForTimeout(80);
   }
-  const st = await page.evaluate(() => ({ u: [S.u1, S.u2, S.u3, S.u4, S.u5, S.u6, S.u7], tap: ganhoClique() }));
+  const st = await page.evaluate(() => ({ u: [S.u1, S.u2, S.u3], tap: ganhoClique() }));
   console.log('upgrades owned:', st.u.join(','), '| tap gain:', st.tap.toFixed(2));
   if (st.u.some(v => !v)) errors.push('some upgrade did not apply');
 
@@ -546,7 +546,7 @@ function chromiumPath() {
     salvar = function () {};   // the unload handler would write live state over the seed
     localStorage.setItem('proto_savetheworld', JSON.stringify({
       energia: 0, energiaTotal: 0, poluicao: 0, geradores: 20, modo: 'carvao', tempoLimpo: 0,
-      u1: true, u2: false, u3: false, u4: false, u5: false, u6: false, u7: false,
+      u1: true, u2: false, u3: false,
       inovacao: 0, transicoes: 0, introSeen: true, salvoEm: Date.now() - 12 * 3600 * 1000
     }));
   });

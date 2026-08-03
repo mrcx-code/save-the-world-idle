@@ -91,14 +91,7 @@
   .chip .tend { margin-top: 3px; font-size: 7px; white-space: nowrap; }
   .tend.cai { color: #e39176; } .tend.sobe { color: #b7d16a; }
 
-  /* the whole frame washes with the rhythm you just chose */
-  #flash { position: fixed; inset: 0; z-index: 8; pointer-events: none; opacity: 0; }
-  #flash.vai { animation: lavagem .5s ease-out 1; }
-  #flash.fast { background: radial-gradient(ellipse at 50% 70%, rgba(255,107,87,.85) 0%, rgba(177,62,83,.5) 45%, transparent 78%); }
-  #flash.steady { background: radial-gradient(ellipse at 50% 70%, rgba(111,221,148,.8) 0%, rgba(56,183,100,.45) 45%, transparent 78%); }
-  /* the super: the whole frame goes warm, not a corner of it */
-  #flash.super { background: radial-gradient(ellipse at 26% 72%, rgba(255,233,176,.95) 0%, rgba(255,205,117,.7) 34%, rgba(111,221,148,.4) 66%, transparent 92%); }
-  @keyframes lavagem { 0% { opacity: .72 } 35% { opacity: .34 } 100% { opacity: 0 } }
+  /* owner: the full-frame washes (#flash) are gone. */
   .pop { animation: estala .42s ease-out 1; }
   @keyframes estala { 0% { transform: scale(1.14); filter: brightness(1.9) } 100% { transform: scale(1); filter: none } }
 
@@ -254,7 +247,6 @@
     box-shadow: 0 1px 5px rgba(120,60,0,.3), inset 0 1px 0 rgba(255,255,255,.65); }
   #btnClique.segurando #dicaHold { color: rgba(42,26,6,.85); }
   /* the super's charge, on the button that swings it: one square per completed combo */
-  #flash.magia { background: radial-gradient(ellipse at 50% 70%, rgba(207,169,255,.8) 0%, rgba(141,91,214,.45) 45%, transparent 78%); }
 
   /* ---- floating sheets above the character ---- */
   /* --hControles is measured from the real control block on load and on resize: NOTES
@@ -390,7 +382,6 @@
 
 <canvas id="fundoHD"></canvas>
 <canvas id="scene" width="320" height="180"></canvas>
-<div id="flash"></div>
 
 <div id="lore" class="escondido">
   <div class="loreBox">
@@ -439,7 +430,7 @@
     <button id="modeQuick" class="cartao"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas>
       <span class="cn" id="modeNome">FAST</span><span class="cv" id="modeSub"></span></button>
     <button id="openUpgrades" class="cartao"><canvas class="pi" data-i="up" width="12" height="12"></canvas>
-      <span class="cn">UPGRADES</span><span class="cv" id="upNota">—</span></button>
+      <span class="cn">UPGRADES</span></button>
   </div>
   <div id="rail">
     <button id="btnClique"><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span><i id="dicaHold">HOLD</i></button>
@@ -452,39 +443,19 @@
   <div class="sheetHead"><div class="t">UPGRADES</div>
     <button class="fechar" data-close="sheetUpgrades">✕</button></div>
   <div class="upgrade" id="cardU1">
-    <div class="info"><div class="nome">Big campaigns</div>
-      <div class="desc">2× help • 1.5× tired</div></div>
+    <div class="info"><div class="nome">Stronger hands</div>
+      <div class="desc">every hit counts three times</div></div>
     <span class="check">✓</span><button id="btnU1"></button>
   </div>
   <div class="upgrade" id="cardU2">
-    <div class="info"><div class="nome">Friends help friends</div>
-      <div class="desc">taps heal 2 tired in GO STEADY</div></div>
+    <div class="info"><div class="nome">Fuller hands</div>
+      <div class="desc">what you pick up is worth double</div></div>
     <span class="check">✓</span><button id="btnU2"></button>
   </div>
   <div class="upgrade" id="cardU3">
-    <div class="info"><div class="nome">Team training</div>
-      <div class="desc">steady grows 2× • cap 4/s</div></div>
+    <div class="info"><div class="nome">Neighbours join in</div>
+      <div class="desc">they help by themselves, two hits a second</div></div>
     <span class="check">✓</span><button id="btnU3"></button>
-  </div>
-  <div class="upgrade" id="cardU4">
-    <div class="info"><div class="nome">Neighbors join in</div>
-      <div class="desc">they help by themselves • 2 hits/s</div></div>
-    <span class="check">✓</span><button id="btnU4"></button>
-  </div>
-  <div class="upgrade" id="cardU5">
-    <div class="info"><div class="nome">Better tools for all</div>
-      <div class="desc">every hit counts 3×</div></div>
-    <span class="check">✓</span><button id="btnU5"></button>
-  </div>
-  <div class="upgrade" id="cardU6">
-    <div class="info"><div class="nome">Fair share</div>
-      <div class="desc">split the gains • +30% everything</div></div>
-    <span class="check">✓</span><button id="btnU6"></button>
-  </div>
-  <div class="upgrade" id="cardU7">
-    <div class="info"><div class="nome">Rest days</div>
-      <div class="desc">the team heals 3× faster</div></div>
-    <span class="check">✓</span><button id="btnU7"></button>
   </div>
 </div>
 
@@ -526,9 +497,8 @@ const CFG = {
   prodCarvao: 3, prodLimpoBase: 1,
   rampaLimpoSeg: 120, tetoLimpo: 2,
   poluicaoPorGerador: 0.15, decaimentoPoluicao: 0.005,
-  custoU1: 100, custoU2: 400, custoU3: 1200,
-  custoU4: 3000, custoU5: 8000, custoU6: 18000, custoU7: 30000,
-  autoTapsPorSeg: 2, forcaToqueU5: 3, bonusJustoU6: 1.3, descansoU7: 3,
+  custoU1: 150, custoU2: 900, custoU3: 4000,   // three upgrades, one per thing the game does
+  autoTapsPorSeg: 2, forcaToqueU1: 3, valorDropU2: 2,
   metaPrestigio: 50000, divisorInovacao: 2500,
   capOfflineHoras: 12,
   // --- the world answers back: troubles walk in, drops are picked up by hand,
@@ -595,7 +565,6 @@ let S = {
   energia: 0, energiaTotal: 0, poluicao: 0,
   geradores: 0, modo: "carvao", tempoLimpo: 0,
   u1: false, u2: false, u3: false,
-  u4: false, u5: false, u6: false, u7: false,
   inovacao: 0, transicoes: 0,
   // Resources: a drop still pays its impact, but on top of that it drops a thing of its
   // kind that piles up — smog→flower, barrel→water, cash→meal. Special projects spend
@@ -615,8 +584,8 @@ let S = {
 const eficiencia = () => 100 / (100 + S.poluicao);
 const bonusInovacao = () => 1 + 0.1 * S.inovacao;
 const custoGerador = () => Math.ceil(CFG.custoGeradorBase * Math.pow(CFG.custoGeradorFator, S.geradores));
-const bonusJusto = () => (S.u6 ? CFG.bonusJustoU6 : 1);   // shared work pays off for everyone
-const forcaToque = () => (S.u5 ? CFG.forcaToqueU5 : 1);
+const bonusJusto = () => 1;                        // owner: kept at 1 so the formulas read the same
+const forcaToque = () => (S.u1 ? CFG.forcaToqueU1 : 1);   // U1: stronger hands
 // A trouble that reaches you stands in the way of the work until someone deals with it.
 // It is a *multiplier*, never tiredness — so it costs GO FAST and GO STEADY the same
 // share and cannot quietly pay for burning the team out.
@@ -646,7 +615,7 @@ function multEspecial(campo) {
 const ganhoClique = () => 1 * forcaToque() * bonusInovacao() * eficiencia() * bonusJusto()
   * bonusMutirao() * bonusSuper() * bonusDias() * multEspecial("tap");
 
-function tetoLimpoAtual() { return S.u3 ? 4 : CFG.tetoLimpo; }
+function tetoLimpoAtual() { return CFG.tetoLimpo; }
 function rampaAtual() {
   const dur = S.u3 ? CFG.rampaLimpoSeg / 2 : CFG.rampaLimpoSeg;
   return 1 + (tetoLimpoAtual() - 1) * Math.min(S.tempoLimpo / dur, 1);
@@ -657,14 +626,14 @@ function fracaoRampa() {
 }
 function prodPorSegundo() {
   let porGerador;
-  if (S.modo === "carvao") porGerador = CFG.prodCarvao * (S.u1 ? 2 : 1);
+  if (S.modo === "carvao") porGerador = CFG.prodCarvao;
   else porGerador = CFG.prodLimpoBase * rampaAtual();
   return S.geradores * porGerador * bonusInovacao() * eficiencia() * bonusJusto()
     * bloqueioMundo() * bonusMutirao() * bonusSuper() * bonusDias() * multEspecial("prod");
 }
 function poluicaoPorSegundo() {
   if (S.modo !== "carvao") return 0;
-  return S.geradores * CFG.poluicaoPorGerador * (S.u1 ? 1.5 : 1);
+  return S.geradores * CFG.poluicaoPorGerador;
 }
 function inovacaoAoTransicionar() {
   return Math.floor(Math.sqrt(S.energiaTotal / CFG.divisorInovacao) * eficiencia());
@@ -681,10 +650,10 @@ function worldHealth() {
 // read the future straight out of the same closed form simular() steps with, so nothing
 // here is a hardcoded claim that can drift away from the economy.
 // ============================================================
-function kCansaco() { return -Math.log(1 - CFG.decaimentoPoluicao * (S.u7 ? CFG.descansoU7 : 1)); }
+function kCansaco() { return -Math.log(1 - CFG.decaimentoPoluicao); }
 // where tiredness settles if you stay in this mode forever: emission / k
 function cansacoEq(modo) {
-  const emissao = modo === "carvao" ? S.geradores * CFG.poluicaoPorGerador * (S.u1 ? 1.5 : 1) : 0;
+  const emissao = modo === "carvao" ? S.geradores * CFG.poluicaoPorGerador : 0;
   return emissao / kCansaco();
 }
 // tiredness t seconds from now, if you stay in this mode — the same equation as simular()
@@ -736,7 +705,7 @@ function simular(dt) {
   S.tempoLimpo = (S.modo === "limpo") ? S.tempoLimpo + dt : 0;
   const ganho = prodPorSegundo() * dt;
   S.energia += ganho; S.energiaTotal += ganho;
-  const k = -Math.log(1 - CFG.decaimentoPoluicao * (S.u7 ? CFG.descansoU7 : 1));
+  const k = -Math.log(1 - CFG.decaimentoPoluicao);
   const eq = poluicaoPorSegundo() / k;
   S.poluicao = eq + (S.poluicao - eq) * Math.exp(-k * dt);
   if (S.poluicao < 0.01) S.poluicao = 0;
@@ -854,7 +823,7 @@ function soltarDrop(m, sx) {
 // which resource a trouble's drop leaves behind, by type
 const RECURSO_DE = { smog: "flor", barrel: "agua", cash: "refeicao" };
 function coletarDrop(d, auto) {
-  const v = d.valor * (auto ? CFG.dropAutoValor : 1);
+  const v = d.valor * (auto ? CFG.dropAutoValor : 1) * (S.u2 ? CFG.valorDropU2 : 1);
   S.energia += v; S.energiaTotal += v;
   // ...and a resource of its kind piles up, no matter who picked it up
   const r = RECURSO_DE[d.type]; if (r) S.recursos[r] = (S.recursos[r] || 0) + 1;
@@ -912,7 +881,7 @@ function atualizarDrops(dt) {
     if (!d.morto && d.wx - worldX <= HX + 8) { coletarDrop(d, false); return; }
     // U4 still grabs whatever is somehow ahead of the hero (a super/call drop spawned past
     // him), sharing half — but the pass-over above means this rarely fires now.
-    if (S.u4 && d.t > CFG.dropAuto && !d.morto) coletarDrop(d, true);
+    if (S.u3 && d.t > CFG.dropAuto && !d.morto) coletarDrop(d, true);
     if (d.t > CFG.dropVida) d.morto = true;
   });
   drops = drops.filter(function (d) { return !d.morto && d.wx - worldX > -20; });
@@ -989,7 +958,6 @@ function clicar(auto, naoConta) {
   // healing only in GO STEADY is what keeps holding the button from erasing tiredness.
   // A shot the wand fires by itself is not people helping each other, so it never heals —
   // that keeps automatic output structurally incapable of paying for GO FAST.
-  if (!auto && S.u2 && S.modo === "limpo") S.poluicao = Math.max(0, S.poluicao - 2);
   // The combo counter advances for EVERY swing, auto-helpers included, so reach and damage
   // are unchanged and the economy sim stays byte-identical (it models neither jumpT nor
   // attackType). But only a REAL tap moves the hero: the neighbours' auto-taps (U4, 2/s) and
@@ -1093,7 +1061,6 @@ function definirModo(m) {
       vx: (Math.random() - 0.5) * (rapido ? 40 : 16), vy: -(rapido ? 70 : 34) - Math.random() * 40,
       life: 0.7 + Math.random() * 0.4, c: rapido ? "#ff6b57" : "#6fdd94", grav: rapido ? 60 : 22 });
   }
-  piscar(rapido);
 
   // one line, in the strip, that stays long enough to be read
   modoAviso = {
@@ -1109,17 +1076,7 @@ function definirModo(m) {
 }
 // screen-level punch that belongs to the HUD, not to the scene: a full-frame wash and a
 // pop on the chips that just changed meaning
-function piscar(rapido) {
-  const f = $("flash");
-  if (!f) return;
-  f.className = "";
-  void f.offsetWidth;                 // restart the animation
-  f.className = rapido ? "vai fast" : "vai steady";
-  ["modeQuick", "chipTaxa", "chipTime"].forEach(function (id) {
-    const el = $(id); if (!el) return;
-    el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
-  });
-}
+// owner: piscar() removed — the full-frame wash is gone with the rest of the screen effects.
 function comprar(u, custo) {
   if (!S[u] && S.energia >= custo) { S.energia -= custo; S[u] = true; desenhar(); }
 }
@@ -1375,7 +1332,7 @@ const GUIA = [
     quando: () => !todosUpgrades() && S.energia >= CFG.custoU1,
     voz: "Enough set aside for an <b>UPGRADE</b>. Have a look." }
 ];
-function todosUpgrades() { return [1, 2, 3, 4, 5, 6, 7].every(function (n) { return S["u" + n]; }); }
+function todosUpgrades() { return [1, 2, 3].every(function (n) { return S["u" + n]; }); }
 let guiaAtual = null, guiaAlvoEl = null, guiaMostradoEm = 0;
 function jaViuGuia(id) { return Array.isArray(S.guiaVistos) && S.guiaVistos.indexOf(id) >= 0; }
 function marcarGuia(id) {
@@ -6119,23 +6076,15 @@ function desenhar() {
   $("ganhoClique").textContent = ganhoClique().toFixed(1);
 
   // the one card left that carries a number of its own
-  const naoTem = [1, 2, 3, 4, 5, 6, 7].filter(function (n) { return !S["u" + n]; });
-  const podeComprar = naoTem.filter(function (n) { return S.energia >= CFG["custoU" + n]; }).length;
-  $("upNota").textContent = naoTem.length === 0 ? "ALL" : podeComprar > 0 ? podeComprar + " READY" : naoTem.length + " LEFT";
+  // owner: no note under the card — the button glows when something is affordable, that is all
+  const podeComprar = [1, 2, 3].filter(function (n) {
+    return !S["u" + n] && S.energia >= CFG["custoU" + n];
+  }).length;
   $("openUpgrades").className = "cartao" + (podeComprar > 0 ? " pronto" : "");
 
 
 
-  $("cardU1").classList.toggle("comprado", S.u1);
-  $("btnU1").textContent = fmt(CFG.custoU1);
-  $("btnU1").disabled = S.u1 || S.energia < CFG.custoU1;
-  $("cardU2").classList.toggle("comprado", S.u2);
-  $("btnU2").textContent = fmt(CFG.custoU2);
-  $("btnU2").disabled = S.u2 || S.energia < CFG.custoU2;
-  $("cardU3").classList.toggle("comprado", S.u3);
-  $("btnU3").textContent = fmt(CFG.custoU3);
-  $("btnU3").disabled = S.u3 || S.energia < CFG.custoU3;
-  [4, 5, 6, 7].forEach(function (n) {
+  [1, 2, 3].forEach(function (n) {
     const custo = CFG["custoU" + n], comprado = S["u" + n];
     $("cardU" + n).classList.toggle("comprado", comprado);
     $("btnU" + n).textContent = fmt(custo);
@@ -6275,10 +6224,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // owner: the projects sheet is gone, and with it its buy buttons and its copy of the
   // rhythm switch. The rhythm now lives only on the card in the control block.
   $("modeQuick").onclick = () => { marcarGuia("rhythm"); definirModo(S.modo === "carvao" ? "limpo" : "carvao"); };
-  $("btnU1").onclick = () => comprar("u1", CFG.custoU1);
-  $("btnU2").onclick = () => comprar("u2", CFG.custoU2);
-  $("btnU3").onclick = () => comprar("u3", CFG.custoU3);
-  [4, 5, 6, 7].forEach(function (n) { $("btnU" + n).onclick = () => comprar("u" + n, CFG["custoU" + n]); });
+  [1, 2, 3].forEach(function (n) { $("btnU" + n).onclick = () => comprar("u" + n, CFG["custoU" + n]); });
   // owner: the torch, the wall, the epilogue, the projects sheet and the special projects
   // are gone — every button that opened them went with them.
   $("openUpgrades").onclick = () => { marcarGuia("upgrades"); abrir("sheetUpgrades"); };
@@ -6338,7 +6284,7 @@ document.addEventListener("DOMContentLoaded", () => {
     verificarAnuncios();
     if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
     if (cartaoT > 0) cartaoT -= dt;
-    if (S.u4) { // neighbors keep helping on their own — but they do not charge your super
+    if (S.u3) { // U3: neighbours keep helping on their own
       autoAcc += dt * CFG.autoTapsPorSeg;
       let n = Math.min(4, Math.floor(autoAcc));
       autoAcc -= Math.floor(autoAcc);
