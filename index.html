@@ -2507,6 +2507,35 @@ function dc() {
   }
   return DECO_H;
 }
+// ---------- ONE LIGHTING REGIME ----------
+// The decorations, the rocks, the neighbours and the hero all took the hour; the houses, the
+// trees, the kitchen stall, the bunting and the rooftops did not, because they were written
+// in literal hex — and a literal hex does not know what time it is. The street was lit twice
+// in one frame: a bench going dark at midnight next to a house standing in the afternoon.
+// Every SURFACE in the world now comes through here, at the same world dose the decorations
+// use (floor 0.06, full tint). What stays exempt is what is genuinely EMITTING: a lit window,
+// the glass of a lamp, the wet smear under it, and the Cetro. That is the rule the lamps
+// already followed, and it is the only rule — a thing is either a source or it takes the hour.
+// Resolved on the same 24 steps of the day, so this costs one small object lookup per fill.
+let mundoPasso = -1, mundoCor = {}, mundoPal = {};
+function wcPasso() {
+  const k = horaKey() >> 2;
+  if (k !== mundoPasso) { mundoPasso = k; mundoCor = {}; mundoPal = {}; }
+  return mundoPasso;
+}
+function wc(hex) {
+  wcPasso();
+  let v = mundoCor[hex];
+  if (!v) v = mundoCor[hex] = rgbS(luzPersonagem(hexA(hex), 0.06, 1));
+  return v;
+}
+// the same, for a whole sprite palette; the id carries the step so the baked canvas follows
+function wp(nome, pal) {
+  const id = nome + ":" + wcPasso();
+  let v = mundoPal[id];
+  if (!v) { v = mundoPal[id] = { _id: id }; for (const c in pal) v[c] = wc(pal[c]); }
+  return v;
+}
 const PLANTA_MAP = [
   "...KK.KK..", "..KDDKDDK.", ".KDDBDDBK.", "KDBBBBBBHK", "KDBBBBBHHK", ".KBBBBBHK.",
   "..KKBBKK..", "....KK...."];
@@ -3356,8 +3385,8 @@ function drawScene() {
         cx.fillStyle = "rgba(0,0,0,.20)";             // shaded left face
         cx.fillRect(sx + t[0], base - th + 1, 2, th);
         if (ti === 0) { // rooftop water tank
-          cx.fillStyle = "#3e4760"; cx.fillRect(sx + t[0] + 3, base - th - 5, 6, 5);
-          cx.fillStyle = "#55607a"; cx.fillRect(sx + t[0] + 4, base - th - 6, 4, 1);
+          cx.fillStyle = wc("#3e4760"); cx.fillRect(sx + t[0] + 3, base - th - 5, 6, 5);
+          cx.fillStyle = wc("#55607a"); cx.fillRect(sx + t[0] + 4, base - th - 6, 4, 1);
         }
         // window grid: each window lights up once the world is healthy enough
         for (let wy = 0; wy < Math.floor(th / 7); wy++) {
@@ -3371,15 +3400,16 @@ function drawScene() {
       // construction crane on the tallest tower while rebuilding
       if (h > 0.25 && h < 0.9) {
         const th = Math.round(H * 0.21), cxx = sx + 22;
-        cx.fillStyle = "#ffcd75";
+        cx.fillStyle = wc("#ffcd75");
         cx.fillRect(cxx, base - th - 16, 2, 16);            // mast
         cx.fillRect(cxx - 8, base - th - 16, 22, 2);        // jib
-        cx.fillStyle = "#8b96ad";
+        cx.fillStyle = wc("#8b96ad");
         cx.fillRect(cxx + 12, base - th - 14, 1, 6);        // cable
         cx.fillRect(cxx + 10, base - th - 8, 5, 3);         // load
       }
-      // antenna with blinking light (very 2026)
-      cx.fillStyle = "#8b96ad"; cx.fillRect(sx + 20, base - Math.round(H * 0.21) - 8, 1, 8);
+      // antenna with a blinking light: the mast is a surface and takes the hour, the light
+      // is an aviation lamp and does not — it is the same source/surface line as everywhere
+      cx.fillStyle = wc("#8b96ad"); cx.fillRect(sx + 20, base - Math.round(H * 0.21) - 8, 1, 8);
       if (tick % 30 < 15) { cx.fillStyle = "#ff5a5a"; cx.fillRect(sx + 19, base - Math.round(H * 0.21) - 10, 3, 3); }
     }
   }
@@ -3650,8 +3680,8 @@ function drawScene() {
       cx.fillStyle = P.folha;
       cx.fillRect(gx + gw, GROUND - 2, 1, 2); cx.fillRect(gx + 2 - gw, GROUND - 3, 1, 3);
     } else if (gr < 0.62 && h > 0.35) { // flower
-      cx.fillStyle = "#2e9b54"; cx.fillRect(gx + 1, GROUND - 3, 1, 3);
-      cx.fillStyle = gr < 0.56 ? "#ffcd75" : "#ff7d9c"; cx.fillRect(gx, GROUND - 5, 3, 2);
+      cx.fillStyle = wc("#2e9b54"); cx.fillRect(gx + 1, GROUND - 3, 1, 3);
+      cx.fillStyle = wc(gr < 0.56 ? "#ffcd75" : "#ff7d9c"); cx.fillRect(gx, GROUND - 5, 3, 2);
     } else if (gr > 0.9) { // dirt speck below
       cx.fillStyle = "rgba(0,0,0,.18)";
       cx.fillRect(gx, GROUND + 6 + Math.floor(gr * 20), 3, 2);
@@ -3704,17 +3734,17 @@ function drawScene() {
         // grey skeleton when the world is sick, and the loudest colour on the screen when
         // it is not — one object carrying the whole arc, which no amount of grading does.
         const flor = alive && h > 0.38 ? (h > 0.68 ? 2 : 1) : 0;   // bare · budding · alight
-        cx.fillStyle = flor ? "#3a2718" : "#57534a"; cx.fillRect(sx + 20, GROUND - 24, 4, 24);
-        cx.fillStyle = flor ? "#6a4a2e" : "#7d7869"; cx.fillRect(sx + 22, GROUND - 24, 1, 24);
-        cx.fillStyle = flor ? "#3a2718" : "#57534a"; cx.fillRect(sx + 18, GROUND - 3, 3, 3); cx.fillRect(sx + 24, GROUND - 2, 3, 2);
-        galhos(flor ? "#4a3524" : "#6a675c", flor ? "#6b4830" : "#8a8578");
+        cx.fillStyle = wc(flor ? "#3a2718" : "#57534a"); cx.fillRect(sx + 20, GROUND - 24, 4, 24);
+        cx.fillStyle = wc(flor ? "#6a4a2e" : "#7d7869"); cx.fillRect(sx + 22, GROUND - 24, 1, 24);
+        cx.fillStyle = wc(flor ? "#3a2718" : "#57534a"); cx.fillRect(sx + 18, GROUND - 3, 3, 3); cx.fillRect(sx + 24, GROUND - 2, 3, 2);
+        galhos(wc(flor ? "#4a3524" : "#6a675c"), wc(flor ? "#6b4830" : "#8a8578"));
         if (flor) {
           const rosa = hash01(k * 71 + 2) > 0.55;
           const chave = (rosa ? "iperosa" : "ipeamarelo") + flor;
-          const pal = flor === 2 ? (rosa ? IPE_ROSA : IPE_AMARELO) : (rosa ? IPE_ROSA_PAL : IPE_AMARELO_PAL);
-          drawMap(chave, IPE_MAP, pal, sx + 11 + sway, GROUND - 45);
+          const pal = wp(chave, flor === 2 ? (rosa ? IPE_ROSA : IPE_AMARELO) : (rosa ? IPE_ROSA_PAL : IPE_AMARELO_PAL));
+          drawMap(pal._id, IPE_MAP, pal, sx + 11 + sway, GROUND - 45);
           if (flor === 2) {
-            cx.fillStyle = rosa ? "#f6a4c6" : "#ffd247"; // petals letting go, one at a time
+            cx.fillStyle = wc(rosa ? "#f6a4c6" : "#ffd247"); // petals letting go, one at a time
             for (let p = 0; p < 3; p++) {
               const fase = (tick * 0.55 + p * 47 + k * 29) % 46;
               cx.fillRect(sx + 13 + p * 7 + (Math.floor(fase / 6) % 2), GROUND - 30 + Math.round(fase * 0.65), 2, 1);
@@ -3722,16 +3752,18 @@ function drawScene() {
           }
         }
       } else {
-        cx.fillStyle = "#33200f"; cx.fillRect(sx + 19, GROUND - 22, 6, 22);    // bark, shaded left
-        cx.fillStyle = "#5f3a24"; cx.fillRect(sx + 20, GROUND - 22, 4, 22);
-        cx.fillStyle = "#7d5030"; cx.fillRect(sx + 23, GROUND - 22, 1, 22);    // lit right side
-        cx.fillStyle = "#33200f"; cx.fillRect(sx + 17, GROUND - 3, 3, 3); cx.fillRect(sx + 25, GROUND - 2, 3, 2);
+        cx.fillStyle = wc("#33200f"); cx.fillRect(sx + 19, GROUND - 22, 6, 22);    // bark, shaded left
+        cx.fillStyle = wc("#5f3a24"); cx.fillRect(sx + 20, GROUND - 22, 4, 22);
+        cx.fillStyle = wc("#7d5030"); cx.fillRect(sx + 23, GROUND - 22, 1, 22);    // lit right side
+        cx.fillStyle = wc("#33200f"); cx.fillRect(sx + 17, GROUND - 3, 3, 3); cx.fillRect(sx + 25, GROUND - 2, 3, 2);
         if (alive && pine) {
-          drawMap("pinho" + (k % 2), PINE_MAP, k % 2 ? PINE_PAL2 : PINE_PAL, sx + 12 + sway, GROUND - 42);
+          const pp = wp("pinho" + (k % 2), k % 2 ? PINE_PAL2 : PINE_PAL);
+          drawMap(pp._id, PINE_MAP, pp, sx + 12 + sway, GROUND - 42);
         } else if (alive) {
-          drawMap("copa" + (k % 2), TREE_MAP, k % 2 ? TREE_PAL2 : TREE_PAL, sx + 11 + sway, GROUND - 38);
+          const cp = wp("copa" + (k % 2), k % 2 ? TREE_PAL2 : TREE_PAL);
+          drawMap(cp._id, TREE_MAP, cp, sx + 11 + sway, GROUND - 38);
         } else {
-          galhos("#4a3020", "#6b4830");
+          galhos(wc("#4a3020"), wc("#6b4830"));
         }
       }
     } else if (kind < 7) { // the house on the street, out of the board's CENÁRIOS strip:
@@ -3739,10 +3771,10 @@ function drawScene() {
       // shuttered window upstairs, a doorway straight onto the pavement, and plants — on the
       // sill, in a pot by the door, and climbing the wall. Nothing on that board is bare.
       const paredes = [["#c9a86a", "#e2c489", "#8a6f42"], ["#d8c9a2", "#f0e2bb", "#93855f"],
-        ["#b58f6e", "#d4ab84", "#7d6047"], ["#a8b48c", "#c6d0a6", "#6f7a58"]][k % 4];
-      const telhas = ["#96482c", "#b45c38", "#6d3320"];
+        ["#b58f6e", "#d4ab84", "#7d6047"], ["#a8b48c", "#c6d0a6", "#6f7a58"]][k % 4].map(wc);
+      const telhas = ["#96482c", "#b45c38", "#6d3320"].map(wc);
       sombra(sx + 21, GROUND, 40);
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 6, GROUND - 32, 31, 32);
+      cx.fillStyle = wc("#2a1c12"); cx.fillRect(sx + 6, GROUND - 32, 31, 32);
       cx.fillStyle = paredes[0]; cx.fillRect(sx + 7, GROUND - 31, 29, 31);
       cx.fillStyle = paredes[2]; cx.fillRect(sx + 7, GROUND - 31, 4, 31);       // shaded left
       cx.fillStyle = paredes[1]; cx.fillRect(sx + 33, GROUND - 31, 3, 31);      // sunlit right
@@ -3752,32 +3784,34 @@ function drawScene() {
       for (let t2 = 0; t2 < 13; t2++) {
         cx.fillStyle = telhas[t2 % 2]; cx.fillRect(sx + 2 + t2 * 3, GROUND - 38, 2, 7);
       }
-      cx.fillStyle = "#d07048"; cx.fillRect(sx + 2, GROUND - 39, 39, 2);        // the sunlit ridge
+      cx.fillStyle = wc("#d07048"); cx.fillRect(sx + 2, GROUND - 39, 39, 2);    // the sunlit ridge
       cx.fillStyle = "rgba(0,0,0,.30)"; cx.fillRect(sx + 3, GROUND - 31, 37, 2); // under the eave
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 25, GROUND - 14, 9, 14);       // the doorway
-      cx.fillStyle = "#4a6b52"; cx.fillRect(sx + 26, GROUND - 13, 7, 13);       // a painted door
-      cx.fillStyle = "#68896c"; cx.fillRect(sx + 31, GROUND - 13, 1, 13);
-      cx.fillStyle = "#eba748"; cx.fillRect(sx + 30, GROUND - 7, 1, 1);
-      // the upstairs window, shuttered, with the light of a room behind it
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 29, 11, 12);
-      cx.fillStyle = (alive || escuridao() > 0.4) ? "#fde79d" : "#3a3428"; cx.fillRect(sx + 12, GROUND - 28, 9, 10);
-      cx.fillStyle = "#7d6047"; cx.fillRect(sx + 12, GROUND - 28, 2, 10); cx.fillRect(sx + 19, GROUND - 28, 2, 10);
-      cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 17, 11, 2);       // the sill
-      cx.fillStyle = "#8a6f42"; cx.fillRect(sx + 11, GROUND - 17, 11, 1);
+      cx.fillStyle = wc("#2a1c12"); cx.fillRect(sx + 25, GROUND - 14, 9, 14);   // the doorway
+      cx.fillStyle = wc("#4a6b52"); cx.fillRect(sx + 26, GROUND - 13, 7, 13);   // a painted door
+      cx.fillStyle = wc("#68896c"); cx.fillRect(sx + 31, GROUND - 13, 1, 13);
+      cx.fillStyle = wc("#eba748"); cx.fillRect(sx + 30, GROUND - 7, 1, 1);
+      // the upstairs window, shuttered, with the light of a room behind it. The pane is the
+      // one thing here that is a SOURCE, so it keeps its own colour when it is lit; the
+      // shutters and the dark pane are surfaces and go down with the street.
+      cx.fillStyle = wc("#2a1c12"); cx.fillRect(sx + 11, GROUND - 29, 11, 12);
+      cx.fillStyle = (alive || escuridao() > 0.4) ? "#fde79d" : wc("#3a3428"); cx.fillRect(sx + 12, GROUND - 28, 9, 10);
+      cx.fillStyle = wc("#7d6047"); cx.fillRect(sx + 12, GROUND - 28, 2, 10); cx.fillRect(sx + 19, GROUND - 28, 2, 10);
+      cx.fillStyle = wc("#2a1c12"); cx.fillRect(sx + 11, GROUND - 17, 11, 2);   // the sill
+      cx.fillStyle = wc("#8a6f42"); cx.fillRect(sx + 11, GROUND - 17, 11, 1);
       if (alive) {                                                             // light spilling out
         cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d";
         cx.fillRect(sx + 9, GROUND - 27, 15, 12); cx.globalAlpha = 1;
       }
       // plants: a box on the sill, a pot by the door, and a vine up the shaded corner
-      cx.fillStyle = "#96482c"; cx.fillRect(sx + 13, GROUND - 19, 7, 3);
-      cx.fillStyle = "#3e4721"; cx.fillRect(sx + 12, GROUND - 21, 9, 2);
-      cx.fillStyle = "#767f34"; cx.fillRect(sx + 13, GROUND - 22, 3, 2); cx.fillRect(sx + 18, GROUND - 21, 2, 2);
-      cx.fillStyle = "#96482c"; cx.fillRect(sx + 20, GROUND - 5, 5, 5);
-      cx.fillStyle = "#525d2a"; cx.fillRect(sx + 19, GROUND - 9, 7, 4);
-      cx.fillStyle = "#767f34"; cx.fillRect(sx + 20, GROUND - 11, 2, 3); cx.fillRect(sx + 23, GROUND - 10, 2, 2);
-      cx.fillStyle = "#3e4721";
+      cx.fillStyle = wc("#96482c"); cx.fillRect(sx + 13, GROUND - 19, 7, 3);
+      cx.fillStyle = wc("#3e4721"); cx.fillRect(sx + 12, GROUND - 21, 9, 2);
+      cx.fillStyle = wc("#767f34"); cx.fillRect(sx + 13, GROUND - 22, 3, 2); cx.fillRect(sx + 18, GROUND - 21, 2, 2);
+      cx.fillStyle = wc("#96482c"); cx.fillRect(sx + 20, GROUND - 5, 5, 5);
+      cx.fillStyle = wc("#525d2a"); cx.fillRect(sx + 19, GROUND - 9, 7, 4);
+      cx.fillStyle = wc("#767f34"); cx.fillRect(sx + 20, GROUND - 11, 2, 3); cx.fillRect(sx + 23, GROUND - 10, 2, 2);
+      cx.fillStyle = wc("#3e4721");
       for (let v = 0; v < 9; v++) cx.fillRect(sx + 7 + (v & 1 ? 0 : 2), GROUND - 4 - v * 3, 3, 3);
-      cx.fillStyle = "#525d2a";
+      cx.fillStyle = wc("#525d2a");
       for (let v = 1; v < 8; v += 2) cx.fillRect(sx + 9, GROUND - 4 - v * 3, 2, 2);
     } else if (kind < 8) { // pond: muddy bank, the sky reflected in it, drifting shimmer
       cx.fillStyle = P.aguaFundo;
@@ -3800,12 +3834,12 @@ function drawScene() {
       if (h > 0.5) {                                           // vitória-régia, rims turned up
         [[10, 7], [21, 10], [30, 6]].forEach(function (p, i) {
           const lx = sx + p[0], ly = GROUND + p[1];
-          cx.fillStyle = "#1f6e40"; cx.fillRect(lx, ly, 8, 3);
-          cx.fillStyle = "#2e9b54"; cx.fillRect(lx + 1, ly, 6, 2);
-          cx.fillStyle = "#6fdd94"; cx.fillRect(lx + 2, ly, 4, 1);
+          cx.fillStyle = wc("#1f6e40"); cx.fillRect(lx, ly, 8, 3);
+          cx.fillStyle = wc("#2e9b54"); cx.fillRect(lx + 1, ly, 6, 2);
+          cx.fillStyle = wc("#6fdd94"); cx.fillRect(lx + 2, ly, 4, 1);
           if (i === 1) {
-            cx.fillStyle = "#ffe4ee"; cx.fillRect(lx + 2, ly - 3, 4, 3);
-            cx.fillStyle = "#ff9ec4"; cx.fillRect(lx + 3, ly - 3, 2, 2);
+            cx.fillStyle = wc("#ffe4ee"); cx.fillRect(lx + 2, ly - 3, 4, 3);
+            cx.fillStyle = wc("#ff9ec4"); cx.fillRect(lx + 3, ly - 3, 2, 2);
           }
         });
       }
@@ -3833,16 +3867,16 @@ function drawScene() {
     // community kitchen: a little stand where everyone eats (appears as the world heals)
     if (h > 0.45 && hash01(k * 61 + 7) > 0.78) {
       const kx = sx + 1;
-      cx.fillStyle = "#22190d";                       // keyline under the whole stand
+      cx.fillStyle = wc("#22190d");                   // keyline under the whole stand
       cx.fillRect(kx - 1, GROUND - 12, 3, 12); cx.fillRect(kx + 13, GROUND - 12, 3, 12);
       cx.fillRect(kx - 2, GROUND - 14, 19, 3); cx.fillRect(kx, GROUND - 7, 15, 7);
       cx.fillRect(kx + 3, GROUND - 10, 8, 4);
-      cx.fillStyle = "#4a3524"; cx.fillRect(kx, GROUND - 11, 1, 11); cx.fillRect(kx + 14, GROUND - 11, 1, 11); // posts
-      for (let a = 0; a < 8; a++) { cx.fillStyle = a % 2 ? "#f0e6c8" : "#9d561c"; cx.fillRect(kx - 1 + a * 2, GROUND - 13, 2, 2); } // striped awning
-      cx.fillStyle = "#6d4620"; cx.fillRect(kx + 1, GROUND - 6, 13, 6);   // counter
-      cx.fillStyle = "#96682f"; cx.fillRect(kx + 1, GROUND - 6, 13, 1);
-      cx.fillStyle = "#7d4a1e"; cx.fillRect(kx + 4, GROUND - 9, 6, 3);    // big shared pot
-      cx.fillStyle = "#b9732c"; cx.fillRect(kx + 4, GROUND - 9, 6, 1);
+      cx.fillStyle = wc("#4a3524"); cx.fillRect(kx, GROUND - 11, 1, 11); cx.fillRect(kx + 14, GROUND - 11, 1, 11); // posts
+      for (let a = 0; a < 8; a++) { cx.fillStyle = wc(a % 2 ? "#f0e6c8" : "#9d561c"); cx.fillRect(kx - 1 + a * 2, GROUND - 13, 2, 2); } // striped awning
+      cx.fillStyle = wc("#6d4620"); cx.fillRect(kx + 1, GROUND - 6, 13, 6);   // counter
+      cx.fillStyle = wc("#96682f"); cx.fillRect(kx + 1, GROUND - 6, 13, 1);
+      cx.fillStyle = wc("#7d4a1e"); cx.fillRect(kx + 4, GROUND - 9, 6, 3);    // big shared pot
+      cx.fillStyle = wc("#b9732c"); cx.fillRect(kx + 4, GROUND - 9, 6, 1);
       if (tick % 24 < 12) { cx.fillStyle = "rgba(218,216,192,.6)"; cx.fillRect(kx + 6, GROUND - 12, 1, 2); cx.fillRect(kx + 8, GROUND - 13, 1, 2); } // steam
       // Whoever is serving stands at the end of the counter, turned back towards it. This is
       // where the board puts its people — around the pot, not posed along the kerb.
@@ -3851,20 +3885,20 @@ function drawScene() {
       // This is the register the whole thing is aiming at: not a monument, a street that
       // somebody bothered to decorate.
       const bpost = kx + 40;
-      cx.fillStyle = "#4a3524"; cx.fillRect(bpost, GROUND - 16, 1, 16);
-      const bcor = ["#b9732c", "#f3a03d", "#767f34", "#71a39c", "#f0e6c8"];
+      cx.fillStyle = wc("#4a3524"); cx.fillRect(bpost, GROUND - 16, 1, 16);
+      const bcor = ["#b9732c", "#f3a03d", "#767f34", "#71a39c", "#f0e6c8"].map(wc);
       for (let b = 0; b < 6; b++) {
         const t2 = (b + 0.5) / 6;
         const bxp = kx + 14 + Math.round(t2 * 26);
         const byp = GROUND - 14 - Math.round(Math.sin(t2 * Math.PI) * -3) - 1;
-        cx.fillStyle = "#5c421f"; cx.fillRect(bxp - 2, byp - 1, 5, 1);     // the cord, sagging
+        cx.fillStyle = wc("#5c421f"); cx.fillRect(bxp - 2, byp - 1, 5, 1); // the cord, sagging
         cx.fillStyle = bcor[b % 5];
         cx.fillRect(bxp - 1, byp, 3, 1); cx.fillRect(bxp, byp + 1, 1, 2);  // a little triangle
       }
-      cx.fillStyle = "#4a3524"; cx.fillRect(kx + 24, GROUND - 5, 1, 5); cx.fillRect(kx + 30, GROUND - 5, 1, 5);
-      cx.fillStyle = "#96682f"; cx.fillRect(kx + 22, GROUND - 6, 11, 2);  // the table top
-      cx.fillStyle = "#b9732c"; cx.fillRect(kx + 22, GROUND - 6, 11, 1);
-      cx.fillStyle = "#4a3524"; cx.fillRect(kx + 20, GROUND - 3, 3, 3); cx.fillRect(kx + 34, GROUND - 3, 3, 3);
+      cx.fillStyle = wc("#4a3524"); cx.fillRect(kx + 24, GROUND - 5, 1, 5); cx.fillRect(kx + 30, GROUND - 5, 1, 5);
+      cx.fillStyle = wc("#96682f"); cx.fillRect(kx + 22, GROUND - 6, 11, 2);  // the table top
+      cx.fillStyle = wc("#b9732c"); cx.fillRect(kx + 22, GROUND - 6, 11, 1);
+      cx.fillStyle = wc("#4a3524"); cx.fillRect(kx + 20, GROUND - 3, 3, 3); cx.fillRect(kx + 34, GROUND - 3, 3, 3);
       // and the people it is for: someone at the table and a kid under the bunting.
       // The wheelchair user is here by construction and not by dice — the board puts him
       // first on its sheet, and a street where he only turns up on a lucky hash is a street
@@ -3911,32 +3945,32 @@ function drawScene() {
       // and a water tank; GO FAST bolts a generator to it and it smokes. White wind turbines
       // were the loudest thing on screen that is nowhere on the board.
       if (S.modo === "limpo") { // the rooftop garden: a tank, beds, a vine down the wall
-        cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 34, GROUND - 27, 22, 27);
-        cx.fillStyle = "#b58f6e"; cx.fillRect(sx + 35, GROUND - 26, 20, 26);
-        cx.fillStyle = "#8a6f42"; cx.fillRect(sx + 35, GROUND - 26, 3, 26);
-        cx.fillStyle = "#96482c"; cx.fillRect(sx + 33, GROUND - 30, 24, 4);   // the parapet
-        cx.fillStyle = "#d07048"; cx.fillRect(sx + 33, GROUND - 30, 24, 1);
-        cx.fillStyle = "#7d8894"; cx.fillRect(sx + 48, GROUND - 40, 8, 10);   // the water tank
-        cx.fillStyle = "#9fa9b4"; cx.fillRect(sx + 54, GROUND - 40, 2, 10);
-        cx.fillStyle = "#3a4227"; cx.fillRect(sx + 47, GROUND - 41, 10, 2);
-        cx.fillStyle = "#3e4721"; cx.fillRect(sx + 35, GROUND - 36, 12, 6);   // the beds on top
-        cx.fillStyle = "#525d2a"; cx.fillRect(sx + 35, GROUND - 37, 12, 2);
-        cx.fillStyle = "#767f34";
+        cx.fillStyle = wc("#2a1c12"); cx.fillRect(sx + 34, GROUND - 27, 22, 27);
+        cx.fillStyle = wc("#b58f6e"); cx.fillRect(sx + 35, GROUND - 26, 20, 26);
+        cx.fillStyle = wc("#8a6f42"); cx.fillRect(sx + 35, GROUND - 26, 3, 26);
+        cx.fillStyle = wc("#96482c"); cx.fillRect(sx + 33, GROUND - 30, 24, 4);   // the parapet
+        cx.fillStyle = wc("#d07048"); cx.fillRect(sx + 33, GROUND - 30, 24, 1);
+        cx.fillStyle = wc("#7d8894"); cx.fillRect(sx + 48, GROUND - 40, 8, 10);   // the water tank
+        cx.fillStyle = wc("#9fa9b4"); cx.fillRect(sx + 54, GROUND - 40, 2, 10);
+        cx.fillStyle = wc("#3a4227"); cx.fillRect(sx + 47, GROUND - 41, 10, 2);
+        cx.fillStyle = wc("#3e4721"); cx.fillRect(sx + 35, GROUND - 36, 12, 6);   // the beds on top
+        cx.fillStyle = wc("#525d2a"); cx.fillRect(sx + 35, GROUND - 37, 12, 2);
+        cx.fillStyle = wc("#767f34");
         cx.fillRect(sx + 37, GROUND - 39 + (Math.floor(tick / 22) % 2), 2, 3);
         cx.fillRect(sx + 42, GROUND - 38, 2, 2);
-        cx.fillStyle = "#eba748"; cx.fillRect(sx + 44, GROUND - 39, 2, 2);    // something flowering
-        cx.fillStyle = "#3e4721";
+        cx.fillStyle = wc("#eba748"); cx.fillRect(sx + 44, GROUND - 39, 2, 2); // something flowering
+        cx.fillStyle = wc("#3e4721");
         for (let v = 0; v < 8; v++) cx.fillRect(sx + 35 + (v & 1 ? 0 : 2), GROUND - 3 - v * 3, 3, 3);
         cx.fillStyle = "#fde79d"; cx.fillRect(sx + 41, GROUND - 18, 4, 5); cx.fillRect(sx + 48, GROUND - 18, 4, 5);
       } else { // the same building with a generator bolted on, and it smokes
-        cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 34, GROUND - 27, 22, 27);
-        cx.fillStyle = "#8a7360"; cx.fillRect(sx + 35, GROUND - 26, 20, 26);
-        cx.fillStyle = "#645343"; cx.fillRect(sx + 35, GROUND - 26, 3, 26);
-        cx.fillStyle = "#5c3b1f"; cx.fillRect(sx + 33, GROUND - 30, 24, 4);
+        cx.fillStyle = wc("#2a1c12"); cx.fillRect(sx + 34, GROUND - 27, 22, 27);
+        cx.fillStyle = wc("#8a7360"); cx.fillRect(sx + 35, GROUND - 26, 20, 26);
+        cx.fillStyle = wc("#645343"); cx.fillRect(sx + 35, GROUND - 26, 3, 26);
+        cx.fillStyle = wc("#5c3b1f"); cx.fillRect(sx + 33, GROUND - 30, 24, 4);
         cx.fillStyle = "#fde79d"; cx.fillRect(sx + 41, GROUND - 18, 4, 5); cx.fillRect(sx + 48, GROUND - 18, 4, 5);
-        cx.fillStyle = "#3f4235"; cx.fillRect(sx + 44, GROUND - 38, 9, 8);    // the generator
-        cx.fillStyle = "#585c4b"; cx.fillRect(sx + 51, GROUND - 38, 2, 8);
-        cx.fillStyle = "#2a2b1a"; cx.fillRect(sx + 46, GROUND - 46, 4, 9);    // its flue
+        cx.fillStyle = wc("#3f4235"); cx.fillRect(sx + 44, GROUND - 38, 9, 8); // the generator
+        cx.fillStyle = wc("#585c4b"); cx.fillRect(sx + 51, GROUND - 38, 2, 8);
+        cx.fillStyle = wc("#2a2b1a"); cx.fillRect(sx + 46, GROUND - 46, 4, 9); // its flue
         cx.fillStyle = "rgba(150,145,130,.62)";
         const p = (tick % 36) / 36, p2 = ((tick + 18) % 36) / 36;
         cx.fillRect(sx + 45 + p * 7, GROUND - 52 - p * 16, 5 - p * 2, 4);
@@ -4018,22 +4052,22 @@ function drawScene() {
       }
       if (sx < -14 || sx > W + 14) continue;
       const incl = hash01(k * 23 + 9) > 0.6 ? 1 : 0;      // half of them lean
-      cx.fillStyle = "#3a3527";
+      cx.fillStyle = wc("#3a3527");
       for (let y = 0; y < hA; y++) cx.fillRect(sx + Math.round(y / hA * incl), base - y, 3, 1);
-      cx.fillStyle = "#57503c";
+      cx.fillStyle = wc("#57503c");
       for (let y = 0; y < hA; y++) cx.fillRect(sx + 2 + Math.round(y / hA * incl), base - y, 1, 1);
-      cx.fillStyle = "#3a3527"; cx.fillRect(sx - 4 + incl, topA + 2, 11, 2);   // the crossarm
-      cx.fillStyle = "#57503c"; cx.fillRect(sx - 4 + incl, topA + 2, 11, 1);
-      cx.fillStyle = "#2a2b1a"; cx.fillRect(sx - 2 + incl, topA + 4, 2, 2); cx.fillRect(sx + 3 + incl, topA + 4, 2, 2);
-      cx.fillStyle = "#1f2412"; cx.fillRect(sx - 1 + incl, topA + 6, 5, 4);    // the knot of cable
+      cx.fillStyle = wc("#3a3527"); cx.fillRect(sx - 4 + incl, topA + 2, 11, 2);   // the crossarm
+      cx.fillStyle = wc("#57503c"); cx.fillRect(sx - 4 + incl, topA + 2, 11, 1);
+      cx.fillStyle = wc("#2a2b1a"); cx.fillRect(sx - 2 + incl, topA + 4, 2, 2); cx.fillRect(sx + 3 + incl, topA + 4, 2, 2);
+      cx.fillStyle = wc("#1f2412"); cx.fillRect(sx - 1 + incl, topA + 6, 5, 4);    // the knot of cable
       if (hash01(k * 41 + 3) > 0.55) {                                          // a lamp on the arm
         const on = h > 0.3 || escuridao() > 0.4;
-        cx.fillStyle = "#2a2b1a"; cx.fillRect(sx + 6 + incl, topA + 4, 4, 2);
-        cx.fillStyle = on ? "#fde79d" : "#4a4a3a"; cx.fillRect(sx + 7 + incl, topA + 6, 2, 2);
+        cx.fillStyle = wc("#2a2b1a"); cx.fillRect(sx + 6 + incl, topA + 4, 4, 2);
+        cx.fillStyle = on ? "#fde79d" : wc("#4a4a3a"); cx.fillRect(sx + 7 + incl, topA + 6, 2, 2);
         if (on) { cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d"; cx.fillRect(sx + 3 + incl, topA + 6, 9, 12); cx.globalAlpha = 1; }
       }
       if (h > 0.4) {                                    // and something climbing it, of course
-        cx.fillStyle = "#3e4721";
+        cx.fillStyle = wc("#3e4721");
         for (let y = 2; y < Math.round(hA * 0.5); y += 3) cx.fillRect(sx + (y & 2 ? -1 : 3), base - y, 2, 2);
       }
       // PÓS-CHUVA: the board's third light state is entirely about the street being wet, and
@@ -4056,9 +4090,9 @@ function drawScene() {
     if (sx > -10 && sx < W + 10) {
       const novo = Math.max(0, (s.life - 540) / 60);
       if (novo > 0) luz(sx + 1, GROUND - 6, 0.6 + novo * 0.6, novo * 0.7);
-      cx.fillStyle = "#1f6e40"; cx.fillRect(sx, GROUND - 5, 2, 5);
-      cx.fillStyle = "#2e9b54"; cx.fillRect(sx - 2, GROUND - 7, 6, 3);
-      cx.fillStyle = "#6fdd94"; cx.fillRect(sx - 1, GROUND - 7, 4, 1); cx.fillRect(sx + 1, GROUND - 5, 1, 5);
+      cx.fillStyle = wc("#1f6e40"); cx.fillRect(sx, GROUND - 5, 2, 5);
+      cx.fillStyle = wc("#2e9b54"); cx.fillRect(sx - 2, GROUND - 7, 6, 3);
+      cx.fillStyle = wc("#6fdd94"); cx.fillRect(sx - 1, GROUND - 7, 4, 1); cx.fillRect(sx + 1, GROUND - 5, 1, 5);
     }
     s.life--;
   });
@@ -4115,7 +4149,7 @@ function drawScene() {
   //   GO STEADY — leaves and petals drifting in, motes rising off worked ground.
   if (smogV > 0.2 && Math.random() < smogV * 0.25) {
     parts.push({ x: Math.random() * W, y: -2, vx: -6 - Math.random() * 6, vy: 10 + Math.random() * 8,
-      life: 4, c: R > 0.4 ? "#b0a08a" : "#8f8f8f", grav: 0 });
+      life: 4, amb: 1, c: R > 0.4 ? "#b0a08a" : "#8f8f8f", grav: 0 });
   }
   // Cinders are deliberately DULLED ochre, not fire orange: the direction's hardest rule is
   // that in a sick frame the Cetro is the only warm saturated thing on screen, and a road
@@ -4125,12 +4159,12 @@ function drawScene() {
     const cs = ["#d98f4c", "#c47a3a", "#e0a75e", "#b06a35"];
     parts.push({ x: Math.random() * W, y: GROUND + Math.random() * 6,
       vx: (Math.random() - 0.35) * 14, vy: -14 - Math.random() * 16,
-      life: 0.7 + Math.random() * 0.8, c: cs[Math.floor(Math.random() * cs.length)], grav: -8 });
+      life: 0.7 + Math.random() * 0.8, amb: 1, c: cs[Math.floor(Math.random() * cs.length)], grav: -8 });
   }
   // leaves blow in on a healthy world; going steady doubles the traffic
   if (h > 0.65 && Math.random() < 0.05 + (1 - R) * 0.06) {
     parts.push({ x: W + 4, y: Math.random() * GROUND * 0.7, vx: -14 - Math.random() * 10, vy: 6 + Math.random() * 6,
-      life: 6, c: Math.random() < 0.7 ? "#6fdd94" : "#ff7d9c", grav: 0 });
+      life: 6, amb: 1, c: Math.random() < 0.7 ? "#6fdd94" : "#ff7d9c", grav: 0 });
   }
   // the mending leaves a residue: motes lifting off ground that has been worked on
   if (h > 0.45 && Math.random() < 0.035 + (1 - R) * 0.05) {
@@ -4226,7 +4260,11 @@ function drawScene() {
       cx.fillRect(px2 - 2, py2 - 1, 6, 4); cx.fillRect(px2 - 1, py2 - 2, 4, 6);
     }
     cx.globalAlpha = pa;
-    cx.fillStyle = p.c;
+    // Ambient weather is made of THINGS — ash, cinders, blown leaves, petals — so it takes
+    // the hour like everything else in the street. Combat sparks and the motes of channelled
+    // light do not: those are the magic, and the direction says the magic never dims with the
+    // world. Before this, a night frame had bright green and pink confetti falling through it.
+    cx.fillStyle = p.amb ? wc(p.c) : p.c;
     cx.fillRect(px2, py2, 2, 2);
     cx.globalAlpha = 1;
   }
