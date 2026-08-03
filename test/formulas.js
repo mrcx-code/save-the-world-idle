@@ -31,6 +31,8 @@ const novoEstado = (over = {}) => Object.assign({
   inovacao: 0, transicoes: 0,
   // the world answering back: troubles standing in the way, a mutirão running, days played
   mobsParados: 0, mutirao: 0, superT: 0, dias: 1,
+  // the resource layer: within-run, wiped by the torch like projects and upgrades
+  recursos: { flor: 0, agua: 0, refeicao: 0 }, especiais: {},
   // skills: kept through every torch, unlike u1..u7
   skillAuto: false
 }, over);

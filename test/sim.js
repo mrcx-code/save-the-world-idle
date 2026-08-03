@@ -59,6 +59,18 @@ const DANO_TOQUE = 4 / 3;           // the 3-hit combo deals 1, 1, 2
 const MIRA_POR_SEG = 1;             // aimed presses a world-tapper makes per second
 const DANO_MIRA = 2;                // ...each landing double a blind swing on what it hits
 
+// A collected drop leaves a resource of the trouble's kind (smog→flower, barrel→water,
+// cash→meal). The game rolls one type per drop from the mode's mix; the sim has no RNG, so
+// it credits each resource its EXPECTED share of one drop instead — same accrual over many
+// drops, and deterministic. Uses the caller's current mode mix.
+function acumularRecurso(S) {
+  const mix = F.CFG.mobMix[S.modo] || F.CFG.mobMix.limpo;
+  const pSmog = mix.smog, pBarrel = mix.barrel - mix.smog, pCash = 1 - mix.barrel;
+  S.recursos.flor += pSmog;         // smog  -> flower
+  S.recursos.agua += pBarrel;       // barrel-> water
+  S.recursos.refeicao += pCash;     // cash  -> meal
+}
+
 function novoMundo() {
   return { mobs: [], drops: [], spawnT: 0, chamadaT: 0, chamada: 0, atendidas: 0, perdidas: 0,
     foco: 0, canalizando: 0, canais: 0, tiros: 0,
@@ -120,9 +132,13 @@ function passoMundo(S, est, m, DT, toques) {
 
   for (const d of m.drops) {
     d.t += DT;
-    if (est.mundo) { ganho += d.valor; d.morto = true; ganharFoco(S, m, F.CFG.focoDrop); }
-    else if (S.u4 && d.t >= F.CFG.dropAuto) { ganho += d.valor * F.CFG.dropAutoValor; d.morto = true; }
-    else if (d.t >= F.CFG.dropVida) d.morto = true;
+    // The hero now collects a drop just by running over it: full value, every drop, for
+    // every strategy — even the hands-off ones that used to only get U4's half or let it
+    // expire. That is a real buff to passive play, so it is mirrored here in full. Focus
+    // (which only the skill uses, and only present players carry) still needs a live player.
+    ganho += d.valor; d.morto = true;
+    acumularRecurso(S);
+    if (est.mundo) ganharFoco(S, m, F.CFG.focoDrop);
   }
   S.energia += ganho; S.energiaTotal += ganho;
   m.drops = m.drops.filter(d => !d.morto);

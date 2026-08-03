@@ -402,6 +402,51 @@ function chromiumPath() {
   if (!recolha.saiu) errors.push('the drop was not taken off the ground');
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-mundo.png') });
 
+  // ---- the resource layer: a drop leaves a resource of its kind, and the hero picks up a
+  // drop just by running over it (full value + a resource), the same as an aimed tap ----
+  const recursos = await page.evaluate(async () => {
+    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
+    S.geradores = 10; S.poluicao = 0; S.recursos = { flor: 0, agua: 0, refeicao: 0 };
+    // each trouble type maps to one resource: smog->flower, barrel->water, cash->meal
+    const tipos = [['smog', 'flor'], ['barrel', 'agua'], ['cash', 'refeicao']];
+    const porTipo = {};
+    tipos.forEach(([t, r]) => {
+      drops.length = 0; const antes = S.recursos[r];
+      soltarDrop({ type: t }, 40);
+      coletarDrop(drops[0], false);
+      porTipo[t] = { recurso: r, ganhou: S.recursos[r] - antes };
+    });
+    // pass-over: a drop sitting at/behind the hero's x is collected by atualizarDrops alone,
+    // with no tap — full value and a resource, and it comes off the ground
+    S.recursos = { flor: 0, agua: 0, refeicao: 0 }; drops.length = 0; S.u4 = false;
+    drops.push({ wx: worldX + HX + 4, type: 'cash', t: 0,
+      valor: (CFG.dropBase + CFG.dropPorProjeto * S.geradores) });
+    const d = drops[0], impAntes = S.energiaTotal, valor = d.valor;
+    atualizarDrops(0.05);
+    const passou = { pago: S.energiaTotal - impAntes, valor, saiu: drops.indexOf(d) < 0,
+      recurso: S.recursos.refeicao };
+    // a drop still ahead of the hero is NOT collected by pass-over yet
+    drops.length = 0;
+    drops.push({ wx: worldX + HX + 60, type: 'smog', t: 0, valor: 5 });
+    const dAhead = drops[0]; atualizarDrops(0.05);
+    passou.aindaLa = drops.indexOf(dAhead) >= 0;
+    S.recursos = { flor: 0, agua: 0, refeicao: 0 }; drops.length = 0;
+    return { porTipo, passou };
+  });
+  console.log('resources -> smog +' + recursos.porTipo.smog.ganhou + recursos.porTipo.smog.recurso,
+    '| barrel +' + recursos.porTipo.barrel.ganhou + recursos.porTipo.barrel.recurso,
+    '| cash +' + recursos.porTipo.cash.ganhou + recursos.porTipo.cash.recurso);
+  console.log('  pass-over -> paid', recursos.passou.pago.toFixed(1), 'of', recursos.passou.valor.toFixed(1),
+    '| off the ground:', recursos.passou.saiu, '| meal +' + recursos.passou.recurso,
+    '| a drop still ahead stays:', recursos.passou.aindaLa);
+  if (recursos.porTipo.smog.ganhou !== 1 || recursos.porTipo.smog.recurso !== 'flor') errors.push('smog did not leave a flower');
+  if (recursos.porTipo.barrel.ganhou !== 1 || recursos.porTipo.barrel.recurso !== 'agua') errors.push('barrel did not leave water');
+  if (recursos.porTipo.cash.ganhou !== 1 || recursos.porTipo.cash.recurso !== 'refeicao') errors.push('cash did not leave a meal');
+  if (recursos.passou.pago < recursos.passou.valor) errors.push('pass-over collection did not pay full value');
+  if (!recursos.passou.saiu) errors.push('a passed-over drop was not taken off the ground');
+  if (recursos.passou.recurso !== 1) errors.push('pass-over collection left no resource');
+  if (!recursos.passou.aindaLa) errors.push('a drop still ahead of the hero was collected too early');
+
   // ---- the community call: show up inside the window and the street works with you ----
   await page.evaluate(async () => {
     mobs.length = 0; drops.length = 0; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;

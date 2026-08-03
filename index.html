@@ -760,6 +760,12 @@ let S = {
   u1: false, u2: false, u3: false,
   u4: false, u5: false, u6: false, u7: false,
   inovacao: 0, transicoes: 0,
+  // Resources: a drop still pays its impact, but on top of that it drops a thing of its
+  // kind that piles up — smog→flower, barrel→water, cash→meal. Special projects spend
+  // specific combos of these. Within-run, like projects and upgrades: the torch wipes them,
+  // because what they buy (special projects) is itself within-run.
+  recursos: { flor: 0, agua: 0, refeicao: 0 },
+  especiais: {},             // ids of special projects completed this run
   qtdCompra: 1,              // vestigial: buying is now the 1-or-MAX pair, no remembered target
   skillAuto: false,          // learned once, survives every torch — unlike u1..u7
   capVisto: 0,               // how many chapter cards this run has shown — reset by the torch
@@ -1078,9 +1084,13 @@ function soltarDrop(m, sx) {
   });
   if (drops.length > 8) drops.shift();
 }
+// which resource a trouble's drop leaves behind, by type
+const RECURSO_DE = { smog: "flor", barrel: "agua", cash: "refeicao" };
 function coletarDrop(d, auto) {
   const v = d.valor * (auto ? CFG.dropAutoValor : 1);
   S.energia += v; S.energiaTotal += v;
+  // ...and a resource of its kind piles up, no matter who picked it up
+  const r = RECURSO_DE[d.type]; if (r) S.recursos[r] = (S.recursos[r] || 0) + 1;
   if (!auto) ganharFoco(CFG.focoDrop);   // bending down for it yourself is what charges it
   const sx = Math.round(d.wx - worldX);
   floats.push({ x: sx - 10, y: GROUND - 30, txt: "+" + Math.round(v), life: 38 });
@@ -1131,7 +1141,11 @@ function atualizarMobs(dt) {
 function atualizarDrops(dt) {
   drops.forEach(function (d) {
     d.t += dt;
-    // U4: the neighbours pick up what you walk past, and share half of it
+    // The hero collects a drop just by running over it — full value and full focus, the
+    // same as an aimed tap. So essentially everything on the ground now gets picked up.
+    if (!d.morto && d.wx - worldX <= HX + 8) { coletarDrop(d, false); return; }
+    // U4 still grabs whatever is somehow ahead of the hero (a super/call drop spawned past
+    // him), sharing half — but the pass-over above means this rarely fires now.
     if (S.u4 && d.t > CFG.dropAuto && !d.morto) coletarDrop(d, true);
     if (d.t > CFG.dropVida) d.morto = true;
   });
@@ -1393,6 +1407,8 @@ function transicionar() {
   S.energia = 0; S.energiaTotal = 0; S.poluicao = 0;
   S.geradores = 0; S.modo = "carvao"; S.tempoLimpo = 0;
   S.u1 = S.u2 = S.u3 = S.u4 = S.u5 = S.u6 = S.u7 = false;
+  // resources and the special projects they bought are within-run, like the upgrades
+  S.recursos = { flor: 0, agua: 0, refeicao: 0 }; S.especiais = {};
   // the road starts clear — but the skill is kept: that is what makes it a skill
   drops = []; mobs = []; chamada = null; chamadaT = 0; mutiraoT = 0;
   foco = 0; canalizando = 0; autoFogoAcc = 0;
@@ -1432,6 +1448,9 @@ function carregar() {
   try { bruto = localStorage.getItem("proto_savetheworld"); } catch (e) {}
   if (!bruto) return;
   try { Object.assign(S, JSON.parse(bruto)); } catch (e) { return; }
+  // old saves predate the resource layer; missing objects read back as their empty shape
+  if (!S.recursos || typeof S.recursos !== "object") S.recursos = { flor: 0, agua: 0, refeicao: 0 };
+  if (!S.especiais || typeof S.especiais !== "object") S.especiais = {};
   const dt = Math.min((Date.now() - S.salvoEm) / 1000, CFG.capOfflineHoras * 3600);
   voltouDepoisDe = dt;
   let texto = "";
