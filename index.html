@@ -1131,13 +1131,21 @@ function clicar(auto, naoConta) {
   // A shot the wand fires by itself is not people helping each other, so it never heals —
   // that keeps automatic output structurally incapable of paying for GO FAST.
   if (!auto && S.u2 && S.modo === "limpo") S.poluicao = Math.max(0, S.poluicao - 2);
-  // 3-hit combo: slash, upper slash, then a big SPIN
-  attackType = combo; combo = (combo + 1) % 3;
-  attackT = attackType === 2 ? JUMPF : 9;
-  if (attackType === 2 && jumpT <= 0) jumpT = JUMPF;   // third hit: leap and slam
+  // The combo counter advances for EVERY swing, auto-helpers included, so reach and damage
+  // are unchanged and the economy sim stays byte-identical (it models neither jumpT nor
+  // attackType). But only a REAL tap moves the hero: the neighbours' auto-taps (U4, 2/s) and
+  // the wand skill used to drive the whole 3-hit combo, so the character leapt on its own
+  // every ~1.5s and the frame read as bugged in production. The visible swing and leap now
+  // fire on player taps only; the auto-helpers still deal their damage below.
+  const passo = combo; combo = (combo + 1) % 3;
+  if (!auto) {
+    attackType = passo;
+    attackT = passo === 2 ? JUMPF : 9;
+    if (passo === 2 && jumpT <= 0) jumpT = JUMPF;   // third hit: leap and slam
+  }
   // reach covers the whole queue (three troubles, one body-width apart) — otherwise the
   // one at the back is unhittable from the button and the road never clears
-  const range = attackType === 2 ? 96 : 80, dmg = attackType === 2 ? 2 : 1;
+  const range = passo === 2 ? 96 : 80, dmg = passo === 2 ? 2 : 1;
   mobs.forEach(function (m) {
     if (m.dying > 0) return;
     const sx = m.wx - worldX;
@@ -1153,11 +1161,13 @@ function clicar(auto, naoConta) {
       }
     }
   });
-  if (attackType === 2) {
+  if (!auto && passo === 2) {
     floats.push({ x: HX - 6, y: GROUND - 58, txt: "SLAM!", life: 32 });
     burst(HX + 8, GROUND - 20, 8, ["#ffcd75", "#e8edf6"]);
   }
-  floats.push({ x: HX + 14, y: GROUND - 34, txt: "+" + g.toFixed(1), life: 40 });
+  // only the player's own taps put a "+N" over the hero — auto-help at 2/s (or the wand at
+  // 10/s) used to spew a float every tick, which read as the frame twitching
+  if (!auto) floats.push({ x: HX + 14, y: GROUND - 34, txt: "+" + g.toFixed(1), life: 40 });
   if (S.modo === "limpo" && sprouts.length < 40) sprouts.push({ wx: worldX + HX - 6, life: 600 });
   // the super, last: an armed swing spends the charge, any other player swing builds it
   if (!auto && !naoConta) { if (superPronto()) dispararSuper(); else carregarSuper(); }
