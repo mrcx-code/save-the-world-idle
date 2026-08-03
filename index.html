@@ -1750,13 +1750,18 @@ const PALETA_BASE = {
   mataNearL: [[98, 124, 54], 0.03],
   mataNearK: [[28, 40, 24], 0.02],
   rodape:  [[34, 46, 24], 0],
-  // the street: warm stone, TERRA/LUZ, never green — the board's cobbles
-  trilha:  [[168, 148, 116], 0],
-  trilhaL: [[206, 188, 152], 0],
-  sulcoA:  [[126, 104, 76], 0],
-  sulcoB:  [[236, 222, 188], 0],
-  gramaA:  [[104, 126, 56], 0],
-  gramaB:  [[80, 100, 44], 0],
+  // The street: warm stone, TERRA/LUZ, never green — the board's cobbles. And IN SHADE: the
+  // board's near pavement measures [113,87,48], L 89.5 at C* 27.5, because the buildings on
+  // both sides are standing between it and the sun. Ours was authored at the value of stone
+  // in full light (the highlight alone came to L 224) and that is the whole reason our
+  // bottom fifth reads 112 against the board's 66. Same family, four steps down the TERRA
+  // ramp, chroma kept — shade is darker and WARMER, not greyer.
+  trilha:  [[142, 118, 80], 0],
+  trilhaL: [[176, 150, 104], 0],
+  sulcoA:  [[100, 80, 52], 0],
+  sulcoB:  [[198, 176, 128], 0],
+  gramaA:  [[86, 104, 46], 0],
+  gramaB:  [[66, 82, 36], 0],
   folha:   [[118, 143, 66], 0],
   agua:    [[84, 130, 125], 0],
   aguaFundo: [[44, 74, 72], 0],
@@ -1904,7 +1909,7 @@ function pal(h) {
   for (const k in PALETA) { const c = resolva(PALETA[k]); P[k + "A"] = c; P[k] = rgbS(c); }
   // thick air eats the bright strip on the horizon: the band is the value architecture, so
   // it is dimmed rather than moved, and it comes straight back when you go steady
-  P.faixa = rgbS(mixA(mixA(horiz, [255, 255, 255], 0.30), hazeLuz(), rq * 0.34));
+  P.faixa = rgbS(mixA(mixA(horiz, [255, 255, 255], 0.12), hazeLuz(), rq * 0.34));
   // the hillside families, sick end shared so a bleached favela is one grey mass with the
   // faintest memory of paint in it — which is exactly what a bleached photograph looks like
   const fam = function (arr, cinza, dist) {
@@ -2027,8 +2032,10 @@ function chaoCanvas(h) {
   const tc = Math.pow(h, 0.78);
   // The board's street is COBBLE, not lawn: TERRA and LUZ warm stone under the feet, going
   // a value lighter and a touch greener where the plants crowd in at the path's edge.
-  const perto = palMix(desbotar([124, 104, 76]), [124, 104, 76], h, tc);   // at your feet
-  const longeC = palMix(desbotar([168, 148, 116]), [168, 148, 116], h, tc); // where it meets the path
+  // and it goes into shade as it comes toward you: the far edge of the slab loses four
+  // steps of the ramp, the near edge loses six, so the gradient itself deepens downward
+  const perto = palMix(desbotar([98, 76, 46]), [98, 76, 46], h, tc);   // at your feet
+  const longeC = palMix(desbotar([142, 118, 80]), [142, 118, 80], h, tc); // where it meets the path
   for (let y = 0; y < alt; y++) {
     const t = Math.pow(y / alt, 0.62);
     let c = mixA(longeC, perto, t);
