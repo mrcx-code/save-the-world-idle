@@ -52,10 +52,15 @@
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0;
     top: calc(6px + env(safe-area-inset-top));
     display: flex; gap: 5px; justify-content: center; padding: 0 6px; pointer-events: none; }
-  .chip { background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
-    border: 2px solid var(--contorno); padding: 5px 8px; flex: 1 1 0;
+  /* the readouts wear the same modelling as the buttons, one notch quieter, so the chrome
+     is one language: same ink keyline, same hard offset shadow, same sun direction */
+  .chip { background:
+      linear-gradient(158deg, rgba(255,255,255,.09) 0%, rgba(255,255,255,.02) 44%, rgba(255,255,255,0) 62%),
+      linear-gradient(180deg, #33436f 0%, var(--chromeA) 54%, var(--chromeB) 100%);
+    border: 2px solid var(--contorno); border-radius: 8px; padding: 5px 8px; flex: 1 1 0;
     max-width: 170px; min-width: 0; color: var(--chromeT);
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.16);
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.20),
+      inset 0 -2px 0 rgba(0,0,0,.24);
     display: flex; align-items: center; gap: 7px; }
   .cInfo { min-width: 0; flex: 1; }
   .chip .rotulo { font-size: var(--fs-xs); color: var(--chromeS); white-space: nowrap; overflow: hidden;
@@ -131,7 +136,7 @@
   /* one line that says what the world wants from you right now */
   #alerta { display: none; position: fixed; z-index: 11; left: 50%; transform: translateX(-50%);
     top: calc(64px + env(safe-area-inset-top)); width: min(420px, 92vw);
-    border: 3px solid var(--ink); padding: 7px 9px; font-size: var(--fs-xs); line-height: 1.7;
+    border: 3px solid var(--ink); border-radius: 9px; padding: 7px 9px; font-size: var(--fs-xs); line-height: 1.7;
     text-align: center; background: rgba(14,15,26,.9); }
   #alerta.mostra { display: block; }
   #alerta.perigo { background: #4a1f2b; box-shadow: inset 0 0 0 2px var(--bad); color: #ffb0b0; }
@@ -149,7 +154,7 @@
     bottom: calc(var(--hControles, 122px) + env(safe-area-inset-bottom)); width: min(520px, 94vw);
     font-size: var(--fs-xs); color: #c6d4f0; line-height: 1.45;
     background: linear-gradient(180deg, #202a4c, #141b33);
-    border: 2px solid var(--contorno); border-left: 5px solid var(--gold);
+    border: 2px solid var(--contorno); border-left: 5px solid var(--gold); border-radius: 7px;
     box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.12); padding: 5px 8px;
     max-height: 3.9em; overflow: hidden; }
   #fato b { color: var(--gold); }
@@ -186,15 +191,29 @@
   #colLado b { font-weight: 700; font-size: var(--fs-sm); }
   #colLado .rot { font-size: 8px; letter-spacing: .5px; opacity: .8; margin-left: auto; }
   /* Poster chrome from the estetica pass; the components below it are the jogabilidade
-     pass's new UI, kept because they are structure, not style. */
-  button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno); border-radius: 2px;
+     pass's new UI, kept because they are structure, not style.
+     ROUNDER AND RICHER WITHOUT TURNING INTO A WEB BUTTON. The owner asked for rounded
+     corners and a light gradient. The trap is that radius + gradient is also the recipe
+     for a generic app button, and what stops it here is that every OTHER property stays
+     hard: the outline is still a 2px ink keyline, the drop shadow is still a hard offset
+     with zero blur (it is a printed shadow, not a soft one), the press still snaps down
+     by whole pixels, and nothing is translucent. What is new is the modelling INSIDE the
+     shape: a three-stop vertical ramp with the break above the middle instead of a flat
+     two-stop, a diagonal sheen falling off by 46% (the same sun-up-and-to-the-right the
+     sprites are lit by, so the chrome and the world agree about where the light is), a
+     lit 1px top edge and a 2px shaded inner floor. */
+  button { font-family: inherit; font-weight: 700; border: 2px solid var(--contorno); border-radius: 9px;
     cursor: pointer; color: var(--chromeT); text-transform: uppercase;
-    background: linear-gradient(180deg, var(--chromeA), var(--chromeB));
-    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14);
+    background:
+      linear-gradient(158deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.03) 44%, rgba(255,255,255,0) 62%),
+      linear-gradient(180deg, #33436f 0%, var(--chromeA) 54%, var(--chromeB) 100%);
+    box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22),
+      inset 0 -2px 0 rgba(0,0,0,.26);
     touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   button:disabled { opacity: .5; cursor: default; }
   button:not(:disabled):active { transform: translateY(2px);
-    box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.14); }
+    box-shadow: 0 1px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22),
+      inset 0 -1px 0 rgba(0,0,0,.26); }
   /* the RHYTHM you are running: the one decision this whole prototype exists to measure,
      so it gets a row of its own. This comment used to have no opening `/*`, and the
      browser swallowed the rule under it — see the note on #controls. */
@@ -203,27 +222,39 @@
     line-height: 1.25; overflow: hidden; }
   #modeQuick .mq b { font-size: 9px; font-weight: normal; }
   #modeQuick .mq i { font-size: 8px; font-style: normal; opacity: .85; white-space: nowrap; }
-  #modeQuick.fast { background: linear-gradient(180deg, #8c2c3e, #4b1622) !important; color: #ffd2cd; }
-  #modeQuick.steady { background: linear-gradient(180deg, #1f7043, #0e3a21) !important; color: #c9f5d4; }
+  #modeQuick.fast { color: #ffd2cd; background:
+    linear-gradient(158deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 44%, rgba(255,255,255,0) 62%),
+    linear-gradient(180deg, #a53a4c 0%, #8c2c3e 54%, #45131f 100%) !important; }
+  #modeQuick.steady { color: #c9f5d4; background:
+    linear-gradient(158deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 44%, rgba(255,255,255,0) 62%),
+    linear-gradient(180deg, #268650 0%, #1f7043 54%, #0c331d 100%) !important; }
   /* it is costing you right now: say so without words */
   #modeQuick.doi { animation: doendo 1.1s steps(2, end) infinite; }
-  @keyframes doendo { 0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 16px rgba(255,107,87,.9) } 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14) } }
+  @keyframes doendo {
+    0%   { box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 0 rgba(0,0,0,.26) }
+    50%  { box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 0 rgba(0,0,0,.26), 0 0 16px rgba(255,107,87,.9) }
+    100% { box-shadow: 0 3px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 0 rgba(0,0,0,.26) } }
   /* the main action: the rest of the block, and the only thing in it with weight */
   /* the one action of the game, and it should not be arguable which one it is: the new
      layout's geometry, wearing the gold the chrome pass reserved for exactly this button */
   #btnClique { flex: 1 1 auto; min-width: 0; min-height: 74px; padding: 11px 10px;
     font-size: var(--fs-lg); font-weight: 800;
-    background: linear-gradient(180deg, #ffe28f 0%, var(--ouroA) 34%, var(--ouroB) 100%);
-    color: #2a1a06; border-width: 3px; letter-spacing: .02em;
+    background:
+      linear-gradient(158deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 42%, rgba(255,255,255,0) 60%),
+      linear-gradient(180deg, #ffe9a6 0%, #ffe28f 16%, var(--ouroA) 40%, var(--ouroB) 100%);
+    color: #2a1a06; border-width: 3px; border-radius: 12px; letter-spacing: .02em;
     display: flex; align-items: center; justify-content: center; gap: 10px;
     text-shadow: 0 1px 0 rgba(255,255,255,.45);
     box-shadow: 0 6px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.55),
-      inset 0 -3px 0 rgba(120,60,0,.28); position: relative; }
+      inset 0 -3px 0 rgba(120,60,0,.28); position: relative; overflow: hidden; }
   #dicaHold { position: absolute; right: 10px; bottom: 3px; font-size: var(--fs-xs); font-style: normal;
     color: rgba(42,26,6,.5); letter-spacing: 1px; text-shadow: none; }
   #btnClique.segurando { transform: translateY(4px);
-    background: linear-gradient(180deg, #fff0b8 0%, #ffdd8c 34%, #f7b845 100%);
-    box-shadow: 0 2px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.6); }
+    background:
+      linear-gradient(158deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.08) 42%, rgba(255,255,255,0) 60%),
+      linear-gradient(180deg, #fff5c8 0%, #fff0b8 16%, #ffdd8c 40%, #f7b845 100%);
+    box-shadow: 0 2px 0 var(--contorno), inset 0 2px 0 rgba(255,255,255,.6),
+      inset 0 -3px 0 rgba(120,60,0,.24); }
   #btnClique.segurando #dicaHold { color: rgba(42,26,6,.85); }
   /* the wand's charge, on the button that swings it */
   #foco { position: absolute; left: 0; top: 0; height: 4px; width: 0%; background: var(--purple);
@@ -250,7 +281,7 @@
   .sheet { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%) translateY(110%);
     bottom: calc(var(--hControles, 120px) + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
     background: linear-gradient(180deg, #24325c 0%, #161e3a 55%, #121933 100%);
-    border: 3px solid var(--contorno); border-radius: 2px;
+    border: 3px solid var(--contorno); border-radius: 12px;
     box-shadow: 0 5px 0 var(--contorno), inset 0 1px 0 rgba(255,255,255,.13);
     /* the menu bar is protected by `bottom`, not by this: max-height only grows upward,
        so the projects sheet can hold its explanation without reaching the buttons below */
@@ -289,7 +320,7 @@
 
   /* the trade, side by side: what you are running now against what switching would do */
   .ritmo { display: flex; gap: 7px; margin-top: 9px; }
-  .rCol { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; padding: 8px 7px; }
+  .rCol { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; border-radius: 7px; padding: 8px 7px; }
   .rCol.quente { box-shadow: inset 0 0 0 1px var(--bad); }
   .rCol.fria { box-shadow: inset 0 0 0 1px var(--good); }
   .rTit { font-size: 8px; color: var(--sub); margin-bottom: 6px; white-space: nowrap;
@@ -310,7 +341,7 @@
   #barPrestigio { background-color: var(--purple); width: 0%; }
 
   .upgrade { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, #141b33, #0d1226);
-    border: 2px solid #000; padding: 9px; margin-bottom: 7px; min-height: 54px; }
+    border: 2px solid #000; border-radius: 7px; padding: 9px; margin-bottom: 7px; min-height: 54px; }
   .upgrade .info { flex: 1; }
   .upgrade .nome { font-size: var(--fs-sm); }
   .upgrade .desc { font-size: var(--fs-xs); color: var(--sub); margin-top: 4px; line-height: 1.7; }
@@ -327,7 +358,7 @@
   #btnConfirmaNao { width: 100%; padding: 12px 8px; font-size: var(--fs-sm); margin-top: 7px;
     color: #b9c8e8; background: linear-gradient(180deg, #2b3557, #171d33); }
   .placar { display: flex; gap: 7px; margin-bottom: 8px; }
-  .placar > div { flex: 1; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; padding: 9px; }
+  .placar > div { flex: 1; background: linear-gradient(180deg, #141b33, #0d1226); border: 2px solid #000; border-radius: 7px; padding: 9px; }
   .placar .r { font-size: var(--fs-xs); color: var(--sub); line-height: 1.7; }
   .placar .v { font-size: var(--fs-sm); margin-bottom: 4px; }
   .placar .ganha .v { color: var(--good); }
