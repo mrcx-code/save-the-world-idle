@@ -3031,6 +3031,29 @@ toda sessão começa lendo a última entrada.
   só é visto por quem abre a folha de projetos e desce mais um nível; medir se alguém entende
   que os drops viraram recurso sem ninguém dizer.**
 
+- **2026-08-03 · fundos HD pintados atrás da jogabilidade (7 cenas do dono).** As sete
+  telas pintadas (WebP retrato 720×1279, ~260KB base64 cada) entram inline por
+  `test/inline-cenarios.js` em `CENARIO_FUNDO_B64` e desenham numa camada SEPARADA
+  `<canvas id="fundoHD">` ATRÁS de `#scene` (z-index -1), dimensionada à resolução do
+  aparelho — não passa pelo canvas de baixa resolução, então a pintura fica nítida. Em
+  cenário pintado o `drawScene()` limpa `#scene` para transparente e PULA o procedural
+  (céu/nuvens/serra/cidade/marcos/morro/cenário-médio-e-próximo/NPCs/deco/grama da frente),
+  que já estão na pintura; sobram só a jogabilidade (herói, monstros, drops, efeitos) e o
+  clima que responde à saúde/ritmo (smog, motes, pássaros). **O que MEDI:** backdrop
+  desenhado a `min(3,dpr)`×viewport = 1170×2532 px (device res), contra os 130×281 px
+  internos do `#scene` — ~19× mais pixels na pintura. `index.html` 1,11MB → 3,08MB (+1,97MB
+  base64, 7 cenas). **FPS 61** em 390×844 (a pintura é redesenhada só na troca de cenário /
+  resize, não por frame). `node test/sim.js` **byte-idêntico** (não toquei em CFG/economia).
+  smoke verde. Alinhamento: a rua/piso pintado começa a ~0,75 da altura da imagem; ancorei
+  essa linha ao `GROUND` (0,68·H) com escala ciente de cobertura (~2,53×) — herói pisa no
+  calçamento nas 7 cenas (verifiquei print da 1, 3 e 5). **Tradeoff conhecido:** a pintura é
+  fixa, então o arco doente→curado NÃO roda no backdrop, só na camada de jogo e no clima
+  procedural restante — não re-tingir a pintura por saúde (ficaria errado). Cenário 1
+  (rua_do_bairro) é o default; os outros 6 são alcançáveis pelo hook de debug `setFundo(n)`
+  (0..6) até o dono desenhar como um cenário é encontrado; `FUNDO_POR_CEN` já liga rua/praça/
+  mata às pinturas 0/1/3. **Próximo passo: quando o dono definir a troca de cenário, ligar
+  `setCenario` aos 4 cenários ainda sem código (orla, cerrado, vila da serra, centro).**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
