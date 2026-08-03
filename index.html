@@ -36,11 +36,13 @@
     --barra: #363c21; --barraOn: #eba748;
     --navBg: #1c2010; --navOn: #313a1f;
     /* responsive type scale — grows with the screen */
-    --ui: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", sans-serif;
-    --fs-xs: clamp(8px, 2.3vw, 11px);
-    --fs-sm: clamp(10px, 2.8vw, 13px);
-    --fs-md: clamp(12px, 3.4vw, 16px);
-    --fs-lg: clamp(15px, 4.4vw, 20px);
+    /* Verdana and Trebuchet are wide and heavy-footed where Segoe is narrow and thin —
+       they are the closest thing to a game face that is already on the device. */
+    --ui: "Trebuchet MS", Verdana, "DejaVu Sans", system-ui, -apple-system, sans-serif;
+    --fs-xs: clamp(9px, 2.5vw, 12px);
+    --fs-sm: clamp(11px, 3vw, 14px);
+    --fs-md: clamp(13px, 3.6vw, 17px);
+    --fs-lg: clamp(17px, 4.8vw, 23px);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent;
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -78,12 +80,12 @@
   /* one line, no stacking: the leaf, the number, then what the number is */
   .chip { min-width: 0; display: flex; align-items: baseline; gap: 10px; }
   .cInfo { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
-  .chip .rotulo { font-size: 9px; color: #d8c398; white-space: nowrap;
-    letter-spacing: .26em; font-weight: 700; text-shadow: 0 2px 0 rgba(0,0,0,.7); }
-  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1; color: #ffeec4;
-    font-variant-numeric: tabular-nums;
+  .chip .rotulo { font-size: 10px; color: #d8c398; white-space: nowrap;
+    letter-spacing: .3em; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.7); }
+  .chip .valor { font-size: var(--fs-lg); font-weight: 900; line-height: 1; color: #ffeec4;
+    font-variant-numeric: tabular-nums; letter-spacing: .02em;
     /* a hard pixel drop shadow so the score reads over any part of the painting */
-    text-shadow: 0 2px 0 rgba(0,0,0,.75); }
+    text-shadow: 0 2px 0 rgba(0,0,0,.8); }
   /* removed by owner: the gear button (#openConfig) opened the metrics panel — both gone. */
   .pi { image-rendering: pixelated; width: 20px; height: 20px; flex: 0 0 auto; }
   #barraTopo .pi { align-self: center; transform: translateY(1px); }
@@ -198,10 +200,11 @@
   /* the four cards — icon over name over value, exactly the board's card */
   #cartoes { display: flex; gap: 6px; align-items: stretch; }
   .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 4px; padding: 10px 4px; border-radius: 12px;
+    justify-content: center; gap: 4px; padding: 10px 4px; border-radius: 18px;
     background: #2b331c; }
-  .cartao .cn { font-size: 9px; letter-spacing: .06em; color: var(--creme);
-    white-space: nowrap; overflow: hidden; max-width: 100%; }
+  .cartao .cn { font-size: 10px; font-weight: 900; letter-spacing: .12em; color: var(--creme);
+    white-space: nowrap; overflow: hidden; max-width: 100%;
+    text-shadow: 0 2px 0 rgba(0,0,0,.45); }
   .cartao .cv { font-size: var(--fs-xs); font-weight: 800; color: var(--gold); white-space: nowrap;
     font-variant-numeric: tabular-nums; }
   .cartao.pronto { background: #3d4a25; }
@@ -217,7 +220,7 @@
      shadow. That reads dated. The construction now is softer: a hairline border, a subtle
      drop shadow with a little blur, and a 1px lit top edge for depth. The primary action
      keeps gold and a touch more lift; everything else stays quiet. */
-  button { font-family: inherit; font-weight: 700; border: 0; border-radius: 0;
+  button { font-family: inherit; font-weight: 900; letter-spacing: .04em; border: 0; border-radius: 0;
     cursor: pointer; color: var(--chromeT); text-transform: uppercase;
     background: var(--chromeA); box-shadow: none;
     touch-action: manipulation; user-select: none; -webkit-user-select: none; }
@@ -238,12 +241,13 @@
   /* THE primary action: gold, a soft inner sheen and a gentle lift so it reads as the one
      button that matters — no hard offset block under it anymore */
   #btnClique { flex: 1 1 auto; min-width: 0; min-height: 62px; padding: 9px 10px;
-    border-radius: 14px;
+    border-radius: 20px;
     font-size: var(--fs-lg); font-weight: 800;
     background: var(--ouroA);
     color: #221806; border: 0; letter-spacing: .02em;
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    text-shadow: none; box-shadow: none; position: relative; }
+    font-weight: 900; text-shadow: 0 2px 0 rgba(255,255,255,.35); box-shadow: none;
+    position: relative; }
   /* owner: the HOLD hint is gone from the button — holding still works. */
   #dicaHold { display: none; }
   #btnClique.segurando { transform: translateY(2px);
@@ -257,13 +261,14 @@
      again the moment a button grows a line of text */
   .sheet { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%) translateY(110%);
     bottom: calc(var(--hControles, 120px) + env(safe-area-inset-bottom)); width: min(560px, 100vw - 16px);
-    background: rgba(26, 31, 16, .93); border: 0; border-radius: 12px; box-shadow: none;
+    background: rgba(26, 31, 16, .93); border: 0; border-radius: 18px; box-shadow: none;
     /* three one-line rows: it takes only the height those need */
     padding: 6px 8px 8px; transition: transform .22s ease, opacity .22s ease;
     opacity: 0; pointer-events: none; }
   .sheet.aberto { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
   .sheetHead { display: flex; align-items: center; margin-bottom: 2px; }
-  .sheetHead .t { font-size: 8px; letter-spacing: .24em; color: #9c8d68; }
+  .sheetHead .t { font-size: 10px; font-weight: 900; letter-spacing: .3em; color: #b09c72;
+    text-shadow: 0 2px 0 rgba(0,0,0,.5); }
   .fechar { display: none; }   /* closing happens on the card below, not in here */
 
   /* Buy button and mode buttons wear the poster palette; everything below is the
@@ -319,12 +324,15 @@
   #barRampa { background-color: var(--good); width: 0%; }
   #barPrestigio { background-color: var(--purple); width: 0%; }
 
-  .upgrade { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    border-radius: 7px; background: transparent; padding: 5px 6px; margin: 0; }
-  .upgrade + .upgrade { border-top: 1px solid rgba(255,255,255,.07); }
-  .upgrade .nome { font-size: var(--fs-xs); color: var(--creme); }
-  .upgrade button { padding: 4px 9px; font-size: var(--fs-xs); color: #221806;
-    background: var(--ouroA); border-radius: 5px; }
+  /* side by side: three narrow columns, name over price */
+  #listaUp { display: flex; gap: 6px; align-items: stretch; }
+  .upgrade { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: space-between; gap: 6px;
+    border-radius: 12px; background: rgba(255,255,255,.05); padding: 8px 6px; }
+  .upgrade .nome { font-size: 10px; font-weight: 900; line-height: 1.4; color: var(--creme);
+    text-align: center; letter-spacing: .04em; text-shadow: 0 2px 0 rgba(0,0,0,.45); }
+  .upgrade button { width: 100%; padding: 5px 4px; font-size: var(--fs-xs); color: #221806;
+    background: var(--ouroA); border-radius: 999px; }
   .upgrade.comprado .nome { color: var(--good); }
   .upgrade.comprado button { background: transparent; color: var(--good); }
 
@@ -424,9 +432,11 @@
 <div class="sheet" id="sheetUpgrades">
   <div class="sheetHead"><div class="t">UPGRADES</div>
     <button class="fechar" data-close="sheetUpgrades">✕</button></div>
-  <div class="upgrade" id="cardU1"><span class="nome">×3 per hit</span><button id="btnU1"></button></div>
-  <div class="upgrade" id="cardU2"><span class="nome">×2 per pickup</span><button id="btnU2"></button></div>
-  <div class="upgrade" id="cardU3"><span class="nome">2 hits/s on their own</span><button id="btnU3"></button></div>
+  <div id="listaUp">
+    <div class="upgrade" id="cardU1"><span class="nome">×3<br>per hit</span><button id="btnU1"></button></div>
+    <div class="upgrade" id="cardU2"><span class="nome">×2<br>per pickup</span><button id="btnU2"></button></div>
+    <div class="upgrade" id="cardU3"><span class="nome">2 hits/s<br>on their own</span><button id="btnU3"></button></div>
+  </div>
 </div>
 
 
@@ -476,7 +486,8 @@ const CFG = {
   // tapping is exactly what erased the GO FAST / GO STEADY decision once already.
   mobVel: 34,              // world px/s a trouble advances toward you
   mobIntervalo: 7,         // seconds between arrivals (shorter when the team is worn out)
-  mobMax: 3, mobFila: 20,  // ...and they queue up, one body-width apart
+  // 48 + 2x14 puts the third of three at 76, still inside the 80 px reach of a swing
+  mobMax: 3, mobFila: 14,
   // How many hits each one takes, and how often each shows up. The spread is deliberate
   // and it is read off the sprites: the smog wisp is the smallest thing on the road and
   // goes down in one combo, the toxic barrel is the heaviest and takes two. 3-vs-4 was
@@ -829,7 +840,9 @@ function atualizarMobs(dt) {
   // They walk in and queue up in front of the hero instead of standing on each other.
   // The one in front takes the first slot; whoever is behind stops a body-width back and
   // shuffles forward when the road clears.
-  let limite = HX + 26;
+  // owner: they were stopping right on top of him. 48 px is roughly a body-width of air,
+  // and still well inside the 80 px reach of a swing.
+  let limite = HX + 48;
   mobs.filter(function (m) { return m.dying <= 0; })
     .sort(function (a, b) { return a.wx - b.wx; })
     .forEach(function (m) {
