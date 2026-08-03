@@ -1809,21 +1809,86 @@ function luzDoDia(c) {
 // quantised so the palette and the sky re-bake a handful of times a minute, not every frame
 function horaKey() { return Math.round((relogio / DIA_SEG) % 1 * 96); }
 
+// ---------- THE RHYTHM, AS WEATHER ----------
+// GO FAST and GO STEADY rendered pixel-identical frames: the one decision this prototype
+// exists to measure had no consequence you could SEE. It does now, and it is weather, not
+// a colour grade — the air in front of a world being pushed is thick, hot and full of
+// cinders, and the air in front of a world being tended is clear and full of living things.
+//
+// Three rules keep it from taking the picture over:
+//   · the sick→healed arc stays dominant. The rhythm only ever adds warm haze, and it adds
+//     it IN PROPORTION TO THE DISTANCE EACH PLANE ALREADY CARRIES — the near plane barely
+//     moves, the horizon takes most of it. That is aerial perspective thickening, the
+//     physically true reading of dirty air, and it means the value separation the whole
+//     architecture rests on survives at every t.
+//   · it rides INSIDE the hour, never over it. The haze is mixed into the world's own
+//     colours BEFORE `luzDoDia()` lights them, so a burning night is smoke lit by street
+//     lamps and not an orange film laid on a dark frame.
+//   · it scales with WHAT THE CHOICE IS COSTING, not only with the choice. The first
+//     version answered `S.modo` alone, so ten seconds of GO FAST looked exactly like ten
+//     minutes of it; now `ritmoCusto` (the team's tiredness, read off `eficiencia()`)
+//     decides how much of the haze is actually in the air. Pressing a rested team barely
+//     smudges the ridge; pressing an exhausted one closes the distance in on you.
+// `ritmoV` eases across ~1.1s so the switch is weather you watch arrive, and everything
+// that reaches a bake key is quantised to eighths, so sky/ground/palette re-bake at most
+// eight times per switch instead of once a frame.
+const HAZE_FAST = [236, 176, 96];        // hot, opaque, and lighter than what it covers
+let ritmoV = 0, ritmoUlt = null, ritmoT = 0, ritmoVirou = 0, ritmoCusto = 0;
+function ritmoPasso() {
+  const agora = performance.now();
+  const primeira = !ritmoT;
+  const dt = primeira ? 0 : Math.min(0.1, (agora - ritmoT) / 1000);
+  ritmoT = agora;
+  const modo = (typeof S !== "undefined" && S.modo) || "limpo";
+  const alvo = modo === "carvao" ? 1 : 0;
+  if (ritmoUlt !== null && ritmoUlt !== modo) ritmoVirou = 1;   // one-shot: the air turns over
+  ritmoUlt = modo;
+  // what the choice is costing: 0 with a rested team, 1 once the team is at half health
+  ritmoCusto = Math.min(1, (1 - eficiencia()) * 2);
+  if (primeira) ritmoV = alvo;      // a save loaded in GO FAST opens on the weather it left in
+  if (dt) {
+    const k = 1 - Math.pow(0.02, dt / 1.1);
+    ritmoV += (alvo - ritmoV) * k;
+    if (Math.abs(alvo - ritmoV) < 0.004) ritmoV = alvo;
+    ritmoVirou = Math.max(0, ritmoVirou - dt / 1.4);
+  }
+  return ritmoV;
+}
+// the weight the haze actually carries: the choice, times what it is costing
+function ritmoQ() { return Math.round(ritmoV * (0.34 + 0.66 * ritmoCusto) * 8) / 8; }
+// the haze as the hour sees it — used by the sky, which is already resolved under its own
+// hourly ramp and would be fought by raw midday ochre at night
+let hazeCv = null, hazeKey = -1;
+function hazeLuz() {
+  const k = horaKey();
+  if (hazeCv && hazeKey === k) return hazeCv;
+  // ...but not all the way down: a quarter of the raw ochre stays in, because a city under
+  // smoke at night glows warm from its own lamps instead of going the colour of the dark
+  hazeKey = k; hazeCv = mixA(luzDoDia(HAZE_FAST), HAZE_FAST, 0.22);
+  return hazeCv;
+}
 let palCache = null, palKey = -1;
 function pal(h) {
-  const key = Math.round(h * 96) * 128 + horaKey();
+  const rq = ritmoQ();
+  const key = (Math.round(h * 96) * 128 + horaKey()) * 16 + Math.round(rq * 8);
   if (palCache && palKey === key) return palCache;
   palKey = key;
   const hv = Math.round(h * 96) / 96, tc = Math.pow(hv, 0.78);   // chroma leads value a little
   const horiz = luzDoDia(horizonC(hv));
-  const P = { _h: hv };
-  const resolva = function (e) { return luzDoDia(mixA(palMix(e[0], e[1], hv, tc), horizonC(hv), e[2])); };
+  const P = { _h: hv, _r: rq };
+  // the rhythm rides on the distance each entry already carries: 6% of haze at your feet,
+  // up to ~38% at the ridge line, so the middle distance thickens and the near band holds.
+  // It goes in BEFORE luzDoDia(), so the hour lights the smoke like it lights everything.
+  const puxa = function (c, dist) { return rq ? mixA(c, HAZE_FAST, rq * (0.06 + 0.66 * dist)) : c; };
+  const resolva = function (e) { return luzDoDia(puxa(mixA(palMix(e[0], e[1], hv, tc), horizonC(hv), e[2]), e[2])); };
   for (const k in PALETA) { const c = resolva(PALETA[k]); P[k + "A"] = c; P[k] = rgbS(c); }
-  P.faixa = rgbS(mixA(horiz, [255, 255, 255], 0.30));
+  // thick air eats the bright strip on the horizon: the band is the value architecture, so
+  // it is dimmed rather than moved, and it comes straight back when you go steady
+  P.faixa = rgbS(mixA(mixA(horiz, [255, 255, 255], 0.30), hazeLuz(), rq * 0.34));
   // the hillside families, sick end shared so a bleached favela is one grey mass with the
   // faintest memory of paint in it — which is exactly what a bleached photograph looks like
   const fam = function (arr, cinza, dist) {
-    return arr.map(function (c) { return rgbS(luzDoDia(mixA(palMix(cinza, c, hv, tc), horizonC(hv), dist))); });
+    return arr.map(function (c) { return rgbS(luzDoDia(puxa(mixA(palMix(cinza, c, hv, tc), horizonC(hv), dist), dist))); });
   };
   P.parede = fam(MORRO_PAREDE, MORRO_CINZA, 0.14);
   P.paredeL = fam(MORRO_LUZ, MORRO_CINZA, 0.12);
@@ -1868,14 +1933,22 @@ function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the 
 // one drawImage. Without the dither it is also two thirds cheaper to bake.
 let skyCv = null, skyKey = "";
 function skyCanvas(h) {
-  const key = W + "," + GROUND + "," + Math.round(h * 48) + "," + horaKey();
+  const rq = ritmoQ();
+  const key = W + "," + GROUND + "," + Math.round(h * 48) + "," + horaKey() + "," + rq;
   if (skyCv && skyKey === key) return skyCv;
   if (!skyCv) skyCv = document.createElement("canvas");
   skyCv.width = W; skyCv.height = GROUND + 2;
   skyKey = key;
   const g = skyCv.getContext("2d");
+  const hz = hazeLuz();
   for (let y = 0; y <= GROUND + 1; y++) {
-    g.fillStyle = rgbS(rampaCeu(h, Math.pow(y / (GROUND + 1), 1.15)));
+    const t = Math.pow(y / (GROUND + 1), 1.15);
+    let c = rampaCeu(h, t);
+    // the sky is most of the frame, so this is where the rhythm is actually felt. Haze
+    // banks at the horizon and thins out overhead — 8% at the zenith, 42% at the skyline —
+    // in the hour's own light, so at night it is smoke over lamps, not orange on black
+    if (rq) c = mixA(c, hz, rq * (0.08 + 0.34 * t));
+    g.fillStyle = rgbS(c);
     g.fillRect(0, y, W, 1);
   }
   // The sun as a real disc with a corona, not a plus sign. Sick, it is a flat pale wafer
@@ -1891,11 +1964,14 @@ function skyCanvas(h) {
   };
   const qH = horaAgora(), noite = lerp(qH.a.escuro, qH.b.escuro, qH.f);
   const sunC = function (a, b) { return rgbS(luzDoDia(mixA(a, b, h))); };
-  g.globalAlpha = (1 - noite) * (0.16 + 0.22 * h); disco(rgbS(mixA([226, 220, 204], [255, 236, 150], h)), r + 5);
-  g.globalAlpha = (1 - noite) * (0.34 + 0.30 * h); disco(rgbS(mixA([230, 224, 208], [255, 240, 168], h)), r + 2);
+  // In GO FAST you are looking at it through the air you are making: the corona swells and
+  // goes orange while the disc itself dulls, which is what a sun in smoke actually does.
+  const gl = mixA([255, 236, 150], [255, 170, 74], rq), gl2 = mixA([255, 240, 168], [255, 186, 92], rq);
+  g.globalAlpha = (1 - noite) * (0.16 + 0.22 * h + 0.20 * rq); disco(rgbS(mixA([226, 220, 204], gl, h)), r + 5 + Math.round(rq * 6));
+  g.globalAlpha = (1 - noite) * (0.34 + 0.30 * h + 0.16 * rq); disco(rgbS(mixA([230, 224, 208], gl2, h)), r + 2 + Math.round(rq * 3));
   g.globalAlpha = 1 - noite * 0.94;
-  disco(sunC([216, 208, 188], [255, 228, 136]), r);
-  disco(sunC([228, 222, 206], [255, 252, 232]), Math.max(2, r - 3));
+  disco(sunC(mixA([216, 208, 188], [246, 198, 118], rq), mixA([255, 228, 136], [246, 198, 118], rq)), r);
+  disco(sunC(mixA([228, 222, 206], [255, 226, 166], rq), mixA([255, 252, 232], [255, 226, 166], rq)), Math.max(2, r - 3));
   g.globalAlpha = 1;
   if (noite > 0.5) {          // and when it has gone, the stars the board hangs over NOITE
     const nn = (noite - 0.5) * 2;
@@ -1916,7 +1992,8 @@ function skyCanvas(h) {
 let chaoCv = null, chaoKey = "";
 function chaoCanvas(h) {
   const alt = H - GROUND;
-  const key = W + "," + alt + "," + Math.round(h * 48) + "," + horaKey();
+  const rq = ritmoQ();
+  const key = W + "," + alt + "," + Math.round(h * 48) + "," + horaKey() + "," + rq;
   if (chaoCv && chaoKey === key) return chaoCv;
   if (!chaoCv) chaoCv = document.createElement("canvas");
   chaoCv.width = W; chaoCv.height = alt;
@@ -1928,7 +2005,12 @@ function chaoCanvas(h) {
   const perto = palMix(desbotar([124, 104, 76]), [124, 104, 76], h, tc);   // at your feet
   const longeC = palMix(desbotar([168, 148, 116]), [168, 148, 116], h, tc); // where it meets the path
   for (let y = 0; y < alt; y++) {
-    g.fillStyle = rgbS(mixA(longeC, perto, Math.pow(y / alt, 0.62)));
+    const t = Math.pow(y / alt, 0.62);
+    let c = mixA(longeC, perto, t);
+    // the ground under your feet is the one thing the rhythm barely touches: 12% at the
+    // path, 3% at the bottom edge. It is the anchor the value architecture is built on.
+    if (rq) c = mixA(c, HAZE_FAST, rq * (0.12 - 0.09 * t));
+    g.fillStyle = rgbS(c);
     g.fillRect(0, y, W, 1);
   }
   return chaoCv;
@@ -2823,8 +2905,14 @@ function drawHero() {
 
 function drawScene() {
   const h = worldHealth();
+  const R = ritmoPasso();           // 0 = GO STEADY, 1 = GO FAST, eased across ~1.1s
+  const RQ = ritmoQ();              // the same choice, weighted by what it is costing
   const P = pal(h);                 // the whole world's colour, resolved once per health step
   const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
+  // The air in front of a world being pushed thickens BEFORE the team is worn: the old
+  // `smog` only ever answered to tiredness, which lags the decision by minutes. Rhythm gets
+  // its own share of it so the switch is felt now, and tiredness still stacks on top.
+  const smogV = Math.min(0.92, smog + R * 0.26 + R * smog * 0.4);
   // sky, sun and glow: dithered gradient baked once per health step
   cx.drawImage(skyCanvas(h), 0, 0);
   // Clouds. They were three flat rectangles of one grey — the crudest thing in the sky and
@@ -3556,50 +3644,98 @@ function drawScene() {
 
   // smog: layered bands with ragged ends and a lit top, drifting at different speeds.
   // Four flat grey rectangles used to be the whole of it.
-  if (smog > 0.03) {
-    const off = (tick * 0.5) % (W + 60);
+  if (smogV > 0.03) {
+    const off = (tick * (0.5 + R * 0.45)) % (W + 60);          // pushed air also moves faster
+    const corpo = rgbS(luzDoDia(mixA([203, 195, 178], [214, 176, 130], R)));
+    const topo = rgbS(luzDoDia(mixA([232, 225, 210], [244, 214, 164], R)));
     [[0.03, 18, 0.30, 12, 1.00], [0.38, 34, 0.32, 10, 0.80],
      [0.70, 12, 0.28, 13, 0.90], [0.18, 52, 0.34, 9, 0.65]].forEach(function (c, i) {
       const bx2 = ((c[0] * W + off * (0.7 + i * 0.16)) % (W + 60)) - 40;
       const bw = Math.round(c[2] * W), bh = c[3];
-      cx.globalAlpha = smog * c[4] * 0.55;
-      cx.fillStyle = "#cbc3b2";                  // smoke SCATTERS light: haze lightens the
+      cx.globalAlpha = smogV * c[4] * 0.55;
+      cx.fillStyle = corpo;                      // smoke SCATTERS light: haze lightens the
       cx.fillRect(bx2 + 7, c[1], bw - 14, bh);   // sky and flattens it, it does not darken it
       cx.fillRect(bx2, c[1] + 3, bw, bh - 6);
-      cx.globalAlpha = smog * c[4] * 0.40;
-      cx.fillStyle = "#e8e1d2";
+      cx.globalAlpha = smogV * c[4] * 0.40;
+      cx.fillStyle = topo;
       cx.fillRect(bx2 + 12, c[1], bw - 26, 3);
       cx.globalAlpha = 1;
     });
   }
-  // birds when healing
-  if (h > 0.55) {
+  // A LOW BANK ON THE HORIZON, only in GO FAST, and only as thick as the choice is costing.
+  // Two soft-ended strips of the same warm haze sitting on the separator band, drifting the
+  // other way from the high smoke — it is what makes the distance close IN on you.
+  if (RQ > 0.02) {
+    cx.fillStyle = rgbS(luzDoDia(mixA([236, 210, 172], HAZE_FAST, 0.45)));
+    for (let i = 0; i < 2; i++) {
+      const bw = Math.round(W * (0.55 + i * 0.25));
+      const bx2 = ((i * 0.5 * W - tick * (0.22 + i * 0.13)) % (W + bw) + W + bw) % (W + bw) - bw;
+      cx.globalAlpha = RQ * (0.20 - i * 0.06);
+      cx.fillRect(bx2 + 8, GROUND - 24 + i * 5, bw - 16, 7 - i * 2);
+      cx.fillRect(bx2, GROUND - 22 + i * 5, bw, 4 - i);
+    }
+    cx.globalAlpha = 1;
+  }
+  // birds when healing — GO STEADY puts more of them up, and earlier
+  if (h > (R > 0.5 ? 0.62 : 0.44)) {
     cx.fillStyle = "#0e0f1a";
-    for (let b = 0; b < 3; b++) {
+    for (let b = 0; b < (R < 0.5 ? 5 : 2); b++) {
       const bx = (tick * (1.4 + b * 0.3) + b * 100) % (W + 20) - 10;
       const by = 22 + b * 10 + Math.sin((tick + b * 7) / 6) * 2;
       cx.fillRect(bx, by, 3, 1); cx.fillRect(bx + 3, by - 1, 2, 1); cx.fillRect(bx - 2, by - 1, 2, 1);
     }
   }
 
-  // ambient weather: ash falls when the air is dirty, leaves drift when healthy
-  if (smog > 0.2 && Math.random() < smog * 0.25) {
+  // AMBIENT WEATHER, AND IT IS WHERE THE RHYTHM LIVES CLOSEST TO YOUR EYE.
+  // Two opposite airs, cross-faded with R rather than switched:
+  //   GO FAST  — ash falling, and CINDERS lifting off the road. Things going up off hot
+  //              ground is the single clearest read of "this is being burned to run".
+  //   GO STEADY — leaves and petals drifting in, motes rising off worked ground.
+  if (smogV > 0.2 && Math.random() < smogV * 0.25) {
     parts.push({ x: Math.random() * W, y: -2, vx: -6 - Math.random() * 6, vy: 10 + Math.random() * 8,
-      life: 4, c: "#8f8f8f", grav: 0 });
+      life: 4, c: R > 0.4 ? "#b0a08a" : "#8f8f8f", grav: 0 });
   }
-  if (h > 0.65 && Math.random() < 0.05) {
+  // Cinders are deliberately DULLED ochre, not fire orange: the direction's hardest rule is
+  // that in a sick frame the Cetro is the only warm saturated thing on screen, and a road
+  // full of bright embers would take that away from it. They lift in proportion to the
+  // COST — a rested team pushed hard barely smokes; a spent one throws sparks off the road.
+  if (RQ > 0.15 && Math.random() < RQ * 0.26) {
+    const cs = ["#d98f4c", "#c47a3a", "#e0a75e", "#b06a35"];
+    parts.push({ x: Math.random() * W, y: GROUND + Math.random() * 6,
+      vx: (Math.random() - 0.35) * 14, vy: -14 - Math.random() * 16,
+      life: 0.7 + Math.random() * 0.8, c: cs[Math.floor(Math.random() * cs.length)], grav: -8 });
+  }
+  // leaves blow in on a healthy world; going steady doubles the traffic
+  if (h > 0.65 && Math.random() < 0.05 + (1 - R) * 0.06) {
     parts.push({ x: W + 4, y: Math.random() * GROUND * 0.7, vx: -14 - Math.random() * 10, vy: 6 + Math.random() * 6,
       life: 6, c: Math.random() < 0.7 ? "#6fdd94" : "#ff7d9c", grav: 0 });
   }
   // the mending leaves a residue: motes lifting off ground that has been worked on
-  if (h > 0.45 && Math.random() < 0.035) {
+  if (h > 0.45 && Math.random() < 0.035 + (1 - R) * 0.05) {
     parts.push({ x: Math.random() * W, y: GROUND + Math.random() * 10,
       vx: (Math.random() - 0.5) * 10, vy: -7 - Math.random() * 10,
       life: 1.6 + Math.random(), c: MOTES[Math.floor(Math.random() * MOTES.length)],
       aura: LUZ_MEIO, grav: -6 });
   }
-  // butterflies flutter near the ground when the world is thriving
-  if (h > 0.75) {
+  // THE TURN ITSELF: a gust that crosses the frame once, in the colour of what you chose.
+  // It reuses the particle field rather than being a wash over the screen, so it happens
+  // IN the world and BEHIND the hero, not on the glass in front of him.
+  if (ritmoVirou > 0.02) {
+    const paraFogo = R > 0.5;
+    for (let i = 0; i < 3; i++) {
+      const cs = paraFogo ? ["#ff9d5c", "#ffbe63", "#c8b49a"] : ["#6fdd94", "#b5e08c", "#ffcd75"];
+      parts.push({
+        x: paraFogo ? W + 6 : -6,
+        y: GROUND - Math.random() * GROUND * 0.55,
+        vx: paraFogo ? -70 - Math.random() * 70 : 60 + Math.random() * 70,
+        vy: paraFogo ? -6 - Math.random() * 18 : 4 - Math.random() * 26,
+        life: 1.1 + Math.random() * 0.7, c: cs[Math.floor(Math.random() * cs.length)],
+        aura: paraFogo ? null : LUZ_MEIO, grav: paraFogo ? -8 : 10 });
+    }
+  }
+  // butterflies flutter near the ground when the world is thriving — and they will not come
+  // out over a road you are burning
+  if (h > (R > 0.5 ? 0.88 : 0.66)) {
     for (let b = 0; b < 2; b++) {
       const bx = (tick * (0.8 + b * 0.5) + b * 140) % (W + 30) - 15;
       const by = GROUND - 14 - b * 9 + Math.round(Math.sin((tick + b * 11) / 5) * 3);
