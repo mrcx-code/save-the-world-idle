@@ -2787,6 +2787,43 @@ toda sessão começa lendo a última entrada.
   por cima conta como moldura e ela é o lugar, então o 20,3% da rua não se compara direto com o
   número delas.**
 
+- **2026-08-03 · duas ordens do dono, ambas na RUA, ambas de cor/composição, nenhuma tocando
+  lógica.** `sim.js` byte-idêntico nos dois commits, smoke verde, **FPS 61**.
+
+  **(1) A MOLDURA LATERAL SAIU.** *"Tem uma textura fixa na tela nas laterais muito feia, tá
+  atrapalhando os cenários no fundo."* As ondas 11–18 tinham engordado a moldura da rua num
+  arco pesado: colunas de alvenaria + folhagem descendo as duas beiradas e uma copa fechando
+  os cantos de cima, tudo perseguindo uma meta de "céu aberto ≤ 23,6%" que o dono **cancelou**.
+  Ela emparedava o maciço, a matriz, o morro e a cidade exatamente onde eles ficam. **Medido
+  antes:** a coluna era `0,092·W` de base + `0,075·W` de inchaço = **~12→22 px de massa por
+  lado** (até ~a terça parte da largura no topo), mais uma copa de `0,40·W` (**52 px**) de
+  profundidade nos cantos superiores. **Depois:** uma franja de folhagem **estática** de
+  `0,017·W` base + `0,013·W` de escalope = **~0,7 a 6 px por lado**, sem alvenaria, sem copa,
+  sem cantos. Ou seja, a área que a "textura fixa lateral" ocupava caiu de **~17% da largura do
+  quadro (2×22 px de 130) para ~4% (2×~5 px)** — e a massa de topo (52 px de copa) foi a zero.
+  Tirei também o `worldX*0,05` que era a última coisa a rolar de leve na moldura; **com ele
+  fora e o fundo distante já congelado, a distância lê estática de vez.** A fila de monstros
+  (sx 60/80/100) ficou folgadíssima — a franja nem chega perto. Julguei por print em sick/mid/
+  healed e nas quatro horas: cenário lê até a beirada nos três, matriz e morro aparecem, noite
+  intacta.
+
+  **(2) O CINZA DO COMEÇO.** *"Pq o jogo está tão cinza, o Brasil é tão colorido."* O arco
+  doente→curado roda em **saturação** e o `desbotar()` jogava TODA família para um mesmo cinza
+  quente — parede de terracota e morro verde viravam o mesmo bege — então o começo (que é o que
+  o jogador novo vê) lia cinza. Não removi o arco: **levantei o piso.** O `desbotar()` agora
+  guarda uma fração `k=0,5` do croma original em torno da própria luma, então doente lê
+  **empoeirado-colorido** (terracota quente, folhas verdes, morro com cor), só mais suave e
+  hazy que curado. Valor ainda é levantado (doente é claro, não escuro). **Medido — C* médio da
+  faixa do mundo, MANHÃ:** 5% de saúde **11,2 → 15,5**, 40% **14,5 → 16,5**, 90% **15,9 → 18,6**.
+  O arco continua monotônico e o pop da cura continua legível (o verde da rebrota estoura no
+  healed); o quadro de 5%, que era o que importava, parou de ler cinza — confirmado no print.
+  NOITE não quebrou (5% C* 21,2→21,8, 90% 5,2→8,1). Medido com um `test/cromahp.js` descartável
+  (não commitado).
+
+  **Próximo passo:** o dono ainda pode achar o piso de cor tímido ou exagerado — `k` é um
+  botão só, fácil de girar. E a franja lateral podia até sumir de vez se ele preferir beirada
+  100% limpa; deixei a folhagem fina porque emoldura como os painéis do board sem emparedar.
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the

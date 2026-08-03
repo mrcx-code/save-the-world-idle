@@ -1863,7 +1863,17 @@ const PB = {
 // the bleach: luma kept and lifted, chroma dropped to a memory of warm ochre
 function desbotar(c) {
   const L = lumaOf(c), g = L * 0.66 + 74;
-  return [cl255(g * 1.035), cl255(g * 0.995), cl255(g * 0.905)];
+  // The sick end used to collapse to one warm grey for EVERY family — a terracotta wall and a
+  // green hillside bleached to the same beige — so the early game (which is exactly what a new
+  // player sees) read grey. *Pq o jogo está tão cinza, o Brasil é tão colorido.* The arc still
+  // runs on saturation, but the FLOOR is raised: keep a fraction of the healed hue so a sick
+  // world reads dusty-colourful — terracotta stays warm, folhas stay green, the morro keeps
+  // its colour — just softer and hazier than healed. Value is still lifted (sick is light, not
+  // dark) and a small warm dust rides on top. It runs muted -> vivid instead of grey -> vivid.
+  const k = 0.5;
+  return [cl255(g * 1.02 + (c[0] - L) * k),
+          cl255(g * 1.00 + (c[1] - L) * k),
+          cl255(g * 0.94 + (c[2] - L) * k)];
 }
 // [healed, distance into the haze] — the sick end is computed
 const PALETA_BASE = {
