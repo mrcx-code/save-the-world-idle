@@ -3799,6 +3799,61 @@ function drawScene() {
       const ipe = hash01(k * 53 + 4) > 0.62;
       const pine = !ipe && hash01(k * 29 + 1) > 0.55;
       const sway = ((Math.floor(tick / 18) + k) % 2);
+      // ---- THE BIG ONE ----
+      // Every tree on this street tops out at GROUND-45, which is y147 on a 192 ground line:
+      // the whole tree line lives in the two bands that were already the densest in the
+      // picture. Measured, the emptiest strip left after the frame closed is the TOP third of
+      // CEU baixo, y86-107, at dE 9.1 by day and 3.6 at night — and the board's PRAÇA
+      // COMUNITÁRIA panel is built around one enormous tree whose crown fills exactly that
+      // part of the picture, with the roofs and the wires passing underneath it.
+      // So one street tree in eight is that tree.
+      // The first cut of it stamped the existing 22×16 canopy four times around a tall trunk
+      // and the print threw it out: every stamp carries its own dark keyline all the way
+      // round, so four of them side by side are four lollipops on a pole, not a crown. This
+      // is the CUMULUS construction instead — the union of five lobes, resolved to one top
+      // and one bottom per column, so the silhouette bulges and notches like a canopy and the
+      // outline is drawn once around the whole mass. Same five colours as every other tree.
+      // It is drawn where every other tree is drawn — before the mobs and before the hero —
+      // so it cannot occlude anything anyone has to read, and it only grows on a street that
+      // is already coming back (h > 0.5).
+      const grande = alive && !ipe && h > 0.5 && hash01(k * 83 + 5) > 0.74;
+      if (grande) {
+        const cxT = sx + 22, cyT = GROUND - 92;
+        sombra(cxT, GROUND, 34);
+        cx.fillStyle = wc("#33200f"); cx.fillRect(cxT - 4, GROUND - 78, 8, 78);   // the trunk
+        cx.fillStyle = wc("#5f3a24"); cx.fillRect(cxT - 3, GROUND - 78, 6, 78);
+        cx.fillStyle = wc("#7d5030"); cx.fillRect(cxT + 2, GROUND - 78, 1, 78);
+        cx.fillStyle = wc("#33200f");
+        cx.fillRect(cxT - 7, GROUND - 4, 4, 4); cx.fillRect(cxT + 3, GROUND - 3, 4, 3);
+        cx.fillRect(cxT - 11, GROUND - 60, 8, 3); cx.fillRect(cxT + 3, GROUND - 68, 9, 3);
+        const lob = [[0, 0, 22, 14], [-11, 8, 13, 11], [11, 9, 14, 11], [-5, -9, 13, 10], [8, -7, 13, 10]];
+        // TREE_PAL2, the darker of the two canopy palettes already in the file, not TREE_PAL:
+        // this crown is the only green in the picture with nothing but open sky behind it, so
+        // at the bright palette it was the most saturated block in the frame and the hero's
+        // chroma rank went from 92/485 to 185/485 for it. Measured on the dark one below.
+        const K = wc("#26301a"), D = wc("#3a4623"), B = wc("#4d5a2c"),
+              Hh = wc("#6d7c38"), Wl = wc("#8f9850");
+        for (let dx = -24; dx <= 24; dx++) {
+          let t0 = 1e9, b0 = -1e9;
+          for (let l = 0; l < 5; l++) {
+            const rx = lob[l][2], ry = lob[l][3], u = (dx - lob[l][0]) / rx;
+            if (Math.abs(u) >= 1) continue;
+            const hh = ry * Math.sqrt(1 - u * u);
+            t0 = Math.min(t0, lob[l][1] - hh); b0 = Math.max(b0, lob[l][1] + hh);
+          }
+          if (b0 < t0) continue;
+          // the leaf notch: the crown is not a smooth curve, it is bitten into
+          const nt = Math.round(t0 - Math.sin(dx * 0.9) * 1.4 - Math.sin(dx * 0.31 + 2) * 2.2);
+          const nb = Math.round(b0 + Math.sin(dx * 0.7 + 1) * 1.6);
+          const x = cxT + dx + sway * (dx > 0 ? 1 : 0);
+          cx.fillStyle = K;                                       // one outline, round it all
+          cx.fillRect(x, cyT + nt - 1, 1, nb - nt + 3);
+          cx.fillStyle = dx < -8 ? D : dx < 8 ? B : Hh;           // one sun, up and to the right
+          cx.fillRect(x, cyT + nt, 1, nb - nt);
+          cx.fillStyle = dx > 4 ? Wl : Hh;                        // and it only reaches the top
+          cx.fillRect(x, cyT + nt, 1, dx > 12 ? 3 : 2);
+        }
+      } else {
       sombra(sx + 22, GROUND, alive ? 24 : 13);
       const galhos = function (cor, luzC) {       // bare forked branches, not three stubs
         cx.fillStyle = cor;
@@ -3845,6 +3900,7 @@ function drawScene() {
         } else {
           galhos(wc("#4a3020"), wc("#6b4830"));
         }
+      }
       }
     } else if (kind < 7) { // the house on the street, out of the board's CENÁRIOS strip:
       // a painted two-storey with a terracotta tiled roof pitched over a deep eave, a tall
