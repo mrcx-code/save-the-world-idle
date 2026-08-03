@@ -4249,7 +4249,30 @@ function drawScene() {
     // the print refused it: at that depth the tongue over the middle swallows the sun whole,
     // and the direction is CLEAR SKY. At 0.16 the sun comes through the leaves, which is a
     // picture the board actually contains.
+    // AND IT IS LIT FROM BEHIND, WHICH IT WAS NOT. Cropping the board's RUA DO BAIRRO panel
+    // and putting it beside this frame (`test/board.js`) says the routed impression — "we
+    // are darker and heavier than the board" — is wrong on the mean and right on the shape.
+    // Whole frame: board luma 90.1 / C* 19.5, this frame at MANHÃ 130.5 / 15.6. We are half
+    // again as bright and LESS saturated. But top-of-frame down to the ground line, in
+    // fifths, the board runs 141 101 83 60 66 — brightest at the top, receding into shade —
+    // and this frame ran 116 140 145 138 112, an inverted U with the darkest fifth ON TOP.
+    // That is the enclosure: not a dark picture, a picture with a lid on it, and a lid is
+    // the one thing none of the board's street panels has.
+    // So the mass keeps its depth — open sky was the wave-11 gain and it does not move a
+    // tenth — and takes the light instead. The columns are ground-level foliage seen from
+    // in front and they stay at `frenteC/frenteL`; this is a canopy seen from UNDER, with
+    // the whole sky behind it, so it grades from the column greens in the deep corners to
+    // the near-mata greens across the thin middle, where a leaf that shallow is holding
+    // daylight on the other side of it.
     const dTopo = W * 0.46, dMeio = W * 0.16, alcance = W * 0.46;
+    // twelve steps of that grade, built once for the pass, so it is still two cached colour
+    // strings per column and not two string builds per column
+    const rampaK = [], rampaM = [];
+    for (let s = 0; s < 12; s++) {
+      const t = s / 11;
+      rampaK.push(rgbS(mixA(P.frenteCA, P.brilhoA, (1 - t) * 0.42)));
+      rampaM.push(rgbS(mixA(P.frenteLA, P.brilhoA, (1 - t) * 0.42)));
+    }
     for (let x = 0; x < W; x++) {
       const borda2 = Math.max(0, 1 - Math.min(x, W - 1 - x) / alcance);
       const d = Math.round(dMeio + dTopo * Math.pow(borda2, 1.45)
@@ -4257,6 +4280,8 @@ function drawScene() {
         + Math.sin(x * 0.081 + 2.3) * (W * 0.048)
         + Math.sin(x * 0.63 + 4.9) * (W * 0.018));   // the same leaf scallop, along x
       if (d <= 0) continue;
+      const s = Math.round(Math.pow(borda2, 1.45) * 11);   // 11 in the corners, 0 in the middle
+      const escuro = rampaK[s], meio = rampaM[s];
       const banda = ((x >> 2) & 1);
       cx.fillStyle = banda ? escuro : meio;
       cx.fillRect(x, 0, 1, d);
