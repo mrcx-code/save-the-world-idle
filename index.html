@@ -69,17 +69,16 @@
      olive, and the gear as its own square at the end of the row. */
   #hudTop { position: fixed; z-index: 10; left: 0; right: 0; top: 0;
     padding-top: env(safe-area-inset-top);
-    display: flex; gap: 0; align-items: stretch; pointer-events: none;
-    background: #14180d; }   /* owner: the top strip fills the width of the screen */
-  #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; align-items: stretch;
-    background: #14180d; border: 0; border-radius: 0; padding: 8px 10px; box-shadow: none; }
-  .chip { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px;
-    background: transparent; border-radius: 0; padding: 4px 6px; color: var(--chromeT); }
-  .cInfo { min-width: 0; flex: 1; }
-  .chip .rotulo { font-size: var(--fs-xs); color: var(--chromeS); white-space: nowrap; overflow: hidden;
-    letter-spacing: .06em; font-weight: 700; }
-  .chip .valor { font-size: var(--fs-md); font-weight: 800; line-height: 1.15; color: var(--chromeT);
-    font-variant-numeric: tabular-nums; }
+    display: flex; pointer-events: none; background: #14180d; }
+  #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; align-items: center;
+    justify-content: center; padding: 10px 12px 11px; }
+  /* one reading, centred, with the leaf beside it */
+  .chip { min-width: 0; display: flex; align-items: center; gap: 9px; color: var(--chromeT); }
+  .cInfo { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+  .chip .rotulo { font-size: 9px; color: var(--chromeS); white-space: nowrap;
+    letter-spacing: .22em; font-weight: 700; margin-top: 1px; }
+  .chip .valor { font-size: var(--fs-lg); font-weight: 800; line-height: 1.05; color: var(--gold);
+    font-variant-numeric: tabular-nums; letter-spacing: .01em; }
   /* removed by owner: the gear button (#openConfig) opened the metrics panel — both gone. */
   .pi { image-rendering: pixelated; width: 20px; height: 20px; flex: 0 0 auto; }
   .pi.big { width: 30px; height: 30px; }
@@ -193,7 +192,7 @@
   /* the four cards — icon over name over value, exactly the board's card */
   #cartoes { display: flex; gap: 6px; margin-bottom: 6px; }
   .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: row; align-items: center;
-    justify-content: center; gap: 7px; padding: 12px 6px; border-radius: 0;
+    justify-content: center; gap: 7px; padding: 12px 6px; border-radius: 12px;
     background: #2b331c; }
   .cartao .cn { font-size: var(--fs-xs); letter-spacing: .06em; color: var(--creme);
     white-space: nowrap; overflow: hidden; }
@@ -226,7 +225,7 @@
   /* THE primary action: gold, a soft inner sheen and a gentle lift so it reads as the one
      button that matters — no hard offset block under it anymore */
   #btnClique { flex: 1 1 auto; min-width: 0; min-height: 62px; padding: 9px 10px;
-    border-radius: 0;
+    border-radius: 14px;
     font-size: var(--fs-lg); font-weight: 800;
     background: var(--ouroA);
     color: #221806; border: 0; letter-spacing: .02em;
@@ -389,7 +388,7 @@
 <div id="hudTop">
   <div id="barraTopo">
     <div class="chip" id="chipTaxa"><canvas class="pi" data-i="leaf" width="12" height="12"></canvas>
-      <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo"><span id="taxa">0</span>/s</div></div></div>
+      <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo">IMPACT</div></div></div>
     <!-- owner: the team-health chip is gone too — tiredness had no source left once the
          projects that emitted it were removed. -->
     <!-- owner: the third chip (world %) is gone — the top row is impact and team only. -->
@@ -5957,14 +5956,13 @@ function desenharMundo() {
 // ---------- HUD ----------
 const $ = id => document.getElementById(id);
 function fmt(n) {
-  if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
-  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e9) return (n / 1e9).toFixed(3) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(3) + "M";
   if (n >= 1e4) return (n / 1e3).toFixed(1) + "K";
   return Math.floor(n).toLocaleString("en-US");
 }
 function desenhar() {
   $("energia").textContent = fmt(S.energia);
-  $("taxa").textContent = prodPorSegundo().toFixed(1);
   $("ganhoClique").textContent = ganhoClique().toFixed(1);
 
   // the rhythm card: icon, name and colour follow S.modo. This used to live in
