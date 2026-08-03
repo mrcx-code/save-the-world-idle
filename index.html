@@ -2005,6 +2005,35 @@ function pal(h) {
     // on — "everything in front of it reads as a silhouette against light". A defect on
     // paper that the bench cannot measure is not a defect worth paying a rank for.
   }
+  // THE FRAME'S OWN CHROMA, WAVE 19. The top fifth measures C* 15.5 against the board's 18.7
+  // and it is the widest single gap left in the picture — `quinto.js` attributes 40% of that
+  // fifth to seven entries and they are all proscenium: `muroM/muroC/muroK/muroL` and
+  // `colunaC/colunaL/colunaB`. Wave 14 took their mass in VALUE, which is why they are there
+  // and why they must stay dark; but a colour taken down in value and then given `luzDoDia`'s
+  // flat daylight lift on top comes back GREYER than it went in — the lift adds the same
+  // amount to three channels that are no longer far apart. So the residual is re-expanded
+  // around the entry's own Rec.709 luma, the wave 12/13/15/16 move: value moves by zero (the
+  // expansion is applied to c − y, whose luma weights sum to zero) and only saturation comes
+  // back. Dark foliage and shaded masonry in a picture with this much bounced light are a
+  // deeper green and a warmer brown, not a greyer one — which is the argument wave 14 already
+  // wrote beside these same entries when it widened their channel ramp by hand.
+  // DAYLIGHT ONLY, and that is measured and not assumed: wave 15 ran a chroma gain flat
+  // across the clock and it INVERTED what wave 12 bought, the boy dropping below his own
+  // street at NOITE. `escuridao()` is exactly 0 at MANHÃ, so this is at full strength by day
+  // and gone after dark, and every NOITE number in this file stays in the digit.
+  {
+    const dia = 1 - escuridao();
+    if (dia > 0.001) {
+      const ganhoC = function (k, g) {
+        const c = P[k + "A"], y = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+        const gg = 1 + (g - 1) * dia;
+        const c2 = [cl255(y + (c[0] - y) * gg), cl255(y + (c[1] - y) * gg), cl255(y + (c[2] - y) * gg)];
+        P[k + "A"] = c2; P[k] = rgbS(c2);
+      };
+      ["muroC", "muroM", "muroK", "muroL", "muroS",
+        "colunaC", "colunaL", "colunaB"].forEach(function (k) { ganhoC(k, 1.30); });
+    }
+  }
   // thick air eats the bright strip on the horizon: the band is the value architecture, so
   // it is dimmed rather than moved, and it comes straight back when you go steady
   P.faixa = rgbS(mixA(mixA(horiz, [255, 255, 255], 0.12), hazeLuz(), rq * 0.34));
