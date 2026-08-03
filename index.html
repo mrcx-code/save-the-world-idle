@@ -3789,7 +3789,10 @@ CENARIOS.rua = {
     // furthest away — it fought the hero for the eye. More haze, and its windows are a
     // texture on a mass now instead of black holes punched through it.
     const cityC = P.cidade;
-    const spacing = 420, speed = 0.16;
+    // and the town being rebuilt was on screen even less often than the matriz — 420 px of
+    // spacing for 68 px of towers, i.e. one frame in six. The windows coming on as the world
+    // heals is one of the few things in the picture that answers the economy directly.
+    const spacing = 250, speed = 0.16;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed) + 40;
@@ -3849,14 +3852,33 @@ CENARIOS.rua = {
     // They stand ON the separator band, not behind it. Rooted at GROUND-8 like the skyline
     // they were simply eaten by the tree line — distant things belong higher on the picture
     // plane, and a silhouette whose feet sit on the light strip is the value architecture.
-    const spacing = 460, speed = 0.15, base = GROUND - 29;
+    // WAVE 21: ONE LANDMARK EVERY 460 SCREEN PIXELS IS ONE LANDMARK EVERY THREE SCREENFULS.
+    // `test/mundo.js` put the number on it: the matriz was on the screen in 4 frames out of
+    // 10 and took 3.7% of the picture at its very best, and the massif with the figure — the
+    // single most Brazilian silhouette in the file — was simply never up when anyone looked.
+    // The owner asked *cadê o Brasil* and the honest answer was "two screens back". Spacing
+    // more than halves and every landmark is drawn 1.55x, which is also the RIGHT way to
+    // close sky: waves 11-14 closed it with a wall at the edges, and a picture closes its sky
+    // properly by putting the place INTO it.
+    // 250 was tried first and `mundo.js` caught the hole: at worldX 3800 the landmark lands
+    // at sx −70 with 71 px of width, i.e. one column of it on the screen, and that frame
+    // measured 0.18% marco and 28.5% sky — the emptiest of the ten. 210 is shorter than the
+    // frame minus a landmark's width, so there is always one up.
+    const spacing = 210, speed = 0.15, base = GROUND - 29, E = 1.55;
     const corpo = P.marcoC, claro = P.marcoL, escuro = P.marcoE;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed);
-      if (sx > W + 20 || sx < -110) continue;
-      // px(colour, x, y, w, h) — y is the height of the rect's BOTTOM above the horizon line
-      const px = function (c, x, y, w2, h2) { cx.fillStyle = c; cx.fillRect(sx + x, base - y - h2, w2, h2); };
+      if (sx > W + 20 || sx < -170) continue;
+      // px(colour, x, y, w, h) — y is the height of the rect's BOTTOM above the horizon line.
+      // Both ends of every span are scaled and THEN rounded, so neighbouring rects still meet
+      // exactly and a scaled monument has no seams in it.
+      const px = function (c, x, y, w2, h2) {
+        const x0 = Math.round(x * E), x1 = Math.round((x + w2) * E);
+        const y0 = Math.round(y * E), y1 = Math.round((y + h2) * E);
+        cx.fillStyle = c;
+        cx.fillRect(sx + x0, base - y1, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+      };
       const mixTelha = P.marcoRL;
       // an arched opening — a rect with a half-round head. Every door and window in the
       // board's CENTRO HISTÓRICO is one of these, and a square hole reads as a modern block.
@@ -3967,35 +3989,41 @@ CENARIOS.rua = {
   // the tree line, so the frame reads city → hillside → forest → the street he is running
   // on. Warm, ordinary, and the thing the whole game is asking you to save.
   {
-    const speed = 0.21, spacing = 340, base = GROUND - 27;
+    // WAVE 21: AND THIS IS THE ONE THAT MATTERS MOST, so it is the one that grows most. The
+    // hillside was on screen in 4 frames out of 10 at 2.8% of the picture — a brown lump
+    // forty rows tall sitting under a wall of leaves — and it is the thing the whole game is
+    // asking you to save. Every house is a third bigger, the slope is half again as tall, the
+    // stretches that have one go from 38% to 78%, and they repeat every 230 screen pixels
+    // instead of every 340.
+    const speed = 0.21, spacing = 230, base = GROUND - 27, CEL = 16, AND = 14;
     const paredes = P.parede, luzP = P.paredeL, telha = P.telha, telhaL = P.telhaL;
     const traco = P.traco, caixa = P.caixa, morro = P.morro;
     const q0 = Math.floor(worldX * speed / spacing) - 1;
     for (let k = q0; k < q0 + Math.ceil(W / spacing) + 2; k++) {
       const sx = Math.round(k * spacing - worldX * speed);
-      if (sx > W + 20 || sx < -140) continue;
-      if (hash01(k * 37 + 11) > 0.62) continue;         // not every stretch has one
+      if (sx > W + 20 || sx < -12 * CEL) continue;
+      if (hash01(k * 37 + 11) > 0.78) continue;         // not every stretch has one
       const altos = [];
-      for (let c = 0; c < 10; c++) {                    // the slope they are built on
-        const t = c / 9;
-        altos.push(3 + Math.round(28 * Math.pow(Math.sin(t * Math.PI), 0.7) * (0.72 + hash01(k * 7 + c) * 0.45)));
+      for (let c = 0; c < 11; c++) {                    // the slope they are built on
+        const t = c / 10;
+        altos.push(4 + Math.round(44 * Math.pow(Math.sin(t * Math.PI), 0.7) * (0.72 + hash01(k * 7 + c) * 0.45)));
         cx.fillStyle = morro;
-        cx.fillRect(sx + c * 12, base - altos[c] - 4, 13, altos[c] + 6);
+        cx.fillRect(sx + c * CEL, base - altos[c] - 5, CEL + 1, altos[c] + 7);
       }
-      for (let c = 0; c < 10; c++) {
-        const alto = altos[c], degrau = Math.round(hash01(k * 5 + c * 3) * 7);
-        for (let j = 0; j * 11 < alto; j++) {
+      for (let c = 0; c < 11; c++) {
+        const alto = altos[c], degrau = Math.round(hash01(k * 5 + c * 3) * 9);
+        for (let j = 0; j * AND < alto; j++) {
           const s2 = hash01(k * 53 + c * 9 + j * 3);
-          const x = sx + c * 12 + (s2 > 0.6 ? 1 : 0), y = base - j * 11 - degrau;
+          const x = sx + c * CEL + (s2 > 0.6 ? 1 : 0), y = base - j * AND - degrau;
           const ci = Math.floor(s2 * 6) % 6, ti = Math.floor(s2 * 17) % 3;
-          cx.fillStyle = paredes[ci]; cx.fillRect(x, y - 9, 12, 9);
-          cx.fillStyle = luzP[ci]; cx.fillRect(x + 10, y - 9, 2, 9);
-          cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 12, 14, 3);
-          cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 12, 14, 1);
-          cx.fillStyle = traco; cx.fillRect(x + 2, y - 5, 3, 5);            // a door onto the steps
+          cx.fillStyle = paredes[ci]; cx.fillRect(x, y - 12, CEL, 12);
+          cx.fillStyle = luzP[ci]; cx.fillRect(x + CEL - 3, y - 12, 3, 12);
+          cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 16, CEL + 2, 4);
+          cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 16, CEL + 2, 2);
+          cx.fillStyle = traco; cx.fillRect(x + 2, y - 7, 4, 7);            // a door onto the steps
           cx.fillStyle = (h > 0.5 || acendeu(k * 17 + 3)) ? "rgba(253,231,157,.85)" : traco;
-          cx.fillRect(x + 7, y - 7, 3, 3);                                  // one window
-          if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 8, y - 15, 4, 3); }  // water tank
+          cx.fillRect(x + 9, y - 9, 4, 4);                                  // one window
+          if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 10, y - 20, 5, 4); }  // water tank
         }
       }
     }
@@ -4630,7 +4658,21 @@ CENARIOS.rua = {
     // ground on all three axes (MANHÃ luma 25 → 29, croma 74 → 81, dE 18 → 21 of 485).
     // Open sky also went THROUGH the held 31.2% to 30.1%. So 0.092·W is the limit: past it
     // the frame stops being two buildings and becomes a tunnel again.
-    const wBase = W * 0.092, wSwell = W * 0.16, wLobo = W * 0.021;
+    // WAVE 21: THE SWELL IS CUT BY MORE THAN HALF, AND THE REASON IS A BENCH THAT DID NOT
+    // EXIST UNTIL NOW. Waves 11 to 14 had exactly one framing number — open sky, target 23.6%
+    // — and every cheap way to move that number is to put mass in front of the sky. So the
+    // proscenium grew, each step measured, each step an improvement by the only measure on
+    // the bench, and nobody ever asked how much of the WORLD was left. `test/mundo.js` asks
+    // it: at 0.092 + 0.16·W the frame measured **24.4% proscenium and 50.8% world**, with the
+    // matriz visible in 4 frames out of 10 at 3.7% of the picture at its very best and the
+    // painted morro in 4 out of 10 at 2.8%. The owner read that off the screen without any
+    // bench at all — *cadê o Brasil?* — and he was right: the massif, the cliff lift, the
+    // matriz, the arcade, the morro and the town are all still drawn and none of them can be
+    // seen. A frame that hits its sky target by hiding the game is worse than one that misses.
+    // The BASE does not move — it is bounded by the mob queue and wave 14 measured that bound
+    // — so the cut is all in the swell, which is the part that closes the TOP of the frame
+    // where the landmarks and the hillside live: 0.252·W at the top edge becomes 0.167·W.
+    const wBase = W * 0.092, wSwell = W * 0.075, wLobo = W * 0.021;
     const perfil = function (y, fase) {
       const t = y / fim;
       return Math.max(0, Math.round(wBase + wSwell * Math.pow(1 - t, 2.2)
@@ -4748,7 +4790,14 @@ CENARIOS.rua = {
     // debt is real and it is left standing, because the only place left to repay it where
     // anyone can see is the middle of the top edge, which is the one thing this wave exists
     // to open.
-    const dTopo = W * 0.72, dMeio = W * 0.045, alcance = W * 0.34;
+    // WAVE 21, THE SAME CUT: 0.72·W is 115 rows of leaf in each top corner of a 282-row
+    // canvas, and `alcance` 0.34·W carries it a third of the way across. Between that and the
+    // columns' swell the top of the frame — which is exactly where the massif, the matriz and
+    // the hillside stand — was closed on both sides. The corners STAY dark, because wave 14's
+    // value gain was real and the board's own panel has dark corners; they stop being a third
+    // of the picture. 0.40·W over 0.26·W puts the deepest leaf at 64 rows and pulls the grade
+    // back to a corner instead of a lid.
+    const dTopo = W * 0.40, dMeio = W * 0.045, alcance = W * 0.26;
     // twelve steps of that grade, built once for the pass, so it is still two cached colour
     // strings per column and not two string builds per column
     const rampaK = [], rampaM = [];
