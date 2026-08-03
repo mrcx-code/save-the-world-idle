@@ -2603,9 +2603,45 @@ function desenharMagias() {
 const CETRO = { casca: "#3a2712", mad: "#6d4620", madL: "#96682f", cord: "#da7a29",
   cordL: "#f3a03d", folha: "#525d2a", folhaL: "#767f34", conta: "#eba748",
   cristal: "#9fc4bd", cristalL: "#dad8c0" };
+// ---------- THE HOUR, ON THE HERO ----------
+// He was the one thing in the frame drawn in fixed colours, so at midnight he stood in the
+// street lit as if it were noon — a cut-out pasted onto the picture. He takes the hour now,
+// but not the same dose the world takes, because two things have to survive it:
+//   · HE HAS TO STAY READABLE AT PHONE SIZE. The world's dimming (`escala`, 0.44 at NOITE)
+//     would sink a 22 px character into the ground plane. His is FLOORED — a third of the
+//     way back to full — and the hour's tint reaches him at 80% strength, so night moves
+//     him a long way in hue and only a little in value. He goes cool and quiet; he never
+//     goes to a silhouette.
+//   · THE CETRO STAYS THE BRIGHTEST THING IN A DARK FRAME. Its wood takes an even gentler
+//     dose (floored more than half way, tint at 45%), and the lit hub, the crystal and
+//     everything `luz()` draws are not touched by the hour at all. So as the street goes
+//     down around him, the staff's share of the frame's light goes UP, which is the read
+//     the direction asks for: the Cetro is the light source, not a lit object.
+// Both are resolved on 24 steps of the day and the hero's sprite is re-baked on the step,
+// so a normal frame is still one drawImage and a handful of cached colour strings.
+function hexA(s) { return [parseInt(s.substr(1, 2), 16), parseInt(s.substr(3, 2), 16), parseInt(s.substr(5, 2), 16)]; }
+function luzPersonagem(c, piso, forcaF) {
+  const q = horaAgora();
+  const esc = lerp(lerp(q.a.escala, q.b.escala, q.f), 1, piso);
+  const forca = lerp(q.a.forca, q.b.forca, q.f) * forcaF;
+  const tin = mixA(q.a.tinta, q.b.tinta, q.f);
+  return mixA([cl255(c[0] * esc), cl255(c[1] * esc), cl255(c[2] * esc)], tin, forca);
+}
+let heroPasso = -1, heroCor = {}, cetroCor = {}, HERO_HORA = HERO_COLORS, CETRO_H = null;
+function hc(hex) { let v = heroCor[hex]; if (!v) v = heroCor[hex] = rgbS(luzPersonagem(hexA(hex), 0.34, 0.80)); return v; }
+function cc(hex) { let v = cetroCor[hex]; if (!v) v = cetroCor[hex] = rgbS(luzPersonagem(hexA(hex), 0.58, 0.45)); return v; }
+function heroLuzPasso() {
+  const k = horaKey() >> 2;                        // 24 steps a day, a few re-bakes a minute
+  if (k !== heroPasso) {
+    heroPasso = k; heroCor = {}; cetroCor = {};
+    HERO_HORA = {}; for (const c in HERO_COLORS) HERO_HORA[c] = hc(HERO_COLORS[c]);
+    CETRO_H = {}; for (const c in CETRO) CETRO_H[c] = cc(CETRO[c]);
+  }
+  return heroPasso;
+}
 const rodaCv = {};
 function rodaCanvas(r, aceso) {
-  const id = r + "," + aceso;
+  const id = r + "," + aceso + "," + heroLuzPasso();
   if (rodaCv[id]) return rodaCv[id];
   const R = r + 6, N = R * 2 + 1;                  // room for the leaves off the rim
   const c = document.createElement("canvas");
@@ -2621,27 +2657,27 @@ function rodaCanvas(r, aceso) {
       const d = r + 1 + s, wdt = s < 3 ? 2 - (s > 1 ? 1 : 0) : 0;
       const bx = Math.round(lx * d), by = Math.round(ly * d);
       for (let o = -wdt; o <= wdt; o++) {
-        px(bx - Math.round(ly * o), by + Math.round(lx * o), o < 0 ? CETRO.folhaL : CETRO.folha);
+        px(bx - Math.round(ly * o), by + Math.round(lx * o), o < 0 ? CETRO_H.folhaL : CETRO_H.folha);
       }
     }
   }
   // the rim: two rings, the outer one dark so the wheel keeps a hard silhouette
   for (let a = 0; a < 360; a += 3) {
     const rad = a * Math.PI / 180, co = Math.cos(rad), si = Math.sin(rad);
-    px(Math.round(co * r), Math.round(si * r), CETRO.casca);
-    px(Math.round(co * (r - 1)), Math.round(si * (r - 1)), si < -0.2 || co > 0.4 ? CETRO.madL : CETRO.mad);
-    px(Math.round(co * (r - 2)), Math.round(si * (r - 2)), CETRO.mad);
+    px(Math.round(co * r), Math.round(si * r), CETRO_H.casca);
+    px(Math.round(co * (r - 1)), Math.round(si * (r - 1)), si < -0.2 || co > 0.4 ? CETRO_H.madL : CETRO_H.mad);
+    px(Math.round(co * (r - 2)), Math.round(si * (r - 2)), CETRO_H.mad);
   }
   // eight spokes out of a hub, which is what makes it a wheel and not a ring
   for (let k = 0; k < 8; k++) {
     const a = k * Math.PI / 4;
     for (let d = 2; d < r - 1; d++) {
-      px(Math.round(Math.cos(a) * d), Math.round(Math.sin(a) * d), k % 2 ? CETRO.mad : CETRO.madL);
+      px(Math.round(Math.cos(a) * d), Math.round(Math.sin(a) * d), k % 2 ? CETRO_H.mad : CETRO_H.madL);
     }
   }
   // the hub: wood, then the sun inside it
   for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) {
-    if (Math.abs(x) + Math.abs(y) <= 3) px(x, y, CETRO.casca);
+    if (Math.abs(x) + Math.abs(y) <= 3) px(x, y, CETRO_H.casca);
   }
   const nucleo = aceso ? ["#fffbe8", "#f3c05c", "#da7a29"] : ["#f3c05c", "#c8891f", "#8a5a2e"];
   px(0, 0, nucleo[0]);
@@ -2651,6 +2687,7 @@ function rodaCanvas(r, aceso) {
   return rodaCv[id];
 }
 function vara(x0, y0v, x1, y1v, brilho) {
+  heroLuzPasso();
   const n = Math.max(2, Math.abs(x1 - x0), Math.abs(y1v - y0v));
   const dx = x1 - x0, dy = y1v - y0v, len = Math.max(1, Math.hypot(dx, dy));
   const nx = -dy / len, ny = dx / len;             // perpendicular, for the bow
@@ -2661,24 +2698,24 @@ function vara(x0, y0v, x1, y1v, brilho) {
     py.push(Math.round(y0v + dy * t + ny * arc));
     pw.push(t < 0.72 ? 2 : 1);                     // thick at the hand, whittled at the tip
   }
-  cx.fillStyle = CETRO.casca;
+  cx.fillStyle = CETRO_H.casca;
   for (let i = 0; i <= n; i++) cx.fillRect(px[i] - 1, py[i] - 1, pw[i] + 2, pw[i] + 2);
-  cx.fillStyle = CETRO.mad;
+  cx.fillStyle = CETRO_H.mad;
   for (let i = 0; i <= n; i++) cx.fillRect(px[i], py[i], pw[i], pw[i]);
-  cx.fillStyle = CETRO.madL;                       // the sun catches one side of the shaft
+  cx.fillStyle = CETRO_H.madL;                       // the sun catches one side of the shaft
   for (let i = 0; i <= n; i++) cx.fillRect(px[i] + pw[i] - 1, py[i], 1, pw[i]);
   // the cord, spiralling the whole length of the shaft — the board devotes a close-up to it
   for (let i = 2; i < n - 1; i += 3) {
-    cx.fillStyle = (i >> 1) % 2 ? CETRO.cordL : CETRO.cord;
+    cx.fillStyle = (i >> 1) % 2 ? CETRO_H.cordL : CETRO_H.cord;
     cx.fillRect(px[i], py[i], 2, 1);
   }
   // and a couple of leaves sprouting off a stick that is still alive
   for (let k = 0; k < 2; k++) {
     const i = Math.round(n * (0.30 + k * 0.26)), sgn = k % 2 ? 1 : -1;
     if (i < 1 || i > n) continue;
-    cx.fillStyle = CETRO.folha;
+    cx.fillStyle = CETRO_H.folha;
     cx.fillRect(px[i] + Math.round(nx * 2 * sgn), py[i] + Math.round(ny * 2 * sgn), 2, 2);
-    cx.fillStyle = CETRO.folhaL;
+    cx.fillStyle = CETRO_H.folhaL;
     cx.fillRect(px[i] + Math.round(nx * 3 * sgn), py[i] + Math.round(ny * 3 * sgn), 1, 1);
   }
   const kx = px[n], ky = py[n];
@@ -2688,10 +2725,10 @@ function vara(x0, y0v, x1, y1v, brilho) {
   // hanging cords: two beads on one, a crystal on the other. They fall with gravity, not
   // with the staff, so they lag behind the swing instead of being welded to it.
   const balanco = Math.round(Math.sin(animT * 3.1) * 1.2);
-  cx.fillStyle = CETRO.cord;
+  cx.fillStyle = CETRO_H.cord;
   cx.fillRect(kx - 3 + balanco, ky + 6, 1, 5);
   cx.fillRect(kx + 3, ky + 6, 1, 7);
-  cx.fillStyle = CETRO.conta;
+  cx.fillStyle = CETRO_H.conta;
   cx.fillRect(kx - 4 + balanco, ky + 11, 3, 2);
   cx.fillStyle = CETRO.cristal; cx.fillRect(kx + 2, ky + 13, 3, 4);
   cx.fillStyle = CETRO.cristalL; cx.fillRect(kx + 3, ky + 14, 1, 2);
@@ -2716,6 +2753,7 @@ function vara(x0, y0v, x1, y1v, brilho) {
   }
 }
 function drawHero() {
+  heroLuzPasso();                                   // resolve him under the hour, once a step
   // the leap: rises fast, hangs, then drops hard onto the ground
   const air = jumpT > 0;
   const pj = air ? 1 - jumpT / JUMPF : 0;            // 0 = take-off, 1 = landing
@@ -2748,7 +2786,7 @@ function drawHero() {
       cx.save();
       cx.translate(pivoX, pivoY + i * 3); cx.rotate(rot - i * 0.42); cx.translate(-pivoX, -pivoY);
       cx.globalAlpha = 0.30 - i * 0.10;
-      drawMap("hero", HERO_MAP, HERO_COLORS, bx, y0);
+      drawMap("hero" + heroPasso, HERO_MAP, HERO_HORA, bx, y0);
       cx.globalAlpha = 1; cx.restore();
     }
   }
@@ -2762,35 +2800,35 @@ function drawHero() {
   const cloth = 7 + flap;
   for (let r = 0; r < cloth; r++) {
     const wdt = 3 + Math.round(r * 0.55), xx = bx + 3 - wdt, yy = y0 + 16 + r;
-    cx.fillStyle = "#14170c"; cx.fillRect(xx - 1, yy, wdt + 1, 1);
-    cx.fillStyle = r < 2 ? "#e2d6b4" : r < cloth - 2 ? "#c2b490" : "#b3a47f";
+    cx.fillStyle = hc("#14170c"); cx.fillRect(xx - 1, yy, wdt + 1, 1);
+    cx.fillStyle = r < 2 ? hc("#e2d6b4") : r < cloth - 2 ? hc("#c2b490") : hc("#b3a47f");
     cx.fillRect(xx, yy, wdt, 1);
-    if (r === cloth - 1) { cx.fillStyle = "#da7a29"; cx.fillRect(xx, yy, wdt, 1); }
+    if (r === cloth - 1) { cx.fillStyle = hc("#da7a29"); cx.fillRect(xx, yy, wdt, 1); }
   }
-  cx.fillStyle = "#14170c"; cx.fillRect(bx + 3 - (3 + Math.round((cloth - 1) * 0.55)) - 1, y0 + 16 + cloth, 4 + Math.round((cloth - 1) * 0.55), 1);
+  cx.fillStyle = hc("#14170c"); cx.fillRect(bx + 3 - (3 + Math.round((cloth - 1) * 0.55)) - 1, y0 + 16 + cloth, 4 + Math.round((cloth - 1) * 0.55), 1);
   // ...and under it the fringe: strands of green and orange cord hanging off the belt, which
   // is the thing the board's PERSONAGEM sheet spends most of its detail on.
   for (let i = 0; i < 4; i++) {
     const fx = bx + 3 + i * 3, fl = 4 + ((i * 5) % 3) + (i % 2 ? flap : 0);
-    cx.fillStyle = "#14170c"; cx.fillRect(fx - 1, y0 + 26, 3, fl + 1);
-    cx.fillStyle = i % 2 ? "#767f34" : "#da7a29"; cx.fillRect(fx, y0 + 26, 1, fl);
-    cx.fillStyle = i % 2 ? "#525d2a" : "#eba748"; cx.fillRect(fx, y0 + 26 + fl - 2, 1, 2);
+    cx.fillStyle = hc("#14170c"); cx.fillRect(fx - 1, y0 + 26, 3, fl + 1);
+    cx.fillStyle = i % 2 ? hc("#767f34") : hc("#da7a29"); cx.fillRect(fx, y0 + 26, 1, fl);
+    cx.fillStyle = i % 2 ? hc("#525d2a") : hc("#eba748"); cx.fillRect(fx, y0 + 26 + fl - 2, 1, 2);
   }
   // back arm swings behind the torso: cream sleeve, dark hand
   const abx = bx + 4 + Math.round(P[4] * 0.4);
-  cx.fillStyle = "#14170c"; cx.fillRect(abx - 1, y0 + 16, 6, 10);
-  cx.fillStyle = "#d8cba6"; cx.fillRect(abx, y0 + 17, 4, 5);
-  cx.fillStyle = "#8a5a2e"; cx.fillRect(abx, y0 + 22, 4, 3);
+  cx.fillStyle = hc("#14170c"); cx.fillRect(abx - 1, y0 + 16, 6, 10);
+  cx.fillStyle = hc("#d8cba6"); cx.fillRect(abx, y0 + 17, 4, 5);
+  cx.fillStyle = hc("#8a5a2e"); cx.fillRect(abx, y0 + 22, 4, 3);
   // head + torso, baked once
-  drawMap("hero", HERO_MAP, HERO_COLORS, bx, y0);
+  drawMap("hero" + heroPasso, HERO_MAP, HERO_HORA, bx, y0);
   // legs (jeans + sneakers) — the back leg reads a value darker so the stride has depth
   const hipY = y0 + 26;
   // Baggy green trousers gathered at the ankle, and sandals — not jeans and sneakers. The
   // thigh is drawn a pixel wider than the shin, which is the whole read of "baggy" at this
   // size, and the back leg stays a value darker so the stride keeps its depth.
   function leg(hipX, dx, dy, back) {
-    const base = back ? "#3e4721" : "#525d2a", rim = back ? "#525d2a" : "#767f34";
-    cx.fillStyle = "#14170c";
+    const base = back ? hc("#3e4721") : hc("#525d2a"), rim = back ? hc("#525d2a") : hc("#767f34");
+    cx.fillStyle = hc("#14170c");
     cx.fillRect(hipX - 2, hipY - 1, 9, 10);
     cx.fillRect(hipX + dx - 1, hipY + 6, 7, 9 + dy);
     cx.fillStyle = base;
@@ -2799,13 +2837,13 @@ function drawHero() {
     cx.fillStyle = rim;                                   // sunlit right edge of the cloth
     cx.fillRect(hipX + 5, hipY, 1, 8);
     cx.fillRect(hipX + dx + 4, hipY + 7, 1, 7 + dy);
-    cx.fillStyle = "#da7a29";                             // the tie at the ankle
+    cx.fillStyle = hc("#da7a29");                             // the tie at the ankle
     cx.fillRect(hipX + dx, hipY + 13 + dy, 5, 1);
     const sy = hipY + 15 + dy, sxx = hipX + dx - (dx < 0 ? 2 : 1);
-    cx.fillStyle = "#14170c"; cx.fillRect(sxx - 1, sy - 2, 8, 4);
-    cx.fillStyle = back ? "#8a5a2e" : "#a9743f"; cx.fillRect(sxx, sy - 1, 6, 1);  // the foot
-    cx.fillStyle = back ? "#5c3b1f" : "#6d4620"; cx.fillRect(sxx, sy, 6, 1);      // the sole
-    cx.fillStyle = "#da7a29"; cx.fillRect(sxx + 2, sy - 1, 1, 1);                 // the strap
+    cx.fillStyle = hc("#14170c"); cx.fillRect(sxx - 1, sy - 2, 8, 4);
+    cx.fillStyle = back ? hc("#8a5a2e") : hc("#a9743f"); cx.fillRect(sxx, sy - 1, 6, 1);  // the foot
+    cx.fillStyle = back ? hc("#5c3b1f") : hc("#6d4620"); cx.fillRect(sxx, sy, 6, 1);      // the sole
+    cx.fillStyle = hc("#da7a29"); cx.fillRect(sxx + 2, sy - 1, 1, 1);                 // the strap
   }
   leg(bx + 6, P[2], P[3], true);   // back leg
   leg(bx + 11, P[0], P[1], false); // front leg
@@ -2815,18 +2853,18 @@ function drawHero() {
   // bracelet on the wrist — the board puts one on both arms.
   function braco(hx2, hy2) {
     const fw = Math.max(3, hx2 - asx - 3);
-    cx.fillStyle = "#14170c";
+    cx.fillStyle = hc("#14170c");
     cx.fillRect(asx + 3, y0 + 18, fw + 2, 6);       // forearm
     cx.fillRect(asx - 1, y0 + 16, 7, 7);            // upper arm, under the poncho
-    cx.fillStyle = "#a9743f"; cx.fillRect(asx + 4, y0 + 19, fw, 4);
-    cx.fillStyle = "#d8cba6"; cx.fillRect(asx, y0 + 17, 5, 5);
-    cx.fillStyle = "#f0e6c8"; cx.fillRect(asx, y0 + 17, 5, 2);
-    cx.fillStyle = "#c08a52"; cx.fillRect(asx + 4, y0 + 19, fw, 1);
-    cx.fillStyle = "#da7a29"; cx.fillRect(asx + 5, y0 + 19, 1, 4);   // the bracelet
-    cx.fillStyle = "#14170c"; cx.fillRect(hx2 - 1, hy2 - 1, 7, 7);
-    cx.fillStyle = "#a9743f"; cx.fillRect(hx2, hy2, 5, 5);
-    cx.fillStyle = "#c08a52"; cx.fillRect(hx2 + 3, hy2, 2, 5);
-    cx.fillStyle = "#8a5a2e"; cx.fillRect(hx2, hy2 + 4, 5, 1);
+    cx.fillStyle = hc("#a9743f"); cx.fillRect(asx + 4, y0 + 19, fw, 4);
+    cx.fillStyle = hc("#d8cba6"); cx.fillRect(asx, y0 + 17, 5, 5);
+    cx.fillStyle = hc("#f0e6c8"); cx.fillRect(asx, y0 + 17, 5, 2);
+    cx.fillStyle = hc("#c08a52"); cx.fillRect(asx + 4, y0 + 19, fw, 1);
+    cx.fillStyle = hc("#da7a29"); cx.fillRect(asx + 5, y0 + 19, 1, 4);   // the bracelet
+    cx.fillStyle = hc("#14170c"); cx.fillRect(hx2 - 1, hy2 - 1, 7, 7);
+    cx.fillStyle = hc("#a9743f"); cx.fillRect(hx2, hy2, 5, 5);
+    cx.fillStyle = hc("#c08a52"); cx.fillRect(hx2 + 3, hy2, 2, 5);
+    cx.fillStyle = hc("#8a5a2e"); cx.fillRect(hx2, hy2 + 4, 5, 1);
   }
   // The 3-hit combo, cast rather than swung. A new swing is detected here — attackT jumps
   // back up and attackType steps on — so the bolt is spawned from the drawing code and
