@@ -29,6 +29,15 @@ function chromiumPath() {
     await page.waitForTimeout(700);
     await page.screenshot({ path: path.resolve(__dirname, '..', 'look-' + tag + '-' + nome + '.png') });
   }
+  // the four light states, at a healed street
+  for (const [nome, frac] of [['manha', 0], ['tarde', 0.25], ['poschuva', 0.5], ['noite', 0.75]]) {
+    await page.evaluate(({ frac }) => {
+      Object.assign(S, { geradores: 60, energia: 90000, energiaTotal: 90000, poluicao: 0, modo: 'limpo' });
+      relogio = frac * DIA_SEG; desenhar();
+    }, { frac });
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: path.resolve(__dirname, '..', 'look-' + tag + '-' + nome + '.png') });
+  }
   const fps = await page.evaluate(() => new Promise(res => {
     let n = 0; const t0 = performance.now();
     (function f() { n++; performance.now() - t0 < 2000 ? requestAnimationFrame(f) : res(Math.round(n / 2)); })();

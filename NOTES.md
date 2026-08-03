@@ -1021,6 +1021,93 @@ toda sessão começa lendo a última entrada.
   I dispara em toda abertura de corrida, inclusive quando a pessoa só recarregou a página —
   não sei ainda se isso vira ritual ou ruído.**
 
+
+- **2026-08-02 · visual — a cara nova inteira, a partir do art board aprovado.** O dono
+  mandou esquecer o layout de hoje e seguir cem por cento o board: personagem, cetro,
+  cenário e UI. Mesma funcionalidade, cara nova — nenhuma fórmula, nenhum `CFG`, nenhum
+  campo do `S`, nenhum número da economia foi tocado; o `smoke.js` ficou verde em todos os
+  cinco incrementos. **FPS medido: 61 no começo e 61 no fim**, incluindo o campo de
+  paralelepípedos e a moldura, que são desenhados linha a linha todo frame.
+
+  **(1) A paleta, amostrada do próprio board.** Rodei um script que lê os pixels da tira
+  PALETA e saí com as seis famílias em hex: TERRA `#512d0c #804411 #9d561c #b9732c`,
+  FOLHAS `#3e4721 #525d2a #767f34 #979a46`, ÁGUA `#54827d #71a39c #dad8c0`, CÉU
+  `#567c8f #87a7ab`, LUZ `#fde79d #e3b970 #a88148 #5c421f`, ACENTO
+  `#22190d #482f19 #5c3b1f #da7a29 #f3a03d`. Todo o mundo foi reautorado dentro delas.
+  A mudança estrutural: **a ponta doente da `PALETA` deixou de ser escrita à mão**. Eram 40
+  pares independentes; agora só a ponta sã é autorada e `desbotar()` deriva a doente
+  guardando e **levantando** o valor e derrubando a croma para uma memória do ocre quente
+  do board — uma regra só, aplicada igual em toda parte. O chão virou pedra quente (TERRA e
+  LUZ) e não mais grama. O chrome parou de falar azul-marinho: creme sobre verde-oliva
+  profundo, dourado guardado para a barra e para o único botão que importa.
+
+  **(2) O menino e o BASTÃO — CETRO DA VIDA.** Herói trocado, não ajustado: pele escura,
+  coroa grande de cabelo cacheado com folhas e florzinhas laranja dentro, poncho creme
+  bordado caindo num pano só pelo ombro de trás, calça verde franjada e sandálias. A
+  silhueta é **larga na cabeça e estreita no tornozelo de propósito** — o cabelo é a
+  leitura a 22 px, e foi por isso que o primeiro desenho falhou: rosto grande demais e
+  cabelo fino demais, virou uma bola marrom. Diminuí o rosto para 6 px de largura e o
+  cabelo passou a ocupar 17. O cetro é o objeto que o board dá uma página inteira: galho
+  trabalhado, cordão em espiral no cabo inteiro, folhas brotando dele, roda de oito raios
+  com miolo aceso, folhas saindo do aro, e cordas com conta e cristal pendurados que
+  **balançam atrasadas em relação ao golpe**. A roda é assada por `(raio, aceso)`, então um
+  golpe custa um `drawImage` e não trinta `fillRect`.
+
+  **(3) A gramática de UI do board, mapeada nas funções que já existem.** O dono disse que
+  esse painel é melhor que o atual, então o rodapé inteiro foi refeito na linguagem dele — e
+  **nada foi inventado para preencher**: barra de topo com três contadores numa pílula só e
+  uma engrenagem apartada (abre o painel do teste de três dias, a única superfície com cara
+  de config que existe aqui); painel de progresso `STREET n%` com barra dourada e uma linha
+  embaixo; quatro cartões ícone/nome/valor — o RITMO, os PROJETOS, os UPGRADES e a TOCHA, e
+  o cartão acende quando tem algo para você; e um trilho escuro embaixo com a única ação do
+  jogo. Cantos arredondados, gradiente suave, creme sobre oliva. Todos os ids que o JS lê
+  continuam existindo; o `--hControles` continua sendo medido do bloco real e continua
+  crescendo com ele (o teste confere).
+
+  **(4) A rua.** Do CENÁRIOS tirei composição, silhueta e densidade de props, **não** o
+  nível de detalhe — pintura à mão não cabe em `fillRect` a 60 FPS num arquivo só, e imitar
+  daria lama. Paralelepípedos em oito fiadas em perspectiva, cada uma mais alta, mais larga
+  e mais rápida que a de trás. **A primeira tentativa saiu listrada**: a junta estava a um
+  tom da face da pedra. Só passou a ler como calçamento quando a junta virou um degrau de
+  valor de verdade, pintada por baixo antes das pedras. Postes de luz inclinados com
+  travessa, nó de cabo e catenária real entre postes consecutivos — está em todas as
+  miniaturas do board. Casario de dois andares com telha capa-e-canal, beiral fundo, janela
+  de veneziana, porta na calçada, jardineira, vaso e trepadeira. E uma **moldura**: folhagem
+  escura fechando as duas bordas com recorte serrilhado, porque sem ela um side-scroller é
+  céu vazio com uma tirinha de coisas embaixo. As larguras da moldura são **frações de W** —
+  a primeira versão usava pixels e engoliu a tela inteira, já que o canvas é
+  `innerWidth / 3` e W dá 130 num telefone, não 320. As turbinas eólicas brancas eram a
+  coisa mais alta e mais fora do board no quadro: um projeto agora é um telhado que alguém
+  construiu — GO STEADY ganha horta e caixa d'água, GO FAST ganha um gerador que fumega.
+  Mesmos dois estados, mesma mecânica.
+
+  **(5) LUZ & ATMOSFERA: as quatro horas.** MANHÃ, TARDE, PÓS-CHUVA e NOITE, ciclo de
+  **240 s**, e **não é um véu por cima do quadro** — a direção não tem pós-processamento e
+  uma camada chapada acinzenta tudo que toca. A hora entra **dentro da resolução da paleta**
+  (`luzDoDia()`) e o céu ganha uma **rampa própria por hora** em vez de um tom por cima da
+  rampa do meio-dia, porque pôr do sol não é meio-dia com laranja. O relógio não lê a
+  economia: o arco doente→são já roda na saturação e pendurar um segundo significado nos
+  mesmos pixels tornaria os dois ilegíveis. À noite o sol some, saem 26 estrelas, e janelas
+  e luminárias acendem por escuridão e não só por saúde do mundo. Na hora do PÓS-CHUVA cada
+  poste escorre um reflexo pálido sobre a pedra. A paleta e o céu são reassados em 96
+  degraus de hora — algumas vezes por minuto, não por frame.
+
+  **O que não alcancei, e por quê.** As miniaturas do CENÁRIOS são ilustrações pintadas com
+  um nível de detalhe que desenho procedural não alcança a 60 FPS; peguei paleta, composição,
+  silhueta, densidade e as quatro luzes, e parei antes de virar ruído. Os marcos distantes
+  (parlamento, museu, ópera) continuam sendo os antigos — ficam na bruma, leem como "cidade
+  ao longe", mas não são o CENTRO HISTÓRICO do board. E **o herói não recebe a luz da hora**:
+  ele é desenhado com cores fixas e à noite fica aceso como se fosse meio-dia. Defensável
+  (o personagem tem que ser legível sempre, e ele carrega o Cetro da Vida), mas é uma
+  escolha que eu não tomei — foi orçamento.
+
+  **Medido no fim:** smoke verde, FPS 61 (era 61), `sim.js` intocado. **Próximo passo: as
+  folhas de NPCs, ITENS & RECURSOS e ÍCONES do board ainda estão quase todas por usar — os
+  vizinhos do cenário e os drops continuam com o desenho antigo, e a cadeira de rodas e o
+  cachorro do board não existem no jogo. Dúvida honesta: o ciclo de 240 s pode ser rápido
+  demais para quem joga em sessões de dois minutos, e não medi isso — pode ser que a hora
+  deva andar com o relógio real do aparelho em vez de com o tempo de sessão.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the

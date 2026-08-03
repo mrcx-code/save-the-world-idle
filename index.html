@@ -1768,21 +1768,62 @@ const MORRO_LUZ = [[230, 190, 120], [246, 232, 194], [212, 142, 92], [174, 186, 
 const MORRO_TELHA = [[150, 74, 44], [132, 68, 40], [142, 80, 48]];
 const MORRO_TELHAL = [[188, 102, 62], [168, 94, 56], [180, 106, 66]];
 const MORRO_CINZA = [154, 148, 132], MORRO_CINZAT = [140, 133, 118];
+// ---------- LUZ & ATMOSFERA: the four times of day ----------
+// The board devotes a whole strip to them — MANHÃ, TARDE, PÓS-CHUVA, NOITE — and they are
+// four different pictures of the same street, not four filters over one. So the light is
+// NOT a wash laid over the finished frame (the direction has no post-processing and a flat
+// overlay greys everything it touches): it is folded into the palette at the point the
+// palette is resolved, and into the sky ramp at the point the sky is baked. Every colour in
+// the world is therefore authored under that light, which is what the thumbnails show.
+//
+// It runs on the clock and on nothing else. It must not read the economy: the sick→healed
+// arc already runs on saturation and hanging a second meaning on the same pixels would make
+// both unreadable. One full day is CFG-free scenery, four minutes long.
+const HORAS = [
+  { nome: "MANHÃ", ceu: [[92, 138, 166], [122, 164, 182], [158, 190, 190], [196, 214, 198], [228, 232, 214]],
+    tinta: [232, 236, 214], forca: 0.05, escala: 1.02, escuro: 0 },
+  { nome: "TARDE", ceu: [[104, 110, 150], [168, 126, 124], [214, 154, 96], [236, 190, 124], [246, 222, 176]],
+    tinta: [246, 168, 84], forca: 0.24, escala: 0.95, escuro: 0.10 },
+  { nome: "PÓS-CHUVA", ceu: [[46, 72, 96], [70, 100, 120], [96, 128, 140], [140, 166, 168], [186, 204, 196]],
+    tinta: [150, 180, 196], forca: 0.18, escala: 0.86, escuro: 0.45 },
+  { nome: "NOITE", ceu: [[14, 24, 44], [20, 34, 58], [32, 50, 76], [50, 72, 96], [78, 100, 112]],
+    tinta: [46, 66, 110], forca: 0.34, escala: 0.44, escuro: 1 }
+];
+const DIA_SEG = 240;                        // one full turn of the four, in seconds
+let relogio = 0;                            // advanced by the frame loop, in seconds
+function horaAgora() {
+  const t = (relogio / DIA_SEG) % 1 * HORAS.length;
+  const i = Math.floor(t), f = t - i;
+  const s = f * f * (3 - 2 * f);            // smoothstep: the turn, not a cut
+  return { a: HORAS[i % HORAS.length], b: HORAS[(i + 1) % HORAS.length], f: s };
+}
+// how dark it is right now, 0..1 — what makes windows and street lamps come on
+function escuridao() { const q = horaAgora(); return lerp(q.a.escuro, q.b.escuro, q.f); }
+// the light applied to one already-resolved colour
+function luzDoDia(c) {
+  const q = horaAgora();
+  const esc = lerp(q.a.escala, q.b.escala, q.f), forca = lerp(q.a.forca, q.b.forca, q.f);
+  const tin = mixA(q.a.tinta, q.b.tinta, q.f);
+  return mixA([cl255(c[0] * esc), cl255(c[1] * esc), cl255(c[2] * esc)], tin, forca);
+}
+// quantised so the palette and the sky re-bake a handful of times a minute, not every frame
+function horaKey() { return Math.round((relogio / DIA_SEG) % 1 * 96); }
+
 let palCache = null, palKey = -1;
 function pal(h) {
-  const key = Math.round(h * 96);
+  const key = Math.round(h * 96) * 128 + horaKey();
   if (palCache && palKey === key) return palCache;
   palKey = key;
-  const hv = key / 96, tc = Math.pow(hv, 0.78);   // chroma leads value a little: colour is the reward
-  const horiz = horizonC(hv);
+  const hv = Math.round(h * 96) / 96, tc = Math.pow(hv, 0.78);   // chroma leads value a little
+  const horiz = luzDoDia(horizonC(hv));
   const P = { _h: hv };
-  const resolva = function (e) { return mixA(palMix(e[0], e[1], hv, tc), horiz, e[2]); };
+  const resolva = function (e) { return luzDoDia(mixA(palMix(e[0], e[1], hv, tc), horizonC(hv), e[2])); };
   for (const k in PALETA) { const c = resolva(PALETA[k]); P[k + "A"] = c; P[k] = rgbS(c); }
   P.faixa = rgbS(mixA(horiz, [255, 255, 255], 0.30));
   // the hillside families, sick end shared so a bleached favela is one grey mass with the
   // faintest memory of paint in it — which is exactly what a bleached photograph looks like
   const fam = function (arr, cinza, dist) {
-    return arr.map(function (c) { return rgbS(mixA(palMix(cinza, c, hv, tc), horiz, dist)); });
+    return arr.map(function (c) { return rgbS(luzDoDia(mixA(palMix(cinza, c, hv, tc), horizonC(hv), dist))); });
   };
   P.parede = fam(MORRO_PAREDE, MORRO_CINZA, 0.14);
   P.paredeL = fam(MORRO_LUZ, MORRO_CINZA, 0.12);
@@ -1815,13 +1856,19 @@ const CEU_DOENTE = CEU_SAO.map(desbotar);
 function rampaCeu(h, t) {                       // t: 0 at the zenith, 1 at the horizon
   const f = Math.min(0.999, Math.max(0, t)) * (CEU_SAO.length - 1);
   const i = Math.floor(f), k = f - i, tc = Math.pow(h, 0.78);
-  return mixA(palMix(CEU_DOENTE[i], CEU_SAO[i], h, tc), palMix(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h, tc), k);
+  const base = mixA(palMix(CEU_DOENTE[i], CEU_SAO[i], h, tc), palMix(CEU_DOENTE[i + 1], CEU_SAO[i + 1], h, tc), k);
+  // ...and then the hour. The sky is where the four light states are most of the picture,
+  // so it takes its OWN ramp per hour rather than a tint over the midday one — a sunset is
+  // not noon with orange on it. Health still decides how much colour survives the smoke.
+  const q = horaAgora();
+  const hora = mixA(mixA(q.a.ceu[i], q.a.ceu[i + 1], k), mixA(q.b.ceu[i], q.b.ceu[i + 1], k), q.f);
+  return mixA(base, hora, 0.30 + 0.55 * h);
 }
 // The sky is baked and rebuilt only when world health moves a step, so a normal frame is
 // one drawImage. Without the dither it is also two thirds cheaper to bake.
 let skyCv = null, skyKey = "";
 function skyCanvas(h) {
-  const key = W + "," + GROUND + "," + Math.round(h * 48);
+  const key = W + "," + GROUND + "," + Math.round(h * 48) + "," + horaKey();
   if (skyCv && skyKey === key) return skyCv;
   if (!skyCv) skyCv = document.createElement("canvas");
   skyCv.width = W; skyCv.height = GROUND + 2;
@@ -1842,11 +1889,24 @@ function skyCanvas(h) {
       if (w > 0) g.fillRect(sunX - w, sunY + y, w * 2, 1);
     }
   };
-  g.globalAlpha = 0.16 + 0.22 * h; disco(rgbS(mixA([226, 220, 204], [255, 236, 150], h)), r + 5);
-  g.globalAlpha = 0.34 + 0.30 * h; disco(rgbS(mixA([230, 224, 208], [255, 240, 168], h)), r + 2);
+  const qH = horaAgora(), noite = lerp(qH.a.escuro, qH.b.escuro, qH.f);
+  const sunC = function (a, b) { return rgbS(luzDoDia(mixA(a, b, h))); };
+  g.globalAlpha = (1 - noite) * (0.16 + 0.22 * h); disco(rgbS(mixA([226, 220, 204], [255, 236, 150], h)), r + 5);
+  g.globalAlpha = (1 - noite) * (0.34 + 0.30 * h); disco(rgbS(mixA([230, 224, 208], [255, 240, 168], h)), r + 2);
+  g.globalAlpha = 1 - noite * 0.94;
+  disco(sunC([216, 208, 188], [255, 228, 136]), r);
+  disco(sunC([228, 222, 206], [255, 252, 232]), Math.max(2, r - 3));
   g.globalAlpha = 1;
-  disco(rgbS(mixA([216, 208, 188], [255, 228, 136], h)), r);
-  disco(rgbS(mixA([228, 222, 206], [255, 252, 232], h)), Math.max(2, r - 3));
+  if (noite > 0.5) {          // and when it has gone, the stars the board hangs over NOITE
+    const nn = (noite - 0.5) * 2;
+    for (let st = 0; st < 26; st++) {
+      const sxx = Math.round(hash01(st * 13 + 1) * W);
+      const syy = Math.round(hash01(st * 29 + 5) * GROUND * 0.7);
+      g.globalAlpha = nn * (0.30 + hash01(st * 7 + 3) * 0.6);
+      g.fillStyle = "#e8eef0"; g.fillRect(sxx, syy, 1, 1);
+    }
+    g.globalAlpha = 1;
+  }
   return skyCv;
 }
 
@@ -1856,7 +1916,7 @@ function skyCanvas(h) {
 let chaoCv = null, chaoKey = "";
 function chaoCanvas(h) {
   const alt = H - GROUND;
-  const key = W + "," + alt + "," + Math.round(h * 48);
+  const key = W + "," + alt + "," + Math.round(h * 48) + "," + horaKey();
   if (chaoCv && chaoKey === key) return chaoCv;
   if (!chaoCv) chaoCv = document.createElement("canvas");
   chaoCv.width = W; chaoCv.height = alt;
@@ -3010,7 +3070,7 @@ function drawScene() {
           cx.fillStyle = telha[ti]; cx.fillRect(x - 1, y - 12, 14, 3);
           cx.fillStyle = telhaL[ti]; cx.fillRect(x - 1, y - 12, 14, 1);
           cx.fillStyle = traco; cx.fillRect(x + 2, y - 5, 3, 5);            // a door onto the steps
-          cx.fillStyle = h > 0.5 ? "rgba(255,224,138,.8)" : traco;
+          cx.fillStyle = (h > 0.5 || escuridao() > 0.4) ? "rgba(253,231,157,.85)" : traco;
           cx.fillRect(x + 7, y - 7, 3, 3);                                  // one window
           if (s2 > 0.55) { cx.fillStyle = caixa; cx.fillRect(x + 8, y - 15, 4, 3); }  // water tank
         }
@@ -3208,7 +3268,7 @@ function drawScene() {
       cx.fillStyle = "#eba748"; cx.fillRect(sx + 30, GROUND - 7, 1, 1);
       // the upstairs window, shuttered, with the light of a room behind it
       cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 29, 11, 12);
-      cx.fillStyle = alive ? "#fde79d" : "#3a3428"; cx.fillRect(sx + 12, GROUND - 28, 9, 10);
+      cx.fillStyle = (alive || escuridao() > 0.4) ? "#fde79d" : "#3a3428"; cx.fillRect(sx + 12, GROUND - 28, 9, 10);
       cx.fillStyle = "#7d6047"; cx.fillRect(sx + 12, GROUND - 28, 2, 10); cx.fillRect(sx + 19, GROUND - 28, 2, 10);
       cx.fillStyle = "#2a1c12"; cx.fillRect(sx + 11, GROUND - 17, 11, 2);       // the sill
       cx.fillStyle = "#8a6f42"; cx.fillRect(sx + 11, GROUND - 17, 11, 1);
@@ -3331,7 +3391,7 @@ function drawScene() {
       cx.fillStyle = "#3e4760"; cx.fillRect(sx + 22, GROUND - 22, 2, 22);
       cx.fillRect(sx + 22, GROUND - 23, 8, 2);
       cx.fillStyle = "#2b2f45"; cx.fillRect(sx + 27, GROUND - 26, 6, 3); // solar panel on top
-      const on = h > 0.3;
+      const on = h > 0.3 || escuridao() > 0.4;
       if (on) { cx.globalAlpha = 0.22; cx.fillStyle = "#cfe8ff"; cx.fillRect(sx + 24, GROUND - 21, 12, 14); cx.globalAlpha = 1; }
       cx.fillStyle = on ? "#e8f4ff" : "#4a5068"; cx.fillRect(sx + 28, GROUND - 21, 4, 3);
     }
@@ -3428,6 +3488,8 @@ function drawScene() {
   // hero, with a catenary between consecutive poles rather than a straight line.
   {
     const passo = 62, vel = 0.92, base = GROUND - 1;
+    // 1 exactly in the PÓS-CHUVA hour, 0 in the other three
+    const esc = escuridao(), molhado = Math.max(0, 1 - Math.abs(esc - 0.45) / 0.32);
     const k0 = Math.floor(worldX * vel / passo) - 1;
     const alt = function (k) { return 46 + Math.round(hash01(k * 17 + 4) * 9); };
     for (let k = k0; k < k0 + Math.ceil(W / passo) + 2; k++) {
@@ -3455,7 +3517,7 @@ function drawScene() {
       cx.fillStyle = "#2a2b1a"; cx.fillRect(sx - 2 + incl, topA + 4, 2, 2); cx.fillRect(sx + 3 + incl, topA + 4, 2, 2);
       cx.fillStyle = "#1f2412"; cx.fillRect(sx - 1 + incl, topA + 6, 5, 4);    // the knot of cable
       if (hash01(k * 41 + 3) > 0.55) {                                          // a lamp on the arm
-        const on = h > 0.3;
+        const on = h > 0.3 || escuridao() > 0.4;
         cx.fillStyle = "#2a2b1a"; cx.fillRect(sx + 6 + incl, topA + 4, 4, 2);
         cx.fillStyle = on ? "#fde79d" : "#4a4a3a"; cx.fillRect(sx + 7 + incl, topA + 6, 2, 2);
         if (on) { cx.globalAlpha = 0.16; cx.fillStyle = "#fde79d"; cx.fillRect(sx + 3 + incl, topA + 6, 9, 12); cx.globalAlpha = 1; }
@@ -3463,6 +3525,16 @@ function drawScene() {
       if (h > 0.4) {                                    // and something climbing it, of course
         cx.fillStyle = "#3e4721";
         for (let y = 2; y < Math.round(hA * 0.5); y += 3) cx.fillRect(sx + (y & 2 ? -1 : 3), base - y, 2, 2);
+      }
+      // PÓS-CHUVA: the board's third light state is entirely about the street being wet, and
+      // what says wet is a lamp smeared down the paving under it. Only in that hour.
+      if (molhado > 0.05) {
+        cx.globalAlpha = molhado * 0.34; cx.fillStyle = "#fde79d";
+        for (let y = 0; y < 16; y++) {
+          const wdt = 5 - Math.round(y / 5) + ((y & 1) ? 1 : 0);
+          cx.fillRect(sx + 6 + incl - (wdt >> 1) + (y & 2 ? 1 : 0), GROUND + y, wdt, 1);
+        }
+        cx.globalAlpha = 1;
       }
     }
   }
@@ -4215,7 +4287,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // spent playing rather than time the tab sat open
     R.segundos += dt; retAcc += dt;
     if (retAcc > 30) { retAcc = 0; marcarDia(); salvarRetencao(); }
-    tick++; animT += dt;
+    tick++; animT += dt; relogio += dt;
     drawScene();
     desenharMundo();
     hudAcc += dt;
