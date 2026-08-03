@@ -1523,6 +1523,101 @@ toda sessão começa lendo a última entrada.
   Não sei medir "o enquadramento está errado" com a bancada que tenho, e mexer em `GROUND`
   encosta em colisão e em `HX`, o que é bem mais do que uma troca de tinta.**
 
+- **2026-08-03 · visual — o enquadramento, que era a maior distância que sobrava, e a
+  medida que finalmente enxerga enquadramento.** Quatro incrementos, cada um com
+  `node test/smoke.js` verde. **FPS 61 do começo ao fim.** Nada de `CFG`, `S`, fórmula ou
+  economia foi tocado — **medido: `node test/sim.js` dá saída byte a byte idêntica nos
+  quatro commits** (`diff` vazio, quatro vezes).
+
+  **(0) A bancada era cega para enquadramento, e a onda passada mediu na direção errada
+  sem saber.** dE de faixa responde "quanto evento tem nesta tira"; não responde "o quadro
+  está composto", porque **uma parede preenchendo o topo da imagem é massa chapada e massa
+  chapada pontua perto de zero** — fechar o quadro ABAIXA a nota da faixa enquanto aproxima
+  a imagem do board. Provado no primeiro incremento: engordei as colunas do proscênio em
+  2,5× e `CEU alto` foi de **10,6 para 10,4**. A medida certa é outra e é contável: o passe
+  de céu é assado num canvas só e pintado primeiro, e todo o resto do mundo é pintado por
+  cima — então **um pixel que ainda carrega exatamente o que `skyCanvas` pôs ali é céu
+  aberto e nada foi desenhado nele**. `medir.js` agora conta isso (`CEU ABERTO`), no canvas
+  inteiro e **só na parte que a barra do HUD não cobre**, porque um quadro que fecha onde
+  ninguém vê não fechou nada. **Linha de base: 39,0% do canvas, 41,4% do visível.** (O "68%"
+  da onda passada era área de faixa, não céu aberto — nuvens, fios e postes já ocupavam
+  muita coisa.)
+
+  **(1) A rota: subir as paredes, não a linha do horizonte.** As duas foram consideradas e a
+  escolha tem número. `GROUND` é lido por colisão, por `HX`, por toda âncora de chão, pela
+  onda de choque, pela fila de monstros e pela coleta de drop — e, medido no próprio print,
+  **o plano do chão já está quase todo debaixo da tarja REAL DATA**: sobram ~6 linhas
+  visíveis abaixo da linha do chão. Subir o horizonte compra pixel escondido, não imagem.
+  Então `GROUND` não se mexeu **um pixel** e o que subiu foi a massa das bordas.
+  O *swell* do proscênio foi de `0,062·W` para `0,24·W` com queda mais íngreme (expoente
+  1,5 → 2,2): **15,6 px → 38 px** de largura no alto do quadro e **8,5 px contra 8,2** na
+  altura em que a fila de monstros para (`HX+26`, +20, +20 → sx 60/80/100), que é a única
+  altura em que a rua deve alguma coisa à jogabilidade. Céu aberto visível **41,4% → 37,4%**.
+
+  **(2) O proscênio ganhou a alvenaria que ele promete desde que foi escrito.** O comentário
+  dizia "folhagem escura **e alvenaria escura** apertando as duas bordas" e só desenhou
+  folha. Na largura velha dava para viver com isso; na nova, uma laje verde chapada com um
+  terço do quadro não é parede, é buraco. Os **60% de fora** de cada coluna viraram fachada
+  — linha de piso a cada dezessete fileiras, um vão de veneziana por andar virado para a
+  rua, vidraça que acende pela mesma regra de fonte/superfície do resto do mundo — e os 40%
+  de dentro continuam sendo a mesma folhagem, na frente dela. **Mesmo vão por fileira,
+  partido em dois: nenhum objeto novo, nenhuma chamada de desenho nova.**
+
+  **(3) O arco fechou no meio, onde ele estava pendurado atrás da barra do HUD.** A copa de
+  cima tinha `dMeio = 0,030·W` — **quatro pixels** — e a barra superior cobre as primeiras
+  **vinte e cinco** fileiras do canvas: no meio do quadro a copa não fechava nada que
+  alguém pudesse ver. Com `0,16·W` e o recorte de folha quase triplicado, a franja fica
+  entre 9 e 33 fileiras e o que aparece debaixo da barra é orla recortada, não corte reto.
+  **Medido: céu aberto visível 37,4% → 34,9%, `CEU alto` aberto 44,1% → 32,4%.** E **o
+  menino lê MELHOR por causa disso**, porque o bloco que ganhava dele era a coroa do sol no
+  topo do quadro e agora tem folha em cima: MANHÃ razão de luma **0,65 → 0,79**, dE
+  **0,78 → 0,81**, posição em dE fora da moldura **38/485 → 36/485**.
+
+  **(4) Fechado o enquadramento, a maior distância medida virou o terço de CIMA de
+  `CEU baixo`** — y86-107, dE **9,1** de dia e **3,6** à noite, e 61% daquela faixa ainda
+  céu aberto. Toda árvore desta rua termina em `GROUND-45`, que é y147: **a linha de árvores
+  inteira mora nas duas faixas que já eram as mais cheias**. O painel PRAÇA COMUNITÁRIA do
+  board é construído em volta de **uma árvore enorme** cuja copa ocupa exatamente aquele
+  pedaço da imagem, com os telhados e os fios passando por baixo. Então **uma árvore de rua
+  em cada oito é aquela árvore**, na construção do cúmulo (união de cinco lóbulos resolvida
+  a um topo e um fundo por coluna, contorno desenhado **uma vez** em volta da massa toda).
+  **Medido: y86-107 dE 9,1 → 12,5 à MANHÃ e 3,6 → 5,2 à NOITE; `CEU baixo` 11,0 → 15,2;
+  céu aberto em `CEU baixo` 61,1% → 50,1% e no visível 34,9% → 31,2%.**
+
+  **E ela cobra do menino — o número está aqui e não escondido.** Fora da moldura, MANHÃ
+  luma **41/485 → 52**, croma **92 → 168**, dE **36 → 46**; NOITE **67 → 80**, **48 → 64**,
+  **49 → 58**. O quadro que a bancada congela põe a árvore **exatamente em cima da cabeça
+  dele**, que é a pior colocação que existe; e diferente do renque de telhados que a onda 10
+  desfez (dE 38 → 53 por **0,0** de ganho na faixa alvo), aqui a troca é real dos dois
+  lados. As razões dele se seguram: dE **0,81 → 0,82** à MANHÃ.
+
+  **Tentei e desfiz, os quatro medidos:** (a) `dMeio = 0,22·W` na franja — céu aberto
+  **32,0% contra 34,9%**, melhor no papel, e o print recusou: naquela profundidade a língua
+  do meio **engole o sol inteiro**, e a direção é CLEAR SKY. (b) A copa grande carimbando
+  quatro vezes o `TREE_MAP` de 22×16 que já existe — **cada carimbo traz o próprio contorno
+  escuro em toda a volta**, então quatro deles lado a lado são quatro pirulitos num pau, não
+  uma copa. (c) Subir a árvore nove fileiras: terço alvo **12,7 → 12,2** e custo em dE
+  **46 → 54**. (d) A copa na paleta clara das árvores: croma do menino **185/485**; a escura,
+  que já estava no arquivo, devolve 17 posições por 0,2 de faixa.
+
+  **Conferido em três níveis de saúde e quatro horas** (`test/cruz.js`): rua doente ganha
+  moldura de alvenaria ocre empoeirada e não verde, a árvore grande **não nasce** com
+  `h ≤ 0,5` (rua doente continua rua sem árvore alta), e à NOITE a copa é massa escura
+  contra o céu com o Cetro seguindo a única coisa quente do quadro.
+
+  **Medido no fim:** smoke verde nos quatro incrementos, **FPS 61**, `sim.js` idêntico.
+  **Total do enquadramento: céu aberto no visível 41,4% → 31,2%, `CEU alto` 50,5% → 32,2%,
+  `CEU baixo` 65,0% → 50,1% — sem mexer em `GROUND`, em `HX` nem em uma coordenada de
+  jogo.** O board ainda está em ~25%.
+  **Próximo passo: `CEU alto` continua a maior faixa e a de menor dE (10,6 / 3,8) mesmo com
+  um terço a menos de céu aberto — o que sobra ali é gradiente entre a franja e o banco de
+  cúmulos, e a resposta do board é a segunda fiada de fachadas subindo pelos lados até quase
+  o topo, que é justamente o que o proscênio não pode fazer sem virar túnel. Dúvida honesta:
+  a croma do menino piorou de 92 para 168 de 485 nesta onda e eu aceitei isso duas vezes
+  seguidas (a franja e a copa) porque em cada uma o preço era pequeno; ninguém mediu o
+  acumulado contra o que a onda 8 disse, que é que a croma já era o pior eixo dele. Se a
+  próxima onda puser mais verde no quadro, mede isso primeiro.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
