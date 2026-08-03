@@ -4161,13 +4161,24 @@ function drawScene() {
     // sixth, which is the emptiest part of the picture and the furthest from anything the
     // player has to read. It should also HELP the read, by closing the bright top that was
     // pulling the eye away from the street — and that is measured, not assumed.
-    const dTopo = W * 0.46, dMeio = W * 0.030, alcance = W * 0.46;
+    // The mid-span depth was 0.030·W — four pixels — and the top HUD bar covers the first
+    // twenty-five rows of the canvas, so across the middle of the frame the canopy was
+    // hanging entirely BEHIND the chrome and closing nothing anybody could see. 0.16·W puts
+    // the fringe at 9–33 rows deep depending on the scallop, which is a ragged leaf edge
+    // showing under the bar instead of a straight cut, and it is what every street panel on
+    // the board has along its top. The scallop is nearly trebled with it: at this depth a
+    // shallow wobble reads as a drawn line rather than as leaves.
+    // 0.22 was tried first and measured better on paper — open sky 32.0% against 34.9% — and
+    // the print refused it: at that depth the tongue over the middle swallows the sun whole,
+    // and the direction is CLEAR SKY. At 0.16 the sun comes through the leaves, which is a
+    // picture the board actually contains.
+    const dTopo = W * 0.46, dMeio = W * 0.16, alcance = W * 0.46;
     for (let x = 0; x < W; x++) {
       const borda2 = Math.max(0, 1 - Math.min(x, W - 1 - x) / alcance);
       const d = Math.round(dMeio + dTopo * Math.pow(borda2, 1.45)
-        + Math.sin(x * 0.27 + 0.7) * (W * 0.013)
-        + Math.sin(x * 0.081 + 2.3) * (W * 0.019)
-        + Math.sin(x * 0.63 + 4.9) * (W * 0.007));   // the same leaf scallop, along x
+        + Math.sin(x * 0.27 + 0.7) * (W * 0.030)
+        + Math.sin(x * 0.081 + 2.3) * (W * 0.048)
+        + Math.sin(x * 0.63 + 4.9) * (W * 0.018));   // the same leaf scallop, along x
       if (d <= 0) continue;
       const banda = ((x >> 2) & 1);
       cx.fillStyle = banda ? escuro : meio;
