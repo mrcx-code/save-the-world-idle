@@ -1948,9 +1948,9 @@ const ICONS = {
   // key stays `sword` because the markup names it; what it draws is the wand. Its star is
   // white-cored with a green halo, the same magic colours the wand uses in the world, and
   // green is the one hue that still reads on cream chrome AND on the yellow action button.
-  sword: { pal: { W: "#fffce8", G: "#6fdd94", B: "#9a6f42", R: "#c3a878" }, map: [
-    "........W...", "......G.W.G.", ".......WWW..", "....GWWWWWG.", ".......WWW..", "......G.B.G.",
-    "......BB....", ".....BB.....", "....RB......", "...RR.......", "..BR........", "............"] }
+  sword: { pal: { W: "#fffce8", G: "#eba748", L: "#767f34", B: "#6d4620", O: "#da7a29" }, map: [
+    "....L.......", "...LGGGL....", "..LG...GL...", "..G..W..G.L.", "..G.WWW.G.L.", "..G..W..GL..",
+    "..LG...GL...", "...LGGGL....", "....BB......", "...OB.......", "..BO........", "..B........."] }
 };
 function renderIcon(cnv, name) {
   const ic = ICONS[name]; if (!ic || !cnv) return;
@@ -2175,19 +2175,19 @@ function drawMobs(smog) {
 // The postcard is only 128x42, so it keeps its own compact cuts of the hero and the smog
 // blob: the full-size sprites would fill two thirds of the frame on their own.
 const HERO_MINI = [
-  "...KKKK...",
-  "..KRRrrKK.",
-  ".KdRRrrrRK",
-  ".Kbbbbbbbb",
-  ".KhaSSssK.",
+  "..KKKKK...",
+  ".KhhHHttK.",
+  "KhFhHHtttK",
+  "KhhaSSsHtK",
   ".KhaSeSsK.",
   ".KhaSSssK.",
   "..KnnnnK..",
-  "..KjJLLK..",
-  ".KjJGJLlK.",
-  ".KjJGJLlK.",
-  ".KjJJJLlK.",
-  "..KiiiiK.."
+  ".KWWwwWWK.",
+  ".KWwGGwWK.",
+  ".KWoGGoWK.",
+  "..KwGGwK..",
+  "..KGGGGK..",
+  "..KooooK.."
 ];
 const SMOG_MINI = { pal: { X: "#7a7288", K: "#10121c", D: "#5c5568" }, map: [
   ".XXXXXX..", "XXXXXXXX.", "XKXXXKXX.", "XXXXXXXX.", "XDXDXDXD.", ".XXXXXX.."] };
@@ -2244,41 +2244,50 @@ function drawLoreArt() {
 // read as crude. He is now on the same grid as the world — twice the pixels, half the size
 // — and the extra resolution is spent on shading. One light direction: the sun sits up and
 // to the right, so every material gets a lit right/top rim, a base, and a shaded left side.
+// ---------- THE KID FROM THE BOARD ----------
+// He is not the red-cap, blue-jacket runner any more. The board's PERSONAGEM PRINCIPAL is a
+// dark-skinned child with a big round crown of curly hair that has leaves and little orange
+// flowers growing in it, wearing a cream embroidered poncho over a fringed green outfit and
+// sandals. Every colour below is out of the board's own families: skin and wood on TERRA,
+// the outfit on FOLHAS, the poncho on LUZ's cream end, the embroidery and the beads on
+// ACENTO orange. The silhouette is deliberately WIDE at the head and narrow at the ankles —
+// the hair is the read, at any size, and that is what makes him recognisable at 22 px.
 const HERO_COLORS = {
-  K: "#0e0f18",                                             // outline
-  r: "#f2798d", R: "#c9455c", d: "#9c3346", b: "#6d2233",   // cap: rim / base / shade / brim
-  s: "#ffeacd", S: "#f6cfa2", a: "#d8a87e", n: "#a97a58",   // skin
-  h: "#40252c", e: "#17141f",                               // hair, eye
-  l: "#9ad8ff", L: "#57b0ff", J: "#2f8be0", j: "#1f63ad", i: "#12406f", // jacket
-  G: "#ffcd75", W: "#e8edf6"
+  K: "#14170c",                                             // outline
+  h: "#231708", H: "#4a3018", t: "#75491f",                 // hair: shade / base / sunlit rim
+  F: "#f3a03d", o: "#da7a29", L: "#767f34",                 // flowers, embroidery, leaves
+  s: "#c08a52", S: "#a9743f", a: "#8a5a2e", n: "#6d431f",   // skin: rim / base / shade / deep
+  e: "#1f1409",                                             // eye
+  W: "#f0e6c8", w: "#d8cba6", v: "#b3a47f",                 // poncho: lit / base / shade
+  G: "#525d2a", g: "#3e4721", y: "#767f34"                  // the green outfit under it
 };
-const HERO_MAP = [ // 22x26: red cap, face, blue jacket — facing right, lit from the right
-  ".........KKKK.........",
-  ".......KKRRrrKK.......",
-  "......KdRRRrrrRK......",
-  ".....KdRRRRrrrrRK.....",
-  ".....KdRRRRRrrrRK.....",
-  "....KbbbbbbbbbbdddK...",
-  ".....KhaSSSSSssK......",
-  ".....KhaSSSSSssK......",
-  ".....KhaSSeSSssK......",
-  ".....KhaSSeSSssK......",
-  ".....KhaSSSSSsssK.....",
-  ".....KaaSSSSSssK......",
-  "......KnaSSSsnK.......",
-  ".......KnnnnnK........",
-  "....KKjJJJJLLLLlKK....",
-  "...KjjJWWWWLLLLlK.....",
-  "...KjJJJWWLLLLLlK.....",
-  "...KjJJJJJLLLLLlK.....",
-  "...KjJJJJJLLLLLlK.....",
-  "...KjJJGGJLLLLLlK.....",
-  "...KjJJGGJLLLLLlK.....",
-  "...KjJJJJJLLLLLlK.....",
-  "....KjJJJJJLLLLlK.....",
-  "....KiiJJJJJLLlK......",
-  "....KiiiJJJJLLlK......",
-  "....KKiiiiiiiiKK......"
+const HERO_MAP = [ // 22x26 — head and body; the legs and the arms are drawn under this
+  "......KKKKKK..........",
+  "....KKhhHHHHtKK.......",
+  "..KKhhhHHHHHHttKK.....",
+  ".KhhFhhHHHHHHHtttFK...",
+  ".KhhhhhHHHHHHHtttttK..",
+  ".KhhhhhHHHHHHHtttttK..",
+  ".KhLhhaSSSSsssHtttFK..",
+  ".KhhhhaSSeSsssHHttK...",
+  ".KhhhhaSSeSsssHHttK...",
+  ".KhFhhaSSSSsssKHHtK...",
+  "..KhhhaSSSSsssK..KK...",
+  "...KhhaaSSSssK........",
+  ".....KaaSSssK.........",
+  "......KnnSnK..........",
+  "...KKKKnnnnKKKKK......",
+  "..KWWWWvwwwwWWWWK.....",
+  "..KWWWvwGGGwvWWWWK....",
+  "..KWoWvwGGGwvWoWWK....",
+  "..KWWWvwwGwwvWWWWK....",
+  "..KWWWvwwGwwvWWWWK....",
+  "..KWoWvwoooowvWoWK....",
+  "...KKWvwwGwwvWKKK.....",
+  "....KwwGGGGGwwK.......",
+  "....KwGGGGGGGwK.......",
+  "....KoGGGGGGGoK.......",
+  ".....KKGGGGGKK........"
 ];
 // 4-frame classic run cycle, in world pixels: [frontLegDx, frontLegDy, backLegDx, backLegDy, armDx, bob]
 const RUN = [
@@ -2367,6 +2376,65 @@ function desenharMagias() {
 // stays a stick; it **tapers**, two pixels thick at the grip down to one at the tip; and it
 // **bows** slightly across its span, because a branch that is perfectly straight is a dowel.
 // `brilho` is the charge, and it is only ever non-zero while he is casting.
+// ---------- BASTÃO — CETRO DA VIDA ----------
+// The board gives this object a name and a page of its own: "feito de madeira, memória e
+// esperança". A worked branch, bound in cord that spirals up the shaft, carrying a spoked
+// wooden wheel at the top with a warm core, leaves growing straight off the rim, and cords
+// hanging under it with beads and a crystal. It is drawn, not sprited, because it has to
+// follow the arm through a swing and a full front flip.
+//
+// The wheel is baked once per (radius, glow step) into an offscreen canvas: it is thirty-odd
+// fillRects and it would otherwise be paid on every frame of every swing.
+const CETRO = { casca: "#3a2712", mad: "#6d4620", madL: "#96682f", cord: "#da7a29",
+  cordL: "#f3a03d", folha: "#525d2a", folhaL: "#767f34", conta: "#eba748",
+  cristal: "#9fc4bd", cristalL: "#dad8c0" };
+const rodaCv = {};
+function rodaCanvas(r, aceso) {
+  const id = r + "," + aceso;
+  if (rodaCv[id]) return rodaCv[id];
+  const R = r + 6, N = R * 2 + 1;                  // room for the leaves off the rim
+  const c = document.createElement("canvas");
+  c.width = N; c.height = N;
+  const g = c.getContext("2d");
+  const cxx = R, cyy = R;
+  const px = function (x, y, cor) { g.fillStyle = cor; g.fillRect(cxx + x, cyy + y, 1, 1); };
+  // the leaves first, so the rim overlaps them and they read as growing out from under it
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4 - Math.PI / 8;
+    const lx = Math.cos(a), ly = Math.sin(a);
+    for (let s = 0; s < 5; s++) {
+      const d = r + 1 + s, wdt = s < 3 ? 2 - (s > 1 ? 1 : 0) : 0;
+      const bx = Math.round(lx * d), by = Math.round(ly * d);
+      for (let o = -wdt; o <= wdt; o++) {
+        px(bx - Math.round(ly * o), by + Math.round(lx * o), o < 0 ? CETRO.folhaL : CETRO.folha);
+      }
+    }
+  }
+  // the rim: two rings, the outer one dark so the wheel keeps a hard silhouette
+  for (let a = 0; a < 360; a += 3) {
+    const rad = a * Math.PI / 180, co = Math.cos(rad), si = Math.sin(rad);
+    px(Math.round(co * r), Math.round(si * r), CETRO.casca);
+    px(Math.round(co * (r - 1)), Math.round(si * (r - 1)), si < -0.2 || co > 0.4 ? CETRO.madL : CETRO.mad);
+    px(Math.round(co * (r - 2)), Math.round(si * (r - 2)), CETRO.mad);
+  }
+  // eight spokes out of a hub, which is what makes it a wheel and not a ring
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4;
+    for (let d = 2; d < r - 1; d++) {
+      px(Math.round(Math.cos(a) * d), Math.round(Math.sin(a) * d), k % 2 ? CETRO.mad : CETRO.madL);
+    }
+  }
+  // the hub: wood, then the sun inside it
+  for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) {
+    if (Math.abs(x) + Math.abs(y) <= 3) px(x, y, CETRO.casca);
+  }
+  const nucleo = aceso ? ["#fffbe8", "#f3c05c", "#da7a29"] : ["#f3c05c", "#c8891f", "#8a5a2e"];
+  px(0, 0, nucleo[0]);
+  [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { px(d[0], d[1], nucleo[1]); });
+  [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (d) { px(d[0], d[1], nucleo[2]); });
+  rodaCv[id] = { c: c, off: R };
+  return rodaCv[id];
+}
 function vara(x0, y0v, x1, y1v, brilho) {
   const n = Math.max(2, Math.abs(x1 - x0), Math.abs(y1v - y0v));
   const dx = x1 - x0, dy = y1v - y0v, len = Math.max(1, Math.hypot(dx, dy));
@@ -2376,23 +2444,42 @@ function vara(x0, y0v, x1, y1v, brilho) {
     const t = i / n, arc = Math.sin(t * Math.PI) * 0.95;
     px.push(Math.round(x0 + dx * t + nx * arc));
     py.push(Math.round(y0v + dy * t + ny * arc));
-    pw.push(t < 0.62 ? 2 : 1);                     // thick at the hand, whittled at the tip
+    pw.push(t < 0.72 ? 2 : 1);                     // thick at the hand, whittled at the tip
   }
-  cx.fillStyle = "#22180f";
+  cx.fillStyle = CETRO.casca;
   for (let i = 0; i <= n; i++) cx.fillRect(px[i] - 1, py[i] - 1, pw[i] + 2, pw[i] + 2);
-  cx.fillStyle = "#6b4a2e";
+  cx.fillStyle = CETRO.mad;
   for (let i = 0; i <= n; i++) cx.fillRect(px[i], py[i], pw[i], pw[i]);
-  cx.fillStyle = "#a2794c";                        // the sun catches one side of the shaft
+  cx.fillStyle = CETRO.madL;                       // the sun catches one side of the shaft
   for (let i = 0; i <= n; i++) cx.fillRect(px[i] + pw[i] - 1, py[i], 1, pw[i]);
-  const wraps = Math.min(6, n - 1);                // the binding: cord wrapped round the grip
-  for (let i = 1; i <= wraps; i++) {
-    cx.fillStyle = i % 2 ? "#c3a878" : "#5c4a30";
-    cx.fillRect(px[i], py[i], 2, 2);
+  // the cord, spiralling the whole length of the shaft — the board devotes a close-up to it
+  for (let i = 2; i < n - 1; i += 3) {
+    cx.fillStyle = (i >> 1) % 2 ? CETRO.cordL : CETRO.cord;
+    cx.fillRect(px[i], py[i], 2, 1);
   }
-  const kx = px[n], ky = py[n];                    // the tip is just a knot in the wood
-  cx.fillStyle = "#22180f"; cx.fillRect(kx - 1, ky - 1, 4, 4);
-  cx.fillStyle = "#7d5836"; cx.fillRect(kx, ky, 2, 2);
-  cx.fillStyle = "#a2794c"; cx.fillRect(kx + 1, ky, 1, 1);
+  // and a couple of leaves sprouting off a stick that is still alive
+  for (let k = 0; k < 2; k++) {
+    const i = Math.round(n * (0.30 + k * 0.26)), sgn = k % 2 ? 1 : -1;
+    if (i < 1 || i > n) continue;
+    cx.fillStyle = CETRO.folha;
+    cx.fillRect(px[i] + Math.round(nx * 2 * sgn), py[i] + Math.round(ny * 2 * sgn), 2, 2);
+    cx.fillStyle = CETRO.folhaL;
+    cx.fillRect(px[i] + Math.round(nx * 3 * sgn), py[i] + Math.round(ny * 3 * sgn), 1, 1);
+  }
+  const kx = px[n], ky = py[n];
+  // the head of the staff: the spoked wheel, its leaves, and what hangs under it
+  const rd = rodaCanvas(6, brilho > 0);
+  cx.drawImage(rd.c, kx - rd.off + 1, ky - rd.off + 1);
+  // hanging cords: two beads on one, a crystal on the other. They fall with gravity, not
+  // with the staff, so they lag behind the swing instead of being welded to it.
+  const balanco = Math.round(Math.sin(animT * 3.1) * 1.2);
+  cx.fillStyle = CETRO.cord;
+  cx.fillRect(kx - 3 + balanco, ky + 6, 1, 5);
+  cx.fillRect(kx + 3, ky + 6, 1, 7);
+  cx.fillStyle = CETRO.conta;
+  cx.fillRect(kx - 4 + balanco, ky + 11, 3, 2);
+  cx.fillStyle = CETRO.cristal; cx.fillRect(kx + 2, ky + 13, 3, 4);
+  cx.fillStyle = CETRO.cristalL; cx.fillRect(kx + 3, ky + 14, 1, 2);
   if (brilho > 0) {                                // ...and only while he is casting, a fire
     luz(kx + 1, ky + 1, Math.min(1.9, brilho + flashCast * 0.7), 1);
     if (flashCast > 0.12) {
@@ -2451,67 +2538,80 @@ function drawHero() {
     }
   }
   if (rot) { cx.save(); cx.translate(pivoX, pivoY); cx.rotate(rot); cx.translate(-pivoX, -pivoY); }
-  // Not a cape — a windbreaker tail and a scarf. A cape put a knight in a 2026 street; this
-  // is a kid running through their own neighbourhood, and the silhouette still trails.
+  // The poncho, off the back of the shoulders — the board's cream cloth with an embroidered
+  // hem, hanging in three stepped panels so it reads as cloth and not as a cape.
   const flap = air ? -2 : (fi % 2 ? 1 : 0);
-  const capa = ["#e05a70", "#c9455c", "#a8384c", "#8b2c3d", "#6e2130"];
-  for (let i = 3; i >= 0; i--) {                    // the scarf, off the back of the neck
-    const sxx = bx + 2 - i * 4, hh = 3 + (i & 1);
-    const sy = y0 + 11 + i + (i > 1 ? flap : 0);
-    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy - 1, 6, hh + 2);
-    cx.fillStyle = capa[Math.min(4, i + 1)]; cx.fillRect(sxx, sy, 4, hh);
-    cx.fillStyle = capa[Math.max(0, i - 1)]; cx.fillRect(sxx, sy, 4, 1);
+  // One wedge of cloth off the far shoulder, widening as it falls, with the board's
+  // embroidered hem along the bottom. Three separate slabs read as a stack of bars; a
+  // trapezoid drawn row by row reads as a poncho seen from slightly behind.
+  const cloth = 7 + flap;
+  for (let r = 0; r < cloth; r++) {
+    const wdt = 3 + Math.round(r * 0.55), xx = bx + 3 - wdt, yy = y0 + 16 + r;
+    cx.fillStyle = "#14170c"; cx.fillRect(xx - 1, yy, wdt + 1, 1);
+    cx.fillStyle = r < 2 ? "#e2d6b4" : r < cloth - 2 ? "#c2b490" : "#b3a47f";
+    cx.fillRect(xx, yy, wdt, 1);
+    if (r === cloth - 1) { cx.fillStyle = "#da7a29"; cx.fillRect(xx, yy, wdt, 1); }
   }
-  cx.fillStyle = "#0e0f18"; cx.fillRect(bx - 1, y0 + 15, 9, 13);    // the jacket tail, cut short
-  cx.fillStyle = "#a8384c"; cx.fillRect(bx, y0 + 16, 7, 11 + flap);
-  cx.fillStyle = "#c9455c"; cx.fillRect(bx, y0 + 16, 7, 2);
-  cx.fillStyle = "#6e2130"; cx.fillRect(bx, y0 + 24 + flap, 7, 3);
-  cx.fillStyle = "#0e0f18"; cx.fillRect(bx + 1, y0 + 13, 8, 12);    // the backpack he carries
-  cx.fillStyle = "#2f4a7a"; cx.fillRect(bx + 2, y0 + 14, 6, 10);
-  cx.fillStyle = "#41639d"; cx.fillRect(bx + 6, y0 + 14, 2, 10);
-  cx.fillStyle = "#1b2c4c"; cx.fillRect(bx + 2, y0 + 18, 6, 2);
-  cx.fillStyle = "#ffcd75"; cx.fillRect(bx + 3, y0 + 21, 2, 2);
-  // back arm swings behind the torso
+  cx.fillStyle = "#14170c"; cx.fillRect(bx + 3 - (3 + Math.round((cloth - 1) * 0.55)) - 1, y0 + 16 + cloth, 4 + Math.round((cloth - 1) * 0.55), 1);
+  // ...and under it the fringe: strands of green and orange cord hanging off the belt, which
+  // is the thing the board's PERSONAGEM sheet spends most of its detail on.
+  for (let i = 0; i < 4; i++) {
+    const fx = bx + 3 + i * 3, fl = 4 + ((i * 5) % 3) + (i % 2 ? flap : 0);
+    cx.fillStyle = "#14170c"; cx.fillRect(fx - 1, y0 + 26, 3, fl + 1);
+    cx.fillStyle = i % 2 ? "#767f34" : "#da7a29"; cx.fillRect(fx, y0 + 26, 1, fl);
+    cx.fillStyle = i % 2 ? "#525d2a" : "#eba748"; cx.fillRect(fx, y0 + 26 + fl - 2, 1, 2);
+  }
+  // back arm swings behind the torso: cream sleeve, dark hand
   const abx = bx + 4 + Math.round(P[4] * 0.4);
-  cx.fillStyle = "#0e0f18"; cx.fillRect(abx - 1, y0 + 16, 6, 10);
-  cx.fillStyle = "#1f63ad"; cx.fillRect(abx, y0 + 17, 4, 5);
-  cx.fillStyle = "#c39a72"; cx.fillRect(abx, y0 + 22, 4, 3);
+  cx.fillStyle = "#14170c"; cx.fillRect(abx - 1, y0 + 16, 6, 10);
+  cx.fillStyle = "#d8cba6"; cx.fillRect(abx, y0 + 17, 4, 5);
+  cx.fillStyle = "#8a5a2e"; cx.fillRect(abx, y0 + 22, 4, 3);
   // head + torso, baked once
   drawMap("hero", HERO_MAP, HERO_COLORS, bx, y0);
   // legs (jeans + sneakers) — the back leg reads a value darker so the stride has depth
   const hipY = y0 + 26;
+  // Baggy green trousers gathered at the ankle, and sandals — not jeans and sneakers. The
+  // thigh is drawn a pixel wider than the shin, which is the whole read of "baggy" at this
+  // size, and the back leg stays a value darker so the stride keeps its depth.
   function leg(hipX, dx, dy, back) {
-    const base = back ? "#242a49" : "#343d66", rim = back ? "#333c63" : "#48548a";
-    cx.fillStyle = "#12142a";
-    cx.fillRect(hipX - 1, hipY - 1, 7, 10);
-    cx.fillRect(hipX + dx - 1, hipY + 6, 7, 10 + dy);
+    const base = back ? "#3e4721" : "#525d2a", rim = back ? "#525d2a" : "#767f34";
+    cx.fillStyle = "#14170c";
+    cx.fillRect(hipX - 2, hipY - 1, 9, 10);
+    cx.fillRect(hipX + dx - 1, hipY + 6, 7, 9 + dy);
     cx.fillStyle = base;
-    cx.fillRect(hipX, hipY, 5, 8);
-    cx.fillRect(hipX + dx, hipY + 7, 5, 8 + dy);
-    cx.fillStyle = rim;                                   // sunlit right edge of the jeans
-    cx.fillRect(hipX + 4, hipY, 1, 8);
-    cx.fillRect(hipX + dx + 4, hipY + 7, 1, 8 + dy);
-    const sy = hipY + 15 + dy, sxx = hipX + dx - (dx < 0 ? 3 : 1);
-    cx.fillStyle = "#0e0f18"; cx.fillRect(sxx - 1, sy - 1, 9, 4);
-    cx.fillStyle = back ? "#bcc5d6" : "#f2f5fb"; cx.fillRect(sxx, sy, 7, 2);
-    cx.fillStyle = back ? "#8d97ab" : "#aeb8ca"; cx.fillRect(sxx, sy + 1, 7, 1);
+    cx.fillRect(hipX - 1, hipY, 7, 8);
+    cx.fillRect(hipX + dx, hipY + 7, 5, 7 + dy);
+    cx.fillStyle = rim;                                   // sunlit right edge of the cloth
+    cx.fillRect(hipX + 5, hipY, 1, 8);
+    cx.fillRect(hipX + dx + 4, hipY + 7, 1, 7 + dy);
+    cx.fillStyle = "#da7a29";                             // the tie at the ankle
+    cx.fillRect(hipX + dx, hipY + 13 + dy, 5, 1);
+    const sy = hipY + 15 + dy, sxx = hipX + dx - (dx < 0 ? 2 : 1);
+    cx.fillStyle = "#14170c"; cx.fillRect(sxx - 1, sy - 2, 8, 4);
+    cx.fillStyle = back ? "#8a5a2e" : "#a9743f"; cx.fillRect(sxx, sy - 1, 6, 1);  // the foot
+    cx.fillStyle = back ? "#5c3b1f" : "#6d4620"; cx.fillRect(sxx, sy, 6, 1);      // the sole
+    cx.fillStyle = "#da7a29"; cx.fillRect(sxx + 2, sy - 1, 1, 1);                 // the strap
   }
   leg(bx + 6, P[2], P[3], true);   // back leg
   leg(bx + 11, P[0], P[1], false); // front leg
   // wand arm out of the front shoulder
   const asx = bx + 13 + Math.round(P[4] * 0.3);
-  function braco(hx2, hy2) {                        // sleeve from the shoulder, hand on the grip
+  // A short cream poncho sleeve at the shoulder, bare forearm out of it, and a beaded
+  // bracelet on the wrist — the board puts one on both arms.
+  function braco(hx2, hy2) {
     const fw = Math.max(3, hx2 - asx - 3);
-    cx.fillStyle = "#0e0f18";
+    cx.fillStyle = "#14170c";
     cx.fillRect(asx + 3, y0 + 18, fw + 2, 6);       // forearm
-    cx.fillRect(asx - 1, y0 + 16, 7, 7);            // upper arm
-    cx.fillStyle = "#1f63ad"; cx.fillRect(asx + 4, y0 + 19, fw, 4);
-    cx.fillStyle = "#2f8be0"; cx.fillRect(asx, y0 + 17, 5, 5);
-    cx.fillStyle = "#57b0ff"; cx.fillRect(asx, y0 + 17, 5, 2); cx.fillRect(asx + 4, y0 + 19, fw, 1);
-    cx.fillStyle = "#0e0f18"; cx.fillRect(hx2 - 1, hy2 - 1, 7, 7);
-    cx.fillStyle = "#f6cfa2"; cx.fillRect(hx2, hy2, 5, 5);
-    cx.fillStyle = "#ffeacd"; cx.fillRect(hx2 + 3, hy2, 2, 5);
-    cx.fillStyle = "#d8a87e"; cx.fillRect(hx2, hy2 + 4, 5, 1);
+    cx.fillRect(asx - 1, y0 + 16, 7, 7);            // upper arm, under the poncho
+    cx.fillStyle = "#a9743f"; cx.fillRect(asx + 4, y0 + 19, fw, 4);
+    cx.fillStyle = "#d8cba6"; cx.fillRect(asx, y0 + 17, 5, 5);
+    cx.fillStyle = "#f0e6c8"; cx.fillRect(asx, y0 + 17, 5, 2);
+    cx.fillStyle = "#c08a52"; cx.fillRect(asx + 4, y0 + 19, fw, 1);
+    cx.fillStyle = "#da7a29"; cx.fillRect(asx + 5, y0 + 19, 1, 4);   // the bracelet
+    cx.fillStyle = "#14170c"; cx.fillRect(hx2 - 1, hy2 - 1, 7, 7);
+    cx.fillStyle = "#a9743f"; cx.fillRect(hx2, hy2, 5, 5);
+    cx.fillStyle = "#c08a52"; cx.fillRect(hx2 + 3, hy2, 2, 5);
+    cx.fillStyle = "#8a5a2e"; cx.fillRect(hx2, hy2 + 4, 5, 1);
   }
   // The 3-hit combo, cast rather than swung. A new swing is detected here — attackT jumps
   // back up and attackType steps on — so the bolt is spawned from the drawing code and
