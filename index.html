@@ -1996,27 +1996,44 @@ const CASH_MOB = { pal: {
   "KZTGGGgggGGGgttuuK",
   ".KZZTTTTTTTTtuuuK.",
   "..KKKKKKKKKKKKKK.."] };
+// The drum was the odd one out and the render said so side by side: its siblings are
+// rounded solids whose whole face is a six-tone ramp from a dark left rim to a lit right
+// one, and the drum was a hard 90° rectangle whose interior was ONE flat green with a
+// single dark pixel on the left and a single light pixel on the right — a wall, not a
+// volume. It was also the SMALLEST of the three (16×20 against 18×16 and 18×13) while
+// being the heaviest thing on the road at 5 hits. Same construction now — chamfered
+// silhouette, unbroken dark keyline, the same left-to-right tone ramp across the body,
+// 2×2 eyes and a dark mouth bar cut out of that ramp — just bigger: 20×22, taller than
+// either sibling. Its own language is kept where it identifies the thing: two steel
+// hoops (shaded on the same ramp instead of flat slabs), a lit lid, and the hazard
+// chevron. Nothing about hp, hitboxes or spawn changed — the hit test reads `m.wx + 5`,
+// not the sprite.
 const BARREL_MOB = { pal: {
-  K: "#0d0e16", Z: "#2f4a1f", D: "#3f6428", B: "#5a8a3c", H: "#7fb356", W: "#a8d97c",
-  Y: "#d8e86a", E: "#1a1620", M: "#333d4b", m: "#5f6d7c" }, map: [
-  "...KKKKKKKKKK...",
-  ".KKZDDBBBHHWWKK.",
-  "KZZDDBBBBBHHHWWK",
-  "KZDmmmmmmmmmmHWK",
-  "KZDMMMMMMMMMMHWK",
-  "KZDBBBBBBBBBBHWK",
-  "KZDBBEEBBEEBBHWK",
-  "KZDBBEEBBEEBBHWK",
-  "KZDBBBBBBBBBBHWK",
-  "KZDBBKKKKKKBBHWK",
-  "KZDBBBBBBBBBBHWK",
-  "KZDmmmmmmmmmmHWK",
-  "KZDMMMMMMMMMMHWK",
-  "KZDBYYBBBBYYBHWK",
-  "KZDBBYYBBYYBBHWK",
-  "KZDBBBYYYYBBBHWK",
-  "KZZDDBBBBBHHHWWK",
-  ".KKDDBBBHHWWKK.."] };
+  K: "#0d0e16", Z: "#26401a", D: "#38581f", B: "#4d7a2c", H: "#69a441", W: "#8fc95e",
+  V: "#bfe98c", Y: "#e8f06a", E: "#1a1620",
+  M: "#232f3c", n: "#3a4d5f", m: "#5f7688", s: "#93a8b8" }, map: [
+  ".....KKKKKKKKKK.....",
+  "....KBBHHHWWVVVK....",
+  "..KDBBBBBBHHHHWWWK..",
+  ".KDDBBBBBBHHHHWWWVK.",
+  "KZDDBBBBBBHHHHWWWVVK",
+  "KnnmmmmmmmmmsssssssK",
+  "KMMMMMnnnnnnnnmmmmmK",
+  "KZDDBBBBBBHHHHWWWVVK",
+  "KZDDBEEBBBHHEEWWWVVK",
+  "KZDDBEEBBBHHEEWWWVVK",
+  "KZDDBBBBBBHHHHWWWVVK",
+  "KZDDBBBKKKKKKHWWWVVK",
+  "KZDDBBBBBBHHHHWWWVVK",
+  "KnnmmmmmmmmmsssssssK",
+  "KMMMMMnnnnnnnnmmmmmK",
+  "KZDDBBBBBBHHHHWWWVVK",
+  "KZDDBYYBBBHHHYYWWVVK",
+  "KZDDBBBYYBHYYHWWWVVK",
+  "KZDDBBBBBYYHHHWWWVVK",
+  "KZDDBBBBBBHHHHWWWVVK",
+  ".KDDBBBBBBHHHHWWWVK.",
+  "..KKKKKKKKKKKKKKKK.."] };
 // ---- foliage: canopies with volume, baked once ----
 // Three stacked rectangles and a dozen random stipple pixels never read as a tree with a
 // lit side and a shaded side. These are hand-shaded maps — deep shadow into the lower left,
@@ -2109,8 +2126,10 @@ function drawMobs(smog) {
       sombra(sx + 9, GROUND, 13, 0.13);          // it floats, so its shadow is soft and wide
       drawMap("smog", SMOG_MOB.map, SMOG_MOB.pal, sx, GROUND - 25 + bob, m.flash > 0);
     } else if (m.type === "barrel") {
-      sombra(sx + 8, GROUND, 18, 0.26);
-      drawMap("barrel", BARREL_MOB.map, BARREL_MOB.pal, sx, GROUND - 18 + (bob ? 1 : 0), m.flash > 0);
+      // 20 wide now, drawn one px left so it still stands on the same centre as its
+      // siblings (sx+9) — the hit test never looked at the sprite, so this is paint only
+      sombra(sx + 9, GROUND, 20, 0.26);
+      drawMap("barrel", BARREL_MOB.map, BARREL_MOB.pal, sx - 1, GROUND - 22 + (bob ? 1 : 0), m.flash > 0);
     } else {
       sombra(sx + 9, GROUND, 18, 0.26);
       drawMap("cash", CASH_MOB.map, CASH_MOB.pal, sx, GROUND - 16 - (bob ? 0 : 1), m.flash > 0);
@@ -3304,7 +3323,7 @@ function drawScene() {
 // no DOM, one keyline plus n little blocks — cheap enough to run for every mob every frame.
 // ESTÉTICA: this whole readout is one function on purpose. The state it needs is `m.hp`,
 // `m.hpMax`, `m.type`, `m.flash` and `m.dying`; restyle or replace the body freely.
-const VIDA_TOPO = { smog: 30, barrel: 23, cash: 21 };   // world px above ground per sprite
+const VIDA_TOPO = { smog: 30, barrel: 27, cash: 21 };   // world px above ground per sprite
 function desenharVidaMob(m) {
   if (m.dying > 0 || !m.hpMax) return;
   const sx = Math.round(m.wx - worldX);
