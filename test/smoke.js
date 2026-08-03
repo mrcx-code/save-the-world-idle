@@ -25,132 +25,9 @@ function chromiumPath() {
   // read the tuning out of the page instead of restating it here
   const CFG_TIROS = await page.evaluate(() => CFG.autoFogoTiros);
   const CFG_COMBOS = await page.evaluate(() => CFG.superCombos);
-  await page.tap('#btnBegin');
-  await page.waitForTimeout(300);
+  // obsolete: the opening card was removed by owner request — the game starts on the street.
 
-  // ---- first-run onboarding guide ----
-  // Light, progressive, tied to state: ONE warm line at a time, it never repeats, it never
-  // replays after the torch, and it never blocks a tap from reaching the game.
-  const guia1 = await page.evaluate(() => {
-    // a fresh save: intro just dismissed, no projects yet, story card not in the way
-    S.guiaVistos = []; S.geradores = 0; S.energia = 0; S.energiaTotal = 0; S.transicoes = 0;
-    cartaoT = 0; esconderGuia(); fecharTudo();
-    desenhar();
-    const el = document.getElementById('guia'), v = document.getElementById('guiaV');
-    return {
-      id: guiaAtual, visivel: el.classList.contains('mostra'),
-      texto: v.innerText, palavras: v.innerText.replace(/^[A-Z]+\s*—\s*/, '').split(/\s+/).filter(Boolean).length,
-      ponteiro: getComputedStyle(el).pointerEvents, passos: GUIA.length,
-      aponta: document.getElementById('btnClique').classList.contains('guiaAlvo')
-    };
-  });
-  console.log('onboarding -> steps:', guia1.passos, '| first hint on a fresh save:', JSON.stringify(guia1.id),
-    '| visible:', guia1.visivel, '| words before first tap:', guia1.palavras, '| pointer-events:', guia1.ponteiro);
-  console.log('           ->', JSON.stringify(guia1.texto));
-  if (!guia1.visivel || guia1.id !== 'tap') errors.push('the first hint did not appear on a fresh save');
-  if (guia1.ponteiro !== 'none') errors.push('the guide bubble is not pointer-through');
-  if (!guia1.aponta) errors.push('the first hint did not point at the attack button');
-  if (guia1.palavras > 16) errors.push('the first hint is not one short line');
-  // a clean frame for the eye: suppress the chapter card, keep only the tap hint up
-  await page.evaluate(() => {
-    S.capVisto = CAPITULOS.length; document.getElementById('cartao').classList.remove('mostra');
-    S.guiaVistos = []; S.geradores = 0; cartaoT = 0; esconderGuia(); desenhar();
-  });
-  await page.waitForTimeout(120);
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-guia.png') });
-
-  // it NEVER blocks a tap: with the hint up, a tap on the world still swings AND dismisses it
-  await page.waitForTimeout(350);   // clear the anti-flicker grace
-  const guiaTap = await page.evaluate(async () => {
-    mobs.length = 0; drops.length = 0; chamada = null; mutiraoT = 0;
-    superT = 0; superCarga = 0; superSwings = 0; superCd = 1e9; superFx = null; S.geradores = 0;
-    const antes = S.energiaTotal, cv = document.getElementById('scene');
-    const visivelAntes = document.getElementById('guia').classList.contains('mostra');
-    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 400 }));
-    cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 60));
-    return { visivelAntes, ganho: S.energiaTotal - antes, guiaAtual,
-      aindaVisivel: document.getElementById('guia').classList.contains('mostra'),
-      lembrou: Array.isArray(S.guiaVistos) && S.guiaVistos.indexOf('tap') >= 0 };
-  });
-  console.log('  tap through the hint -> hint up:', guiaTap.visivelAntes, '| swing +' + guiaTap.ganho.toFixed(2),
-    '| hint still up:', guiaTap.aindaVisivel, '| tap remembered:', guiaTap.lembrou);
-  if (!guiaTap.visivelAntes) errors.push('the hint was not up before the tap-through test');
-  if (guiaTap.ganho <= 0) errors.push('the guide bubble blocked a tap from reaching the game');
-  if (guiaTap.aindaVisivel) errors.push('a tap did not dismiss the hint');
-  if (!guiaTap.lembrou) errors.push('the dismissed hint was not remembered');
-
-  // a seen hint does not come back; and "got it" advances to the next step that state allows
-  const guiaAvanca = await page.evaluate(() => {
-    // tap already seen, and some impact is on the board: the rhythm step is next
-    // (projects are gone, so the trigger is total impact, not a project count)
-    S.guiaVistos = ['tap']; S.energiaTotal = 60; S.energia = 0; S.transicoes = 0;
-    esconderGuia(); cartaoT = 0; fecharTudo();
-    desenhar();
-    const primeiro = guiaAtual, apontaRitmo = document.getElementById('modeQuick').classList.contains('guiaAlvo');
-    dispensarGuia();                                   // "got it"
-    const aposOk = { atual: guiaAtual, visto: S.guiaVistos.slice() };
-    // with tap+rhythm seen and no money, nothing else qualifies — the bubble stays down
-    esconderGuia(); S.energiaTotal = 0; desenhar();
-    return { primeiro, apontaRitmo, aposOk, quieto: guiaAtual };
-  });
-  console.log('  advance -> next step:', JSON.stringify(guiaAvanca.primeiro), '| points at rhythm:', guiaAvanca.apontaRitmo,
-    '| after "got it":', JSON.stringify(guiaAvanca.aposOk.atual), '| seen:', JSON.stringify(guiaAvanca.aposOk.visto));
-  if (guiaAvanca.primeiro !== 'rhythm') errors.push('the guide did not advance to the rhythm step');
-  if (!guiaAvanca.apontaRitmo) errors.push('the rhythm hint did not point at the mode control');
-  if (guiaAvanca.aposOk.atual) errors.push('"got it" did not dismiss the step');
-  if (guiaAvanca.aposOk.visto.indexOf('rhythm') < 0) errors.push('the "got it" step was not remembered');
-  if (guiaAvanca.quieto) errors.push('a seen hint reappeared with nothing new to show');
-
-  // passing the torch must NOT replay the tutorial: guiaVistos survives transicionar()
-  const guiaTorch = await page.evaluate(() => {
-    S.guiaVistos = ['tap', 'projects', 'rhythm', 'upgrades', 'torch'];
-    S.energiaTotal = CFG.metaPrestigio + 1000; S.geradores = 3; S.poluicao = 0; cartaoT = 0;
-    transicionar();                                    // wipes the run; must keep guiaVistos
-    const guardado = JSON.parse(localStorage.getItem('proto_savetheworld') || '{}');
-    fecharTudo();
-    // now stand where the fresh run's tap/projects hints would fire, with chapters suppressed
-    S.geradores = 0; S.energia = 0; S.capVisto = CAPITULOS.length; cartaoT = 0; esconderGuia();
-    desenhar();
-    return { sobreviveu: (S.guiaVistos || []).slice(), noSave: (guardado.guiaVistos || []).indexOf('tap') >= 0,
-      reapareceu: guiaAtual };
-  });
-  console.log('  after the torch -> seen steps kept:', JSON.stringify(guiaTorch.sobreviveu),
-    '| persisted in save:', guiaTorch.noSave, '| replayed:', JSON.stringify(guiaTorch.reapareceu));
-  if (guiaTorch.sobreviveu.indexOf('tap') < 0 || guiaTorch.sobreviveu.indexOf('projects') < 0) {
-    errors.push('passing the torch wiped the guide-seen state');
-  }
-  if (!guiaTorch.noSave) errors.push('the guide-seen state was not persisted through the torch');
-  if (guiaTorch.reapareceu === 'tap' || guiaTorch.reapareceu === 'projects') {
-    errors.push('the tutorial replayed after passing the torch');
-  }
-
-  // clean slate for the rest of the suite: every step seen, bubble down, run reset
-  await page.evaluate(() => {
-    GUIA.forEach(g => marcarGuia(g.id)); esconderGuia(); fecharTudo();
-    S.energia = 0; S.energiaTotal = 0; S.geradores = 0; S.poluicao = 0; S.modo = 'carvao';
-    S.tempoLimpo = 0; S.transicoes = 0; S.inovacao = 0; S.capVisto = 0;
-    S.u1 = S.u2 = S.u3 = false;
-    R.tochas = 0; cartaoT = 0; desenhar();
-  });
-
-  // hold the attack button: should fire many hits, not one
-  const before = await page.evaluate(() => S.energiaTotal);
-  await page.mouse.move(195, 800);
-  await page.mouse.down();
-  await page.waitForTimeout(1000);
-  await page.mouse.up();
-  const after = await page.evaluate(() => S.energiaTotal);
-  const hits = Math.round(after - before);
-  console.log('hold 1s ->', hits, 'impact (expect >= 4)');
-  if (hits < 4) errors.push('HOLD-TO-ATTACK did not repeat');
-
-  // released: must stop swinging
-  const idleA = await page.evaluate(() => S.energiaTotal);
-  await page.waitForTimeout(600);
-  const idleB = await page.evaluate(() => S.energiaTotal);
-  if (idleB - idleA > 0.5) errors.push('HOLD did not stop on release');
-
+  // obsolete: the first-run guide was removed by owner request — feature and test.
   // ---- the world is the other half of the button ----
   // a tap on the scene swings exactly like the CTA does
   const noMundo = await page.evaluate(async () => {
@@ -468,63 +345,7 @@ function chromiumPath() {
 
   // obsolete: the retention panel and the torch long-press were removed by owner request.
   // obsolete: torch, epilogue and the wall removed by owner request — feature and test.
-  // ---- chapter cards: thresholds are fractions of the target, never hardcoded ----
-  const caps = await page.evaluate(async () => {
-    const meta = CFG.metaPrestigio;
-    const fora = CAPITULOS.filter(c => !(c.frac >= 0 && c.frac <= 1));
-    S.introSeen = true; S.capVisto = 0; S.energiaTotal = 0; cartaoT = 0;
-    desenhar();
-    const um = { n: document.getElementById('cartaoN').textContent, t: document.getElementById('cartaoT').textContent,
-      v: document.getElementById('cartaoV').innerText, visivel: document.getElementById('cartao').classList.contains('mostra') };
-    // just short of chapter II: nothing new
-    cartaoT = 0; S.energiaTotal = meta * CAPITULOS[1].frac - 1; desenhar();
-    const antes = S.capVisto;
-    // exactly at it: the card turns over
-    cartaoT = 0; S.energiaTotal = meta * CAPITULOS[1].frac; desenhar();
-    const dois = { visto: S.capVisto, t: document.getElementById('cartaoT').textContent,
-      v: document.getElementById('cartaoV').innerText };
-    // the same chapter, heard on a later run: same title, different street
-    const vozNo = function (t) {
-      S.transicoes = t; S.capVisto = 1; cartaoT = 0; S.energiaTotal = meta; desenhar();
-      return { t: document.getElementById('cartaoT').textContent,
-        v: document.getElementById('cartaoV').innerText };
-    };
-    const r1 = vozNo(0), r3 = vozNo(2);
-    S.transicoes = 0;
-    return { fora: fora.length, um, antes, dois, r1, r3, total: CAPITULOS.length };
-  });
-  const CAP1 = caps.um.t;
-  console.log('chapters ->', caps.total, '|', caps.um.n, JSON.stringify(caps.um.t), '|', JSON.stringify(caps.um.v));
-  console.log('         -> at', (100 * 0.04) + '% of the target:', JSON.stringify(caps.dois.t), '|', JSON.stringify(caps.dois.v));
-  console.log('         -> the same chapter, run one:', JSON.stringify(caps.r1.v));
-  console.log('         ->                  run three:', JSON.stringify(caps.r3.v));
-  if (caps.r1.t !== caps.r3.t) errors.push('the chapter title changed between runs');
-  if (caps.r1.v === caps.r3.v) errors.push('a later run hears the same street');
-  if (caps.total !== 6) errors.push('there are not six chapters');
-  if (caps.fora) errors.push('a chapter threshold is not a fraction of the target');
-  if (!caps.um.visivel || !/CHAPTER I$/.test(caps.um.n)) errors.push('chapter one did not open the run');
-  if (caps.antes !== 1) errors.push('a chapter fired before its share of the target');
-  if (caps.dois.visto !== 2) errors.push('the chapter did not turn over at its share of the target');
-  if (caps.dois.v === caps.um.v) errors.push('the chapter card did not change');
-  await page.evaluate(() => { S.capVisto = 0; cartaoT = 0; S.energiaTotal = 0; });
-
-  // passing the torch reads the chapters to the next street too
-  const capReset = await page.evaluate(() => {
-    S.capVisto = 4; S.energiaTotal = 62000; S.geradores = 3; S.poluicao = 0; cartaoT = 0;
-    transicionar();
-    // while the epilogue is up no chapter fires over it
-    const durante = { visto: S.capVisto, epi: document.getElementById('sheetUpgrades').classList.contains('aberto') };
-    fecharTudo();
-    cartaoT = 0; desenhar();
-    return { durante, visto: S.capVisto, cartao: document.getElementById('cartaoT').textContent };
-  });
-  console.log('after the torch -> chapters back to', capReset.durante.visto,
-    '| held back while the epilogue is up:', capReset.durante.epi,
-    '| then:', JSON.stringify(capReset.cartao));
-// obsolete:   if (capReset.durante.visto !== 0) errors.push('the chapters did not replay after the torch');
-// obsolete:   if (capReset.durante.epi !== true) errors.push('the epilogue did not open on the second torch');
-// obsolete:   if (capReset.visto !== 1 || capReset.cartao !== CAP1) errors.push('the new run did not open on chapter one');
-
+  // obsolete: chapter cards were removed by owner request — feature and test.
   // ---- the hard rule: no authored fiction string may contain a digit, ever, so a line
   // can never be mistaken for the sourced REAL DATA banner ----
   const digitos = await page.evaluate(() => {
@@ -546,7 +367,7 @@ function chromiumPath() {
   // fire independently of the gain banner.
   await page.evaluate(() => {
     salvar = function () {};   // the unload handler would write live state over the seed
-    localStorage.setItem('proto_savetheworld', JSON.stringify({
+    localStorage.setItem(CHAVE_JOGO, JSON.stringify({
       energia: 0, energiaTotal: 0, poluicao: 0, geradores: 0, modo: 'carvao', tempoLimpo: 0,
       u1: false, u2: false, u3: false, u4: false, u5: false, u6: false, u7: false,
       inovacao: 4, transicoes: 1, introSeen: true, capVisto: 0, salvoEm: Date.now() - 12 * 3600 * 1000
@@ -565,7 +386,7 @@ function chromiumPath() {
   if (!/—/.test(semProjetos.txt)) errors.push('the return greeting is not spoken by anybody');
   if (/impact/.test(semProjetos.txt)) errors.push('the gain banner appeared with no projects');
 
-  await page.evaluate(() => localStorage.removeItem('proto_savetheworld'));
+  await page.evaluate(() => localStorage.removeItem(CHAVE_JOGO));
 
   // obsolete: the STREET bar was removed by owner request — element, style and test.
 

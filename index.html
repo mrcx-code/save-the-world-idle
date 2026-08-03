@@ -192,12 +192,12 @@
   /* removed by owner: the STREET vertical bar (#barraRua) is gone — element and style. */
 
   /* the four cards — icon over name over value, exactly the board's card */
-  #cartoes { display: flex; gap: 6px; margin-bottom: 6px; }
-  .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: row; align-items: center;
-    justify-content: center; gap: 7px; padding: 12px 6px; border-radius: 12px;
+  #cartoes { display: flex; gap: 6px; align-items: stretch; }
+  .cartao { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 4px; padding: 10px 4px; border-radius: 12px;
     background: #2b331c; }
-  .cartao .cn { font-size: var(--fs-xs); letter-spacing: .06em; color: var(--creme);
-    white-space: nowrap; overflow: hidden; }
+  .cartao .cn { font-size: 9px; letter-spacing: .06em; color: var(--creme);
+    white-space: nowrap; overflow: hidden; max-width: 100%; }
   .cartao .cv { font-size: var(--fs-xs); font-weight: 800; color: var(--gold); white-space: nowrap;
     font-variant-numeric: tabular-nums; }
   .cartao.pronto { background: #3d4a25; }
@@ -222,7 +222,8 @@
   /* it is costing you right now: say so without words */
   /* owner: the rhythm card no longer pulses when it is costing you. */
   /* the bottom rail, and the one thing standing in it */
-  #rail { background: transparent; border: 0; border-radius: 0;
+  /* the middle slot: twice the share of the row that a card gets, so the action leads it */
+  #rail { flex: 2 1 0; min-width: 0; background: transparent; border: 0;
     padding: 0; display: flex; box-shadow: none; }
   /* THE primary action: gold, a soft inner sheen and a gentle lift so it reads as the one
      button that matters — no hard offset block under it anymore */
@@ -375,16 +376,8 @@
 <canvas id="fundoHD"></canvas>
 <canvas id="scene" width="320" height="180"></canvas>
 
-<div id="lore" class="escondido">
-  <div class="loreBox">
-    <canvas id="loreArt" width="128" height="42"></canvas>
-    <h2>YEAR 2026</h2>
-    <p>You wake up in a world that is <i>in really bad shape</i>. The sky is gray. The rivers are dirty. The trees have no leaves. The people are tired.</p>
-    <p>Everyone says it is too late. You are <i>NIA</i> — Gran Odete called you <i>a spark</i> as a complaint, and the name stuck — and you believe it can get better. <i>Nobody is saved alone.</i></p>
-    <p>Tap anywhere to help — the button or the world itself. Start projects. Clear what gets in the way, pick up what it drops, and show up when the kitchen calls. <i>Don't let your team get too tired.</i></p>
-    <button id="btnBegin">▶ START</button>
-  </div>
-</div>
+<!-- owner: the opening card is gone. The game starts on the street, and the first-run
+     guide is what explains it, one line at a time. -->
 
 <!-- The board's top bar: one dark rail of counters, and a gear standing apart at its end. -->
 <div id="hudTop">
@@ -398,11 +391,7 @@
 </div>
 
 <div id="offline"></div>
-<div id="cartao"><div class="cn" id="cartaoN"></div><div class="ct" id="cartaoT"></div>
-  <div class="cv" id="cartaoV"></div></div>
 
-<!-- First-run guide: a neighbour's line pointing at the next thing. Pointer-through; only
-     the two buttons capture. Populated and positioned by mostrarGuia(). -->
 <div id="guia" aria-live="polite">
   <div class="guiaBolha">
     <div id="guiaV"></div>
@@ -421,11 +410,11 @@
   <div id="cartoes">
     <button id="modeQuick" class="cartao"><canvas class="pi" id="modeIcon" width="12" height="12"></canvas>
       <span class="cn" id="modeNome">FAST</span><span class="cv" id="modeSub"></span></button>
+    <div id="rail">
+      <button id="btnClique"><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span></button>
+    </div>
     <button id="openUpgrades" class="cartao"><canvas class="pi" data-i="up" width="12" height="12"></canvas>
       <span class="cn">UPGRADES</span></button>
-  </div>
-  <div id="rail">
-    <button id="btnClique"><canvas class="pi big" data-i="sword" width="12" height="12"></canvas><span>+<span id="ganhoClique">1</span></span></button>
   </div>
 </div>
 
@@ -718,6 +707,8 @@ function burst(x, y, n, cores) {
   if (parts.length > 190) parts = parts.slice(-190);
 }
 let combo = 0, attackT = 0, attackType = 0;
+let toquesDados = 0;                 // player swings only — the auto-help does not count
+const TOQUES_ANTES_DOS_BICHOS = 5;
 const JUMPF = 20;                 // frames of the leap
 const PASSO_PX = 5;               // ground covered per walk frame — six of these is one stride
 const ATKF = 16;                  // frames a cast animation is shown — long enough to READ the
@@ -832,6 +823,9 @@ function novoMob(tipo, wx) {
 }
 // Movement, spawning and state. Drawing lives in drawMobs() and is not touched here.
 function atualizarMobs(dt) {
+  // owner: nothing walks in until the player has swung five times. The street opens quiet,
+  // so the first thing anyone does is find out what the button does.
+  if (toquesDados < TOQUES_ANTES_DOS_BICHOS) return;
   const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
   mobT += dt;
   const espera = CFG.mobIntervalo / (1 + smog);   // a worn-out team draws more trouble
@@ -940,6 +934,7 @@ function tocarMundo(px, py) {
 //              out identically; it just cannot charge the super, so a phone on a table
 //              never builds one.
 function clicar(auto, naoConta) {
+  if (!auto) toquesDados++;
   const g = ganhoClique();
   S.energia += g; S.energiaTotal += g;
   // the team recovers while you organise together, not while you burn them out:
@@ -1133,11 +1128,11 @@ function simularOffline(total) {
 // ---------- save / load / offline ----------
 function salvar() {
   S.salvoEm = Date.now();
-  try { localStorage.setItem("proto_savetheworld", JSON.stringify(S)); } catch (e) {}
+  try { localStorage.setItem(CHAVE_JOGO, JSON.stringify(S)); } catch (e) {}
 }
 function carregar() {
   let bruto = null;
-  try { bruto = localStorage.getItem("proto_savetheworld"); } catch (e) {}
+  try { bruto = localStorage.getItem(CHAVE_JOGO); } catch (e) {}
   if (!bruto) return;
   try { Object.assign(S, JSON.parse(bruto)); } catch (e) { return; }
   // A save from before the cleanup still carries a project count and the tiredness those
@@ -1179,6 +1174,9 @@ function carregar() {
 // The prototype exists to answer "does the loop hold someone for three days?", so the
 // answer lives in its own key: passing the torch wipes S, and a corrupted game save
 // should not take the measurement down with it.
+// bumped when the cleanup removed projects, the torch and the whole economy those fed:
+// a save from before that carries totals no version of this game could have produced.
+const CHAVE_JOGO = "proto_savetheworld_v2";
 const CHAVE_RET = "proto_savetheworld_retencao";
 let R = { dias: [], segundos: 0, tochas: 0 };
 function diaLocal() {
@@ -1278,25 +1276,9 @@ const CAPITULOS = [
     ["BEN", "They're ready. They've been ready a while."]] }
 ];
 let cartaoT = 0;
-function mostrarCartao(c) {
-  const el = $("cartao"); if (!el) return;
-  const voz = c.v[Math.min(Math.max(0, S.transicoes | 0), c.v.length - 1)];
-  $("cartaoN").textContent = "CHAPTER " + c.n;
-  $("cartaoT").textContent = c.t;
-  $("cartaoV").innerHTML = "<b>" + voz[0] + "</b> — &ldquo;" + voz[1] + "&rdquo;";
-  el.classList.remove("mostra"); void el.offsetWidth;   // restart the fade
-  el.classList.add("mostra");
-  cartaoT = 5.4;
-}
+// owner: mostrarCartao() removed with the chapter cards and the guide.
 // Called from the HUD tick. One card per threshold crossed, in order, never two at once.
-function verificarCapitulo() {
-  if (!S.introSeen) return;                 // the intro is already saying chapter one
-  const i = Math.max(0, S.capVisto | 0);
-  if (i >= CAPITULOS.length) return;
-  if (cartaoT > 0) return;                  // a card still up wins; the next one waits
-  const c = CAPITULOS[i];
-  if (S.energiaTotal >= CFG.metaPrestigio * c.frac) { S.capVisto = i + 1; mostrarCartao(c); }
-}
+// owner: verificarCapitulo() removed with the chapter cards and the guide.
 
 // ---------- first-run guide ----------
 // The problem the owner named: a new player sees a HUD full of controls with nothing saying
@@ -1327,58 +1309,16 @@ const GUIA = [
 ];
 function todosUpgrades() { return [1, 2, 3].every(function (n) { return S["u" + n]; }); }
 let guiaAtual = null, guiaAlvoEl = null, guiaMostradoEm = 0;
-function jaViuGuia(id) { return Array.isArray(S.guiaVistos) && S.guiaVistos.indexOf(id) >= 0; }
-function marcarGuia(id) {
-  if (!id) return;
-  if (!Array.isArray(S.guiaVistos)) S.guiaVistos = [];
-  if (S.guiaVistos.indexOf(id) < 0) { S.guiaVistos.push(id); salvar(); }
-}
-function esconderGuia() {
-  const el = $("guia"); if (!el) return;
-  el.classList.remove("mostra");
-  if (guiaAlvoEl) { guiaAlvoEl.classList.remove("guiaAlvo"); guiaAlvoEl = null; }
-  guiaAtual = null;
-}
+// owner: marcarGuia() removed with the chapter cards and the guide.
+// owner: esconderGuia() removed with the chapter cards and the guide.
 // dismiss the step on screen (a tap anywhere, or "got it") and remember it so it never repeats
-function dispensarGuia() {
-  if (!guiaAtual) return;
-  marcarGuia(guiaAtual);
-  esconderGuia();
-}
+// owner: dispensarGuia() removed with the chapter cards and the guide.
 // skip the whole tour at once: every step counts as seen
-function pularGuia() { GUIA.forEach(function (g) { marcarGuia(g.id); }); esconderGuia(); }
-function mostrarGuia(g) {
-  const el = $("guia"); if (!el) return;
-  const alvo = $(g.alvo);
-  $("guiaV").innerHTML = g.voz;
-  guiaAtual = g.id;
-  guiaAlvoEl = alvo || null;
-  el.classList.add("mostra");
-  guiaMostradoEm = (typeof performance !== "undefined" ? performance.now() : Date.now());
-  if (alvo) {
-    alvo.classList.add("guiaAlvo");
-    // aim the caret at the thing being named, not at the middle of the bubble
-    const bolha = el.querySelector(".guiaBolha"), caret = el.querySelector(".guiaCaret");
-    if (bolha && caret) {
-      const rb = bolha.getBoundingClientRect(), ra = alvo.getBoundingClientRect();
-      const x = Math.max(12, Math.min(rb.width - 12, ra.left + ra.width / 2 - rb.left));
-      caret.style.left = x + "px";
-    }
-  }
-}
+// owner: mostrarGuia() removed with the chapter cards and the guide.
 // Called from the HUD tick, exactly like verificarCapitulo(): one step at a time, in order,
 // and only when the screen is otherwise quiet — never over a chapter card, an open sheet or
 // the epilogue.
-function verificarGuia() {
-  if (!S.introSeen) return;
-  if (guiaAtual) return;                    // one at a time
-  if (cartaoT > 0) return;                  // a chapter card is telling the story; wait for it
-  for (let i = 0; i < SHEETS.length; i++) if ($(SHEETS[i]).classList.contains("aberto")) return;
-  for (let i = 0; i < GUIA.length; i++) {
-    const g = GUIA[i];
-    if (!jaViuGuia(g.id) && g.quando()) { mostrarGuia(g); return; }
-  }
-}
+// owner: verificarGuia() removed with the chapter cards and the guide.
 
 // ---------- the wall ----------
 // Every torch leaves a name painted on it and the wall only ever grows. It is the one
@@ -2731,51 +2671,7 @@ const HERO_MINI = [
 ];
 const SMOG_MINI = { pal: { X: "#7a7288", K: "#10121c", D: "#5c5568" }, map: [
   ".XXXXXX..", "XXXXXXXX.", "XKXXXKXX.", "XXXXXXXX.", "XDXDXDXD.", ".XXXXXX.."] };
-function drawLoreArt() {
-  const la = document.getElementById("loreArt"); if (!la) return;
-  const lc = la.getContext("2d");
-  const px = function (c, x, y, w, h) { lc.fillStyle = c; lc.fillRect(x, y, w, h); };
-  const pm = function (map, pal, dx, dy) {
-    for (let r = 0; r < map.length; r++) for (let c = 0; c < map[r].length; c++) {
-      const ch = map[r][c]; if (ch !== ".") { lc.fillStyle = pal[ch]; lc.fillRect(dx + c, dy + r, 1, 1); }
-    }
-  };
-  // sick gray sky, banded
-  px("#2a2633", 0, 0, 128, 12); px("#3a3442", 0, 12, 128, 10);
-  px("#4a4452", 0, 22, 128, 8); px("#5a5162", 0, 30, 128, 3);
-  for (let x = 0; x < 128; x += 2) { px("#4a4452", x + (x % 4 ? 1 : 0), 29, 1, 1); } // dither seam
-  // pale cold sun behind haze
-  px("#8a8194", 100, 5, 8, 8); px("#9a91a4", 102, 7, 4, 4);
-  // dead city on the horizon
-  [[6, 14, 9, 19], [18, 10, 7, 23], [28, 16, 10, 17], [52, 12, 8, 21], [64, 17, 11, 16], [88, 14, 8, 19]].forEach(function (b) {
-    px("#1c1926", b[0], b[1], b[2], b[3]);
-    for (let wy = b[1] + 2; wy < 31; wy += 3) for (let wx = b[0] + 1; wx < b[0] + b[2] - 1; wx += 3)
-      px(Math.random() < 0.12 ? "#6a5a3a" : "#141220", wx, wy, 1, 1); // almost every window is dark
-  });
-  px("#3a3442", 20, 6, 3, 4); px("#544c60", 20, 4, 6, 3); // one chimney still smoking
-  px("#544c60", 24, 2, 7, 3); px("#5e5570", 29, 0, 8, 3);
-  // cracked dead ground
-  px("#3b3548", 0, 33, 128, 3); px("#2a2633", 0, 36, 128, 6);
-  [[10, 34], [30, 35], [55, 34], [78, 36], [100, 35], [118, 34]].forEach(function (k) {
-    px("#1c1926", k[0], k[1], 4, 1); px("#1c1926", k[0] + 2, k[1] + 1, 3, 1);
-  });
-  // a dead tree
-  px("#241f30", 16, 22, 2, 11); px("#241f30", 13, 22, 4, 1); px("#241f30", 12, 19, 1, 4);
-  px("#241f30", 18, 24, 4, 1); px("#241f30", 22, 21, 1, 4); px("#241f30", 15, 18, 1, 5);
-  // two smog blobs closing in from the left
-  pm(SMOG_MINI.map, SMOG_MINI.pal, 34, 22); pm(SMOG_MINI.map, SMOG_MINI.pal, 46, 24);
-  // the hero — the only bright thing in the frame
-  const hx0 = 74, hy0 = 16;
-  px("#a8384c", hx0 - 3, hy0 + 7, 4, 5); px("#87293a", hx0 - 6, hy0 + 8, 3, 4);   // cape
-  pm(HERO_MINI, HERO_COLORS, hx0, hy0);
-  px("#242a49", hx0 + 2, hy0 + 13, 3, 4); px("#343d66", hx0 + 6, hy0 + 13, 3, 4); // legs
-  px("#e8edf6", hx0 + 1, hy0 + 16, 4, 1); px("#e8edf6", hx0 + 6, hy0 + 16, 4, 1); // shoes
-  // the spark above the hero
-  px("#ffcd75", hx0 + 4, hy0 - 6, 2, 2); px("#ffe9b0", hx0 + 4, hy0 - 8, 2, 1);
-  px("#ffe9b0", hx0 + 4, hy0 - 4, 2, 1); px("#ffe9b0", hx0 + 2, hy0 - 6, 1, 2); px("#ffe9b0", hx0 + 7, hy0 - 6, 1, 2);
-  // faint glow around the hero on the ground
-  px("rgba(255,205,117,.25)", hx0 - 2, 33, 14, 1);
-}
+// owner: drawLoreArt() removed with the chapter cards and the guide.
 
 // ---------- AUTHORED HERO SPRITE FRAMES ----------
 // The hero is no longer assembled procedurally: he is 24 authored frames, sliced by hand,
@@ -3116,11 +3012,11 @@ function drawHero() {
     frames = HERO_SPR.atk2;
     fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / ATKF) * 4)));
   } else {
-    // He is standing, not running. The backdrop is a fixed painting, so a run cycle had
-    // him treadmilling — legs going, world still. The idle is four frames of breathing at
-    // 6 fps, which is what reads as alive without pretending to travel.
-    frames = HERO_SPR.idle;
-    fi = ((Math.floor(animT * 6) % 4) + 4) % 4;
+    // Walking, and the backdrop scrolls under him now so it is a real walk. The frame is
+    // picked by DISTANCE covered, not by elapsed time, so the stride can never drift out of
+    // step with the ground however fast the street is moving.
+    frames = HERO_SPR.walk;
+    fi = ((Math.floor(worldX / PASSO_PX) % 6) + 6) % 6;
   }
   const img = frames[fi];
 
@@ -3300,10 +3196,41 @@ function redesenharFundo() {
   // ground band below covered (dy+dh>=ch). The last term dominates for these tall paintings.
   const scale = Math.max(cw / iw, ch / ih, gd * ch / (gs * ih), (1 - gd) * ch / ((1 - gs) * ih));
   const dw = iw * scale, dh = ih * scale;
-  const dx = (cw - dw) / 2;
   let dy = gd * ch - gs * dh;
   dy = Math.min(0, Math.max(ch - dh, dy));   // keep the box fully covered
-  fx.drawImage(im, dx, dy, dw, dh);
+  // Park the geometry; the scroll is redrawn every frame from it, which is far cheaper than
+  // recomputing the cover-fit each time.
+  fundoGeo = { im: im, dw: dw, dh: dh, dy: dy, cw: cw, ch: ch };
+  rolarFundo();
+}
+
+// One painting, drawn as a repeating pair with every second copy MIRRORED. That is what
+// removes the seam: an edge only ever meets its own reflection, so there is no join to spot,
+// and the same trick works for any painting without needing it to tile.
+let fundoGeo = null;
+function rolarFundo() {
+  const g = fundoGeo;
+  if (!g) return;
+  const fc = document.getElementById("fundoHD");
+  if (!fc) return;
+  const fx = fc.getContext("2d");
+  fx.imageSmoothingEnabled = true;
+  fx.clearRect(0, 0, g.cw, g.ch);
+  // the backdrop travels slower than the street: parallax, and it keeps the distance distant
+  const desl = ((worldX * (g.cw / W) * 0.35) % (g.dw * 2) + g.dw * 2) % (g.dw * 2);
+  for (let k = -1; k <= Math.ceil(g.cw / g.dw) + 1; k++) {
+    const x = k * g.dw - desl;
+    if (x > g.cw || x + g.dw < 0) continue;
+    const espelhado = (((k % 2) + 2) % 2) === 1;
+    if (espelhado) {
+      fx.save();
+      fx.translate(x + g.dw, 0); fx.scale(-1, 1);
+      fx.drawImage(g.im, 0, g.dy, g.dw, g.dh);
+      fx.restore();
+    } else {
+      fx.drawImage(g.im, x, g.dy, g.dw, g.dh);
+    }
+  }
 }
 // Debug hook: force any of the seven paintings regardless of the coded scenario. n<0 clears
 // the override and returns to deriving the painting from cenAtivo.
@@ -5637,40 +5564,9 @@ function drawScene() {
 
   // owner: sprouts removed with the rest of what fired alongside the strike.
 
-  // smog: layered bands with ragged ends and a lit top, drifting at different speeds.
-  // Four flat grey rectangles used to be the whole of it.
-  if (smogV > 0.03) {
-    const off = (tick * (0.5 + R * 0.45)) % (W + 60);          // pushed air also moves faster
-    const corpo = rgbS(luzDoDia(mixA([203, 195, 178], [214, 176, 130], R)));
-    const topo = rgbS(luzDoDia(mixA([232, 225, 210], [244, 214, 164], R)));
-    [[0.03, 18, 0.30, 12, 1.00], [0.38, 34, 0.32, 10, 0.80],
-     [0.70, 12, 0.28, 13, 0.90], [0.18, 52, 0.34, 9, 0.65]].forEach(function (c, i) {
-      const bx2 = ((c[0] * W + off * (0.7 + i * 0.16)) % (W + 60)) - 40;
-      const bw = Math.round(c[2] * W), bh = c[3];
-      cx.globalAlpha = smogV * c[4] * 0.55;
-      cx.fillStyle = corpo;                      // smoke SCATTERS light: haze lightens the
-      cx.fillRect(bx2 + 7, c[1], bw - 14, bh);   // sky and flattens it, it does not darken it
-      cx.fillRect(bx2, c[1] + 3, bw, bh - 6);
-      cx.globalAlpha = smogV * c[4] * 0.40;
-      cx.fillStyle = topo;
-      cx.fillRect(bx2 + 12, c[1], bw - 26, 3);
-      cx.globalAlpha = 1;
-    });
-  }
-  // A LOW BANK ON THE HORIZON, only in GO FAST, and only as thick as the choice is costing.
-  // Two soft-ended strips of the same warm haze sitting on the separator band, drifting the
-  // other way from the high smoke — it is what makes the distance close IN on you.
-  if (RQ > 0.02) {
-    cx.fillStyle = rgbS(luzDoDia(mixA([236, 210, 172], HAZE_FAST, 0.45)));
-    for (let i = 0; i < 2; i++) {
-      const bw = Math.round(W * (0.55 + i * 0.25));
-      const bx2 = ((i * 0.5 * W - tick * (0.22 + i * 0.13)) % (W + bw) + W + bw) % (W + bw) - bw;
-      cx.globalAlpha = RQ * (0.20 - i * 0.06);
-      cx.fillRect(bx2 + 8, GROUND - 24 + i * 5, bw - 16, 7 - i * 2);
-      cx.fillRect(bx2, GROUND - 22 + i * 5, bw, 4 - i);
-    }
-    cx.globalAlpha = 1;
-  }
+  // owner: the smog bands and the low bank on the horizon are gone — no more grey drifting
+  // across the top of the picture.
+
   // owner: birds, ash, cinders, leaves, motes, the rhythm gust and the butterflies are
   // all gone — the owner wanted the extra particles off the screen.
 
@@ -5987,8 +5883,6 @@ function desenhar() {
   });
 
   alertaMundo();
-  verificarCapitulo();
-  verificarGuia();
 }
 
 // The super's charge, on the button that will spend it: one square per completed combo,
@@ -6117,11 +6011,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   // owner: the projects sheet is gone, and with it its buy buttons and its copy of the
   // rhythm switch. The rhythm now lives only on the card in the control block.
-  $("modeQuick").onclick = () => { marcarGuia("rhythm"); definirModo(S.modo === "carvao" ? "limpo" : "carvao"); };
+  $("modeQuick").onclick = () => { definirModo(S.modo === "carvao" ? "limpo" : "carvao"); };
   [1, 2, 3].forEach(function (n) { $("btnU" + n).onclick = () => comprar("u" + n, CFG["custoU" + n]); });
   // owner: the torch, the wall, the epilogue, the projects sheet and the special projects
   // are gone — every button that opened them went with them.
-  $("openUpgrades").onclick = () => { marcarGuia("upgrades"); abrir("sheetUpgrades"); };
+  $("openUpgrades").onclick = () => { abrir("sheetUpgrades"); };
   document.querySelectorAll(".fechar").forEach(function (b) {
     b.onclick = function () { $(b.dataset.close).classList.remove("aberto"); };
   });
@@ -6161,11 +6055,7 @@ document.addEventListener("DOMContentLoaded", () => {
   medirControles();
   window.addEventListener("resize", medirControles);
 
-  if (!S.introSeen) {
-    drawLoreArt();
-    $("lore").classList.remove("escondido");
-    $("btnBegin").onclick = () => { S.introSeen = true; $("lore").classList.add("escondido"); salvar(); };
-  }
+  S.introSeen = true;   // owner: there is no opening card to see any more
 
   let ultimo = performance.now(), hudAcc = 0, autoAcc = 0, retAcc = 0;
   function frame(agora) {
@@ -6177,21 +6067,20 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarChamada(dt);
     verificarAnuncios();
     if (modoAviso) { modoAviso.t -= dt; if (modoAviso.t <= 0) modoAviso = null; }
-    if (cartaoT > 0) cartaoT -= dt;
     if (S.u3) { // U3: neighbours keep helping on their own
       autoAcc += dt * CFG.autoTapsPorSeg;
       let n = Math.min(4, Math.floor(autoAcc));
       autoAcc -= Math.floor(autoAcc);
-      while (n-- > 0) clicar(false, true);
+      while (n-- > 0) clicar(true, true);   // auto: it earns, it never moves the hero
     }
-    // The street still creeps, slowly — it is what brings the next trouble and the next
-    // drop within reach. It is no longer tied to a stride, because he is not walking it.
-    worldX += dt * 26;
+    // 55 px/s over a 5 px stride frame puts the walk at 11 fps, which reads as a walk.
+    worldX += dt * 55;
     // rAF stops in a background tab and dt is clamped, so this counts time actually
     // spent playing rather than time the tab sat open
     R.segundos += dt; retAcc += dt;
     if (retAcc > 30) { retAcc = 0; marcarDia(); salvarRetencao(); }
     tick++; animT += dt; relogio += dt;
+    rolarFundo();               // the painted backdrop travels with him
     drawScene();
     desenharMundo();
     hudAcc += dt;
