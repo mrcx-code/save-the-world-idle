@@ -242,6 +242,18 @@ function legibilidade(p) {
         (n ? s / n : 0).toFixed(1) + ', C* ' + croma(p, y0, y1).toFixed(1));
     }
     console.log('FAIXA ' + nome + '  ' + linha.join('  |  '));
+    // CEU baixo is 55 px tall and the question about it is WHERE inside it the emptiness is:
+    // a layer that only reaches the bottom edge raises the band's average while leaving the
+    // hole untouched. Split in three so "it filled the band" cannot hide that.
+    const cb0 = Math.round(p.ground * 0.45), cb1 = p.ground - 42, cbt = (cb1 - cb0) / 3;
+    const sub = [];
+    for (let t = 0; t < 3; t++) {
+      const y0 = Math.round(cb0 + t * cbt), y1 = Math.round(cb0 + (t + 1) * cbt);
+      let s = 0, n = 0;
+      for (let y = y0; y + 12 < y1; y += 4) for (let x = 0; x + 12 < p.w; x += 6) { s += bloco(p, x, y, 12, 12).de; n++; }
+      sub.push('y' + y0 + '-' + y1 + ' dE ' + (n ? s / n : 0).toFixed(1));
+    }
+    console.log('  CEU baixo por terco: ' + sub.join('  |  '));
   }
 
   // ---- (2) the worst-case frame ----
