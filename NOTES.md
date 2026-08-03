@@ -1280,6 +1280,95 @@ toda sessão começa lendo a última entrada.
   medida de leitura; não sei dizer se num celular pequeno, com três monstros na fila e o
   campo de partículas cheio, o herói continua sendo a primeira coisa que o olho acha.**
 
+- **2026-08-03 · visual — um regime de luz só, e a densidade finalmente medida em vez de
+  julgada por print.** Três incrementos, cada um com `node test/smoke.js` verde. **FPS 61 do
+  começo ao fim.** Nada de `CFG`, `S`, fórmula ou economia foi tocado — **medido: `node
+  test/sim.js` dá saída byte a byte idêntica nos três commits** (`diff` vazio, três vezes).
+
+  **(1) O bug que a onda passada deixou anotado: a rua tinha duas iluminações no mesmo
+  quadro.** As decorações, as pedras, os vizinhos e o menino tomavam a hora; as casas, as
+  árvores, a barraca da cozinha e as bandeirinhas não, porque estavam em hexadecimal cravado
+  — e hexadecimal cravado não sabe que horas são. Varri o mundo inteiro por um par de
+  funções novas, `wc(hex)` e `wp(nome, paleta)`, na **mesma dose do mundo** que as decorações
+  já usam (piso 0,06, tinta cheia), resolvidas nos mesmos 24 degraus do dia. Entraram: casas
+  (parede, telha, cumeeira, porta, veneziana, peitoril, jardineira, trepadeira), casca e copa
+  das árvores, o ipê e as pétalas que ele solta, vitórias-régias, a barraca e o toldo listrado,
+  as bandeirinhas e o cordão, a mesa, os telhados-projeto (horta e gerador), os postes de
+  cabo, o guindaste e a antena da linha do horizonte, as florzinhas da beira, os brotos e
+  **as partículas de clima ambiente** (cinza, cinzas quentes, folhas e pétalas ao vento —
+  o quadro noturno tinha confete verde e rosa caindo dentro dele).
+
+  **A regra é uma só, e é a que as luminárias já seguiam: ou a coisa é FONTE, ou toma a
+  hora.** Ficaram de fora, e só elas: janela acesa, vidro da luminária e o derrame dela, o
+  reflexo molhado da PÓS-CHUVA, o pisca-pisca da antena, as faíscas de combate e o Cetro.
+
+  **Medido**, faixa do mundo com a rua sã, **antes → depois**: à NOITE o percentil 99,5 de
+  luma caiu de **209,3 para 123,6** e a fatia de pixels acima de luma 150 (ou seja, com cara
+  de dia) caiu de **1,93% para 0,38%** — e os 0,38% que sobraram são luminária, janela acesa
+  e Cetro, que é exatamente o ponto. A média foi de 69,4 para 64,5. **E o dia não foi
+  acinzentado junto:** MANHÃ média 143,7 → 144,4 e percentil 99,5 246,5 dos dois lados.
+
+  **(2) Os três monstros eram o mesmo bug de cara nova, e eram o pior caso.** Eram as últimas
+  figuras do mundo em hexadecimal cravado, e sendo as maiores formas saturadas da rua eram
+  também a coisa mais acesa à meia-noite. Passaram por `luzPersonagem` com **piso 0,26 contra
+  o 0,34 do menino** — margem de propósito: ele é a leitura do quadro e tem de ficar acima
+  das coisas em que bate. O flash branco do acerto e os pips de vida **não** passam por ali:
+  aquilo é sinal de jogo, não tinta.
+
+  **(3) A densidade, medida.** Montei o pior caso que a onda passada não soube julgar —
+  rua sã, três monstros na fila, campo de partículas no teto de 190, decorações e vizinhos
+  na densidade máxima — em `test/medir.js`. **Método:** todo bloco do tamanho do herói
+  (22×34 px de mundo) numa grade de 5 px sobre a faixa do mundo recebe uma nota de contraste
+  local = **desvio absoluto médio dos pixels do bloco em relação à luma média do anel em
+  volta**. A diferença das médias foi a primeira tentativa e **não mede nada**: um herói
+  metade poncho creme e metade calça escura tem média igual à do próprio fundo e tira **1,9**.
+  A moldura de folhagem é contada à parte, porque proscênio é arquitetura e não prop
+  disputando o olho.
+
+  **Antes → depois:** à NOITE o herói tira **20,7** e o rival mais forte caiu de **52,4 para
+  32,9** — razão herói/rival de **0,40 para 0,63**; posição entre 873 blocos, 168 → 143 (fora
+  da moldura, 104 → 96). À MANHÃ o herói foi de 52,8 para 53,1 contra rival 62,1, razão 0,85
+  → 0,86, e fora da moldura 34 → 27 de 519.
+
+  **A resposta honesta é que ele ainda não é o primeiro.** À frente dele estão a silhueta do
+  proscênio contra o céu e o monstro mais próximo — e um monstro que você deve acertar lendo
+  um pouco mais alto que ele não é obviamente o quadro errado. O que estava errado, e não
+  está mais, é que à noite ele perdia por fator 2,5.
+
+  **Tentei e desfiz:** subir o piso noturno do próprio menino de 0,34 para 0,46. Comprou 2,5
+  pontos (20,8 → 22,3) e custou a escolha que a onda anterior tomou medindo — luma do poncho
+  123,6 → 134,5, ele lendo menos como alguém de pé no escuro. Não vale por 2,5 pontos.
+
+  **(4) A maior distância que sobrava para o board.** Pondo os dois lado a lado: o painel
+  LUZ & ATMOSFERA / NOITE do board **não é uma rua escura com pontinhos de luz**, é uma rua
+  feita de **poças** — cada luminária deita uma elipse quente sobre a pedra e o escuro é o
+  que sobra entre elas. `pocaLuz()` faz isso, das luminárias de poste e do lampião da rua.
+  **Não acrescenta objeto nenhum** — é luz sobre chão que já existe, e é por isso que não
+  deixa um quadro já cheio mais cheio. Só existe em proporção a `escuridao()`, então MANHÃ e
+  TARDE saem idênticas ao pixel.
+
+  **Peguei no print, não no código:** a primeira versão deitava a poça em 13 linhas descendo
+  da linha do chão e a tarja REAL DATA comia tudo — o plano do chão tem 30 px de mundo e o
+  que se vê são umas sete linhas abaixo da linha do chão. Refeita larga e rasa dentro dessa
+  faixa, que é também o que uma poça de lampião parece num ângulo tão rasante. A força saiu
+  do print também: 0,13 era invisível, 0,30 lavava os vizinhos, **0,22** é uma rua de pé
+  dentro da luz. Custa ~0,5 ponto de legibilidade do herói (20,8 → 20,6 à NOITE, 53,1 → 52,2
+  à MANHÃ), porque a poça também clareia o entorno dele.
+
+  **Conferido em dois níveis de saúde e em quatro horas**, não só no quadro fácil: rua doente
+  à NOITE fica cinza-malva desbotada e escura, com o Cetro como única coisa quente; rua doente
+  à TARDE fica ocre e clara. O arco doente→são continua mandando e a hora continua sendo uma
+  camada por cima dele.
+
+  **Medido no fim:** smoke verde nos três incrementos, **FPS 61**, `sim.js` idêntico.
+  **Próximo passo: os pips brancos de vida em cima dos monstros são hoje a coisa mais clara
+  da faixa do chão num quadro noturno — são sinal de jogo e por isso ficaram de fora da
+  varredura, mas agora que os monstros escureceram eles ficaram desproporcionais e alguém
+  precisa decidir se aquilo é leitura ou ruído. Dúvida honesta: `test/medir.js` mede contraste
+  de luma e mais nada; o board separa doente de são pela CROMA, e um herói que é a única coisa
+  saturada de um quadro pode estar lendo primeiro por um canal que a minha medida não olha —
+  não sei se estou subestimando ele.**
+
 ## Would cut with one more day
 
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
