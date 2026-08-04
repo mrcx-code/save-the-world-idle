@@ -1,10 +1,10 @@
 // Build step (source-time only, never runs in the game): read the seven owner-painted scene
-// data-URIs from assets/scenarios/cen1.datauri .. cen7.datauri and splice them into index.html
+// data-URIs from assets/scenarios/cen1.webp .. cen7.webp and splice them into index.html
 // between the CEN_FUNDO_B64 markers as the CENARIO_FUNDO_B64 array.
 //
 //   node test/inline-cenarios.js
 //
-// The .datauri files are SOURCE (like assets/hero/*.png): the shipped game stays one
+// The .webp masters are SOURCE (like assets/hero/*.png): the shipped game stays one
 // self-contained index.html with the paintings inlined, no runtime asset fetch.
 const fs = require('fs');
 const path = require('path');
@@ -16,12 +16,15 @@ const NAMES = ['cen1', 'cen2', 'cen3', 'cen4', 'cen5', 'cen6', 'cen7'];
 const parts = [];
 let total = 0;
 for (const n of NAMES) {
-  const f = path.join(DIR, n + '.datauri');
-  const s = fs.readFileSync(f, 'utf8').trim();
-  if (!/^data:image\/[a-z]+;base64,/.test(s)) {
-    console.error('ERROR: ' + n + '.datauri is not a data:image;base64 URI');
+  // The masters are binary .webp now, not base64 text. Same bytes, a third less on disk:
+  // base64 costs 33% and there was no reason to pay it twice — once here and once again in
+  // the file this script writes into.
+  const f = path.join(DIR, n + '.webp');
+  if (!fs.existsSync(f)) {
+    console.error('ERROR: falta ' + f);
     process.exit(1);
   }
+  const s = 'data:image/webp;base64,' + fs.readFileSync(f).toString('base64');
   parts.push('  "' + s + '"');
   total += s.length;
   console.error(`${n}: ${(s.length / 1024).toFixed(1)}KB (base64)`);
