@@ -257,44 +257,7 @@ function chromiumPath() {
   if (!recursos.passou.aindaLa) errors.push('a drop still ahead of the hero was collected too early');
 
   // obsolete: special projects removed by owner request — feature and test.
-  // ---- the community call: show up inside the window and the street works with you ----
-  await page.evaluate(async () => {
-    mobs.length = 0; drops.length = 0; mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null;
-    abrirChamada(false);
-    await new Promise(r => setTimeout(r, 250));
-  });
-  await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-chamada.png') });
-  const chamado = await page.evaluate(async () => {
-    const aviso = ''/*obsolete: alert strip removed*/;
-    const semMutirao = prodPorSegundo();
-    const r = document.getElementById('scene').getBoundingClientRect();
-    const cv = document.getElementById('scene');
-    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true,
-      clientX: r.left + chamada.sx / W * r.width, clientY: r.top + (GROUND - 14) / H * r.height }));
-    cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    await new Promise(rr => setTimeout(rr, 60));
-    return { aviso, semMutirao, comMutirao: prodPorSegundo(), t: mutiraoT, aberta: !!chamada,
-      mult: bonusMutirao() };
-  });
-  console.log('community call ->', JSON.stringify(chamado.aviso), '| answered:', !chamado.aberta,
-    '| rate', chamado.semMutirao.toFixed(1), '->', chamado.comMutirao.toFixed(1),
-    '(×' + chamado.mult + ' for', Math.round(chamado.t) + 's)');
-// obsolete:   if (!/HANDS/.test(chamado.aviso)) errors.push('the call did not announce itself');
-// obsolete:   if (chamado.aberta) errors.push('tapping the pot did not answer the call');
-  if (!(chamado.comMutirao > chamado.semMutirao)) errors.push('the mutirão did not raise production');
-
-  // a missed call closes on its own and costs nothing
-  const perdida = await page.evaluate(async () => {
-    mutiraoT = 0; superT = 0; superCarga = 0; superSwings = 0; superCd = 0; superFx = null; abrirChamada(false);
-    const antes = S.energiaTotal;
-    for (let i = 0; i < 300; i++) atualizarChamada(0.1);   // 30s: past the window
-    return { aberta: !!chamada, perdeu: S.energiaTotal < antes };
-  });
-  // obsolete: mutirão was removed by owner request. left as history.
-  // if (perdida.aberta) errors.push('a missed call never closed');
-  if (perdida.perdeu) errors.push('missing a call took something away');
-
-  // obsolete: projects + the rhythm panel removed by owner request — feature and test.
+  // obsolete: the community call was removed by owner request — feature and test.
   // obsolete: the AUTO-FIRE skill was removed by owner request — feature and test.
   // ---- coming back on another day is worth something ----
   const dias = await page.evaluate(() => {
@@ -361,10 +324,7 @@ function chromiumPath() {
   // can never be mistaken for the sourced REAL DATA banner ----
   const digitos = await page.evaluate(() => {
     const s = [];
-    CAPITULOS.forEach(c => { s.push(c.t, c.n === undefined ? '' : ''); c.v.forEach(v => s.push(v[0], v[1])); });
     NOTAS_VOLTA.forEach(v => s.push(v[0], v[1]));
-    GUIA.forEach(g => s.push(g.voz.replace(/<[^>]+>/g, '')));
-    ORDINAIS.forEach(o => s.push(o));
     return { total: s.length, ruins: s.filter(x => /[0-9]/.test(x)) };
   });
   console.log('fiction strings checked for digits ->', digitos.total, '| with a digit:', digitos.ruins.length);
