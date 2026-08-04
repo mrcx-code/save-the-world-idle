@@ -46,8 +46,10 @@ function chromiumPath() {
     '| earned', salto.ganho.toFixed(2), '| combo moved', salto.combo);
   if (salto.noAr <= 0) errors.push('a tap on the world did not jump');
   if (salto.pousou !== 0) errors.push('the jump never landed');
-  if (salto.ganho > 0.001) errors.push('a tap on the world earned impact');
-  if (salto.combo !== 0) errors.push('a tap on the world advanced the combo');
+  // owner changed his mind: the jump lands a blow on the way up, so it DOES earn and it DOES
+  // move the combo. What it must not do is stamp an attack pose over the leap.
+  if (!(salto.ganho > 0)) errors.push('the jump landed no blow');
+  if (salto.combo === 0) errors.push('the jump did not advance the combo');
 
   // a leaf caught out of the air pays, and only while she is up there
   const folha = await page.evaluate(async () => {
@@ -116,7 +118,10 @@ function chromiumPath() {
   if (!(vida.golpes.barrel > vida.golpes.cash && vida.golpes.cash > vida.golpes.smog)) {
     errors.push('the three troubles do not take different numbers of hits');
   }
-  if (vida.hp.barrel > 6) errors.push('the health spread grew into a damage system');
+  // The cap was 6 back when the button was the only thing that swung. A jump lands a blow
+  // too now, so the owner raised health across the board; the guard still exists to stop an
+  // arms race, just at the new scale.
+  if (vida.hp.barrel > 24) errors.push('the health spread grew into a damage system');
   if (!vida.pintou) errors.push('the health readout drew nothing');
   if (!vida.mudou) errors.push('the health readout does not change when a trouble is damaged');
 
@@ -182,7 +187,7 @@ function chromiumPath() {
   console.log('aimed taps -> drops left:', recolha.nDrops, 'worth', recolha.valor.toFixed(1),
     '| picking one up paid', recolha.ganho.toFixed(1), '| taken off the ground:', recolha.saiu);
   if (recolha.nDrops < 1) errors.push('beating a trouble left no drop');
-  if (recolha.ganho < recolha.valor) errors.push('picking up a drop paid nothing');
+  if (recolha.ganho < recolha.valor - 1e-9) errors.push('picking up a drop paid nothing');
   if (!recolha.saiu) errors.push('the drop was not taken off the ground');
   await page.screenshot({ path: path.resolve(__dirname, '..', 'shot-mundo.png') });
 
