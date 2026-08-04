@@ -91,13 +91,13 @@
     background: linear-gradient(180deg, rgba(24,18,10,.72), rgba(24,18,10,.34));
     backdrop-filter: blur(1px); }
   /* the three drop counters: small, quiet, and only as wide as their numbers */
-  #recursos { display: flex; align-items: center; gap: 9px; margin-left: 12px; }
-  .rec { display: flex; align-items: center; gap: 3px; }
-  .rec b { font-size: 11px; font-weight: 900; color: #d8c398; font-variant-numeric: tabular-nums;
-    text-shadow: 0 2px 0 rgba(0,0,0,.7); }
-  .pd { image-rendering: pixelated; width: 14px; height: 14px; }
+  #recursos { display: flex; align-items: center; gap: 14px; margin-left: 18px; }
+  .rec { display: flex; align-items: center; gap: 6px; }
+  .rec b { font-size: var(--fs-sm); font-weight: 900; color: #f4e3bb;
+    font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0,0,0,.75); }
+  .pd { image-rendering: pixelated; width: 26px; height: 26px; }
   #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline;
-    justify-content: center; gap: 10px; padding: 10px 14px 12px; }
+    justify-content: center; gap: 14px; padding: 12px 14px 14px; }
   /* one line, no stacking: the leaf, the number, then what the number is */
   .chip { min-width: 0; display: flex; align-items: baseline; gap: 10px; }
   .cInfo { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
@@ -383,9 +383,9 @@
       <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo">IMPACT</div></div></div>
     <!-- what the street has given you, counted. The sprites are the drops themselves. -->
     <div id="recursos">
-      <span class="rec"><canvas class="pd" id="pdFlor" width="12" height="12"></canvas><b id="nFlor">0</b></span>
-      <span class="rec"><canvas class="pd" id="pdAgua" width="12" height="12"></canvas><b id="nAgua">0</b></span>
-      <span class="rec"><canvas class="pd" id="pdRef" width="12" height="12"></canvas><b id="nRef">0</b></span>
+      <span class="rec"><canvas class="pd" id="pdFlor" width="26" height="26"></canvas><b id="nFlor">0</b></span>
+      <span class="rec"><canvas class="pd" id="pdAgua" width="26" height="26"></canvas><b id="nAgua">0</b></span>
+      <span class="rec"><canvas class="pd" id="pdRef" width="26" height="26"></canvas><b id="nRef">0</b></span>
     </div>
     <!-- owner: the third chip (world %) is gone — the top row is impact and team only. -->
   </div>
@@ -2912,16 +2912,15 @@ function redesenharFundo() {
 // and the same trick works for any painting without needing it to tile.
 let fundoGeo = null;
 // ---------- the street you have reached ----------
-// Seven paintings, and you walk one of them until you have earned the next. The first advance
-// wants every upgrade bought AND 5000 impact; after that only the impact bar rises, because
-// there are no more upgrades to ask for. These numbers are the whole of the game's long arc,
-// so they live here, together, where they can be argued with.
-const LIMIARES = [5000, 18000, 55000, 150000, 400000, 1000000];
+// Seven paintings, and you walk one of them until you have earned the next. Each street costs
+// a flat 3000 impact — no curve. The upgrade gate went with the old numbers: the three of them
+// cost 5050 together, so requiring them would have made the FIRST street dearer than the other
+// five put together, which is the opposite of a flat cost.
+const LIMIARES = [3000, 6000, 9000, 12000, 15000, 18000];
 function cenarioAtual() {
   const n = Math.max(0, Math.min(CENARIO_FUNDO.length - 1, S.cenario | 0));
   return n;
 }
-function todosUpgrades() { return S.u1 && S.u2 && S.u3; }
 function proximoLimiar() {
   const i = cenarioAtual();
   return i >= LIMIARES.length ? null : LIMIARES[i];
@@ -2929,7 +2928,6 @@ function proximoLimiar() {
 function verificarCenario() {
   const alvo = proximoLimiar();
   if (alvo === null) return;                       // the last street: nothing further to reach
-  if (!todosUpgrades()) return;                    // the first gate, and it never reopens
   if (S.energiaTotal < alvo) return;
   S.cenario = cenarioAtual() + 1;
   redesenharFundo();
@@ -2949,9 +2947,9 @@ function pintarIconesDrop() {
   alvos.forEach(function (a) {
     const cn = $(a[0]); if (!cn) return;
     const g2 = cn.getContext("2d");
-    g2.clearRect(0, 0, 12, 12);
+    g2.clearRect(0, 0, 26, 26);
     g2.imageSmoothingEnabled = false;
-    g2.drawImage(DROP_SPR[a[1]], 0, 0, 12, 12);
+    g2.drawImage(DROP_SPR[a[1]], 0, 0, 26, 26);
   });
   iconesDropOk = true;
 }
