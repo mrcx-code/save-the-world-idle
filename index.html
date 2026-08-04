@@ -1024,18 +1024,22 @@ function clicar(auto, naoConta, semAnim) {
   // the wand skill used to drive the whole 3-hit combo, so the character leapt on its own
   // every ~1.5s and the frame read as bugged in production. The visible swing and leap now
   // fire on player taps only; the auto-helpers still deal their damage below.
-  const passo = combo; combo = (combo + 1) % 3;
+  // Owner: the leap comes on every FIFTH swing, not every third. Four ordinary casts, then
+  // she goes up.
+  const PASSOS = 5, SALTO = PASSOS - 1;
+  const passo = combo; combo = (combo + 1) % PASSOS;
   // semAnim: the swing that comes with a JUMP. It earns and it damages, but it leaves the
   // pose alone — she is already in the air, and stamping an attack frame over the leap would
   // cut the arc in half.
   if (!auto && !semAnim) {
-    attackType = passo;
-    attackT = passo === 2 ? JUMPF : ATKF;
-    if (passo === 2 && jumpT <= 0) jumpT = JUMPF;   // third beat: she leaps. No shockwave.
+    // only two cast poses exist, so the four ordinary beats alternate between them
+    attackType = passo % 2;
+    attackT = passo === SALTO ? JUMPF : ATKF;
+    if (passo === SALTO && jumpT <= 0) jumpT = JUMPF;   // the fifth beat: she leaps.
   }
   // reach covers the whole queue (three troubles, one body-width apart) — otherwise the
   // one at the back is unhittable from the button and the road never clears
-  const range = passo === 2 ? 96 : 80, dmg = passo === 2 ? 2 : 1;
+  const range = passo === SALTO ? 96 : 80, dmg = passo === SALTO ? 2 : 1;
   mobs.forEach(function (m) {
     if (m.dying > 0) return;
     const sx = m.wx - worldX;

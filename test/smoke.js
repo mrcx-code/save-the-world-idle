@@ -191,7 +191,9 @@ function chromiumPath() {
     const alvo = paraCliente(sx + 5, GROUND - 12);
     const cv = document.getElementById('scene');
     // the world is the jump surface now, so swinging is done on the button
-    for (let i = 0; i < 6 && mobs.length && !mobs[0].dying; i++) {
+    // troubles have four times the health they used to, and the leap only lands every fifth
+    // swing, so it takes a good few more taps to see one off
+    for (let i = 0; i < 24 && mobs.length && !mobs[0].dying; i++) {
       clicar();
       await new Promise(rr => setTimeout(rr, 40));
     }
