@@ -330,6 +330,11 @@
     text-align: center; letter-spacing: .04em; text-shadow: 0 2px 0 rgba(0,0,0,.45); }
   .upgrade button { width: 100%; padding: 5px 4px; font-size: var(--fs-xs); color: #221806;
     background: var(--ouroA); border-radius: 999px; }
+  /* the test switch is not one of the three: it is free, it breaks the pacing on purpose,
+     and it should never be mistaken for something the game intends you to buy */
+  .upgrade.teste { background: rgba(138, 47, 34, .35); }
+  .upgrade.teste .nome { color: #ffd9cd; }
+  .upgrade.teste button { background: #8a2f22; color: #ffe6df; }
   .upgrade.comprado .nome { color: var(--good); }
   .upgrade.comprado button { background: transparent; color: var(--good); }
 
@@ -428,6 +433,7 @@
     <div class="upgrade" id="cardU1"><span class="nome">×3<br>per hit</span><button id="btnU1"></button></div>
     <div class="upgrade" id="cardU2"><span class="nome">×2<br>per pickup</span><button id="btnU2"></button></div>
     <div class="upgrade" id="cardU3"><span class="nome">2 hits/s<br>on their own</span><button id="btnU3"></button></div>
+    <div class="upgrade teste" id="cardU4"><span class="nome">×100<br>TEST</span><button id="btnU4"></button></div>
   </div>
 </div>
 
@@ -456,6 +462,7 @@ const CFG = {
   // read as CFG["custoU" + n] and never as CFG.custoU1, so a dead-code sweep will offer to
   // delete these. They are live.
   custoU1: 150, custoU2: 900, custoU3: 4000,
+  custoU4: 0, forcaToqueU4: 100,   // the test switch: free, and it ends the progression
   metaPrestigio: 50000, divisorInovacao: 2500,
   capOfflineHoras: 12,
   // --- the world answers back: troubles walk in, drops are picked up by hand,
@@ -523,6 +530,7 @@ let S = {
   // sprinting the moment the page loaded.
   modo: "limpo",
   u1: false, u2: false, u3: false,
+  u4: false,                 // the x100 test switch, off by default
   cenario: 0,                // which of the seven streets you have reached
   // A drop still leaves a resource of its kind — smog to flower, barrel to water, cash to
   // meal. Nothing spends them since special projects were removed, so they are a counter kept
@@ -531,7 +539,9 @@ let S = {
   salvoEm: 0
 };
 
-const forcaToque = () => (S.u1 ? CFG.forcaToqueU1 : 1);   // U1: stronger hands
+// U1 triples the tap; U4 is the test switch and multiplies whatever that came to by a
+// hundred, so the later streets are reachable in a minute instead of half an hour.
+const forcaToque = () => (S.u1 ? CFG.forcaToqueU1 : 1) * (S.u4 ? CFG.forcaToqueU4 : 1);
 // coming back on a new day is worth something: the neighbourhood knows you now
 const bonusDias = () => 1 + CFG.bonusDia * Math.min(Math.max(0, R.dias.length - 1), CFG.diasMax);
 // What a tap is worth: the base, the upgrade that triples it, and the day streak. Every
@@ -942,6 +952,7 @@ const ESQUEMA_SAVE = {
   u1:           { tipo: "bool", pad: false },
   u2:           { tipo: "bool", pad: false },
   u3:           { tipo: "bool", pad: false },
+  u4:           { tipo: "bool", pad: false },
   cenario:      { tipo: "num", min: 0, max: 6, pad: 0 },
   salvoEm:      { tipo: "num", min: 0, max: 4e12, pad: 0 }
 };
@@ -5630,7 +5641,7 @@ function desenhar() {
 
   // the one card left that carries a number of its own
   // owner: no note under the card — the button glows when something is affordable, that is all
-  const podeComprar = [1, 2, 3].filter(function (n) {
+  const podeComprar = [1, 2, 3, 4].filter(function (n) {
     return !S["u" + n] && S.energia >= CFG["custoU" + n];
   }).length;
   // toggle, never reassign: reassigning wiped the class that turns this card into the
@@ -5639,10 +5650,10 @@ function desenhar() {
 
 
 
-  [1, 2, 3].forEach(function (n) {
+  [1, 2, 3, 4].forEach(function (n) {
     const custo = CFG["custoU" + n], comprado = S["u" + n];
     $("cardU" + n).classList.toggle("comprado", comprado);
-    $("btnU" + n).textContent = comprado ? "✓" : fmt(custo);
+    $("btnU" + n).textContent = comprado ? "✓" : (custo === 0 ? "FREE" : fmt(custo));
     $("btnU" + n).disabled = comprado || S.energia < custo;
   });
 
@@ -5771,7 +5782,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // owner: the projects sheet is gone, and with it its buy buttons and its copy of the
   // rhythm switch. The rhythm now lives only on the card in the control block.
   $("modeQuick").onclick = () => { definirModo(S.modo === "carvao" ? "limpo" : "carvao"); };
-  [1, 2, 3].forEach(function (n) { $("btnU" + n).onclick = () => comprar("u" + n, CFG["custoU" + n]); });
+  [1, 2, 3, 4].forEach(function (n) { $("btnU" + n).onclick = () => comprar("u" + n, CFG["custoU" + n]); });
   // owner: the torch, the wall, the epilogue, the projects sheet and the special projects
   // are gone — every button that opened them went with them.
   $("openUpgrades").onclick = function () {
