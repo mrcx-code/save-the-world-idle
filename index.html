@@ -5778,7 +5778,15 @@ document.addEventListener("DOMContentLoaded", () => {
       autoAcc += dt * CFG.autoTapsPorSeg;
       let n = Math.min(4, Math.floor(autoAcc));
       autoAcc -= Math.floor(autoAcc);
-      while (n-- > 0) clicar(true, true);   // auto: it earns, it never moves the hero
+      while (n-- > 0) {
+        // The auto flag is what keeps these off the combo — it was added because auto-taps used to
+        // drive the whole three-beat cycle and set her leaping on her own every second. But it
+        // also suppressed the bolt, so the upgrade paid out with nothing on screen: the number
+        // moved and nothing happened. The bolt is thrown here instead, straight from the
+        // helper, so it is visible without touching the combo or the leap.
+        clicar(true, true);
+        lancarMagia(0, HX - 8, GROUND - 44);
+      }
     }
     // A sprite frame must last a WHOLE number of render frames or the cadence limps. Five of
     // them per pose walking (12 fps), four running (15 fps) — a run is a slightly quicker
