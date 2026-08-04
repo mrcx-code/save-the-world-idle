@@ -3120,8 +3120,13 @@ function drawHero() {
   const mid = HX;                                         // his centre line / feet x
   let frames, fi;
   if (air) {
-    frames = HERO_SPR.sp;
-    fi = Math.max(0, Math.min(5, Math.floor((1 - jumpT / JUMPF) * 6)));
+    // There is no jump sheet. HERO_SPR.sp is the SUPER — she plants the wand and a green
+    // blast goes off at her feet — which is the flash that appeared mid-leap; the super itself
+    // was removed, but the frames stayed and the jump inherited them. Until a real jump cycle
+    // exists, the arc borrows the two walk poses with the tightest legs: 3 going up, 9 coming
+    // down. It reads as tucked and it carries no effect with it.
+    frames = HERO_SPR.walk;
+    fi = (1 - jumpT / JUMPF) < 0.5 ? 3 : 9;
   } else if (attackT > 0 && attackType === 0) {
     frames = HERO_SPR.atk1;
     fi = Math.max(0, Math.min(3, Math.floor((1 - attackT / ATKF) * 4)));   // attackT starts at 9
