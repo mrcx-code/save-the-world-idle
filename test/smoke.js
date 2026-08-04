@@ -41,7 +41,9 @@ function chromiumPath() {
     await new Promise(rr => setTimeout(rr, 60));
     const noAr = jumpT;
     cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    await new Promise(rr => setTimeout(rr, 700));
+    // the arc is JUMPF frames at 60fps — 733ms — so 700 was cutting it fine enough to fail
+    // on a slow frame. Wait for the landing instead of guessing at it.
+    for (let i = 0; i < 60 && jumpT > 0; i++) await new Promise(rr => setTimeout(rr, 40));
     return { noAr, pousou: jumpT, ganho: S.energiaTotal - antes, combo: combo - comboAntes };
   });
   console.log('tap on the world -> jumpT', salto.noAr, '| landed at', salto.pousou,

@@ -2570,20 +2570,17 @@ let magias = [], ultAtkT = 0, ultAtkTipo = -1;
 // falls back to zero a few frames later, so the wand is a stick with a bright moment in it
 // rather than an object that hums all day. Everything the light does is a function of this.
 let flashCast = 0;
+// One bolt per cast, straight ahead. The second cast pose used to throw a spread of three
+// on diverging arcs, which read as a different, bigger attack than the one beside it — the
+// owner wants a single basic shot every time. Only the height it leaves at still differs
+// between the two poses, because one swings low and the other high.
 function lancarMagia(tipo, bx, y0) {
   flashCast = 1;
-  // The two everyday casts are both basic, but they must not be the same animation twice.
-  // One goes LOW and forward along the dirt; the other whips UP and throws a spread.
-  if (tipo === 0) {
-    magias.push({ wx: worldX + bx + 32, y: y0 + 30, vx: 215, vy: -14, t: 0, vida: 0.34, f: 1.45 });
-  } else if (tipo === 1) {
-    for (let i = -1; i <= 1; i++) {
-      magias.push({ wx: worldX + bx + 32, y: y0 + 4, vx: 132 + i * 26, vy: -128 + i * 44,
-        t: 0, vida: 0.30, f: 1.05 });
-    }
-  } else {
-    magias.push({ wx: worldX + bx + 30, y: y0 + 26, vx: 90, vy: 150, t: 0, vida: 0.24, f: 1.7 });
-  }
+  const alto = tipo === 1;
+  magias.push({
+    wx: worldX + bx + 32, y: y0 + (alto ? 14 : 30),
+    vx: 215, vy: 0, t: 0, vida: 0.34, f: alto ? 1.2 : 1.45
+  });
 }
 function desenharMagias() {
   for (let i = magias.length - 1; i >= 0; i--) {
