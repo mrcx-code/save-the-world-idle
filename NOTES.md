@@ -6,13 +6,12 @@ não existem. Se as duas discordarem, esta parte é a verdade.
 
 ## O loop
 
-Ela caminha por uma rua. Coisas aparecem e caminham na direção contrária. Você golpeia
-o que quiser golpear e ignora o resto — nada trava, nada espera. Impacto sobe. Três
-upgrades gastam esse impacto. Não há mais nada.
+Ela caminha por uma rua. Coisas aparecem e caminham na direção contrária. Você golpeia o
+que quiser golpear e ignora o resto — nada trava, nada espera. Impacto sobe, compra três
+upgrades, e depois compra **a próxima rua**: são sete, 3.000 de impacto acumulado cada.
 
-Isso é deliberado: o jogo foi enxugado de um protótipo idle até sobrar o núcleo de ação,
-para servir de base. O que **falta** para virar jogo está honestamente listado no fim
-desta seção.
+O jogo foi enxugado de um protótipo idle até sobrar o núcleo de ação. O que ainda falta
+está listado no fim desta seção.
 
 ## Entrada
 
@@ -51,8 +50,23 @@ Rasa de propósito. Fontes de impacto: golpe, drop e folha pega no ar.
 | `u1` Stronger hands | 150 | cada golpe conta 3× |
 | `u2` Fuller hands | 900 | o que você pega vale o dobro |
 | `u3` Neighbours join in | 4.000 | ajudam sozinhos, 2 golpes/s |
+| `u4` ×100 TEST | grátis | interruptor de teste, ×100 no toque |
 
 Mais `bonusDias()`, que cresce com dias distintos jogados.
+
+### As sete ruas
+
+Cada uma custa **3.000 de impacto acumulado**, plano. `LIMIARES = [3000, 6000, 9000,
+12000, 15000, 18000]`. Medido: ~25 minutos golpeando para ver as sete, ou ~15 segundos
+com o `u4` ligado.
+
+A curva anterior era crescente e chegava a 1.000.000 na sétima — 23 horas de jogo ativo.
+Também havia um portão exigindo os três upgrades antes da primeira troca; ele saiu junto,
+porque os três custam 5.050 e exigi-los faria a primeira rua sair mais cara que as outras
+cinco somadas, que é o oposto de custo plano.
+
+Os drops são contados no topo, um por tipo, com o sprite do próprio drop. Antes eles
+acumulavam em `S.recursos` sem ninguém ler.
 
 **Não existe:** renda passiva, projetos, cansaço, rampa, prestígio, tocha, sabedoria,
 mutirão, projetos especiais, skills, super, capítulos, tutorial. Tudo isso existiu e foi
@@ -104,13 +118,18 @@ personagem levitar.
 - **Nenhum `eval`, `new Function`, `fetch`, `XMLHttpRequest` ou `document.write`.**
 - **Nenhum `innerHTML`.** O único que existia foi trocado por nós de texto.
 
-## O que falta para virar jogo
+## O que ainda falta
 
-1. **Um ralo de economia.** Os três upgrades custam 5.050 no total. Depois disso o
-   impacto sobe sem ter onde ser gasto e o jogo não tem teto nem fim.
-2. **Um motivo para voltar amanhã.** `bonusDias` existe mas quase não aparece.
-3. **Variedade de inimigo.** Três tipos, mesmo comportamento: andar para a esquerda.
-4. **Som.** Não há nenhum.
+1. **Som.** Não há nenhum. Num jogo de ação, golpe sem impacto sonoro é meio golpe, e é
+   o maior retorno por esforço da lista — dá para sintetizar com WebAudio sem quebrar a
+   regra de arquivo único e zero rede.
+2. **Variedade de inimigo.** Três tipos que só diferem em vida e cor; todos andam para a
+   esquerda. Nenhum motivo para tratar um diferente do outro.
+3. **Um motivo para voltar amanhã.** `bonusDias` existe mas quase não aparece.
+4. **O que vem depois da sétima rua.** Hoje: nada. O impacto volta a subir sem destino,
+   só que 18.000 mais tarde.
+5. **O `u4` em produção.** É um interruptor de teste no jogo publicado. Se isso incomodar,
+   o caminho honesto é escondê-lo atrás de uma condição de URL.
 
 ## Diário
 
@@ -2837,3 +2856,36 @@ ficou intacto: é honesto porque é datado.
 
 **Próximo passo:** o jogo não tem ralo de economia. Os três upgrades custam 5.050 no
 total e depois disso o impacto sobe sem destino. É a decisão de design que falta.
+
+### 2026-08-04 · o impacto ganhou destino: as ruas viraram níveis
+
+**Lente: Fim de partida.**
+
+O jogo durava **7m26** — medido, a 4 toques/s: os três upgrades custam 5.050 juntos e
+depois disso o impacto subia sem ter onde ser gasto. Era a única lacuna que separava
+"base" de "jogo".
+
+O dono escolheu não criar um ralo novo e sim usar o que já existia: as sete pinturas.
+Elas vinham girando sozinhas a cada ~6 s de caminhada — bonito, mas acontecia jogando bem
+ou mal. Agora é **uma por vez**, replicada contra si mesma com cópias alternadas
+espelhadas, e chegar na próxima é a recompensa. O espelho também permitiu remover o
+cross-fade: uma borda que encontra o próprio reflexo não tem emenda para suavizar.
+
+Custo: **3.000 de impacto acumulado por rua**, plano. A primeira versão tinha curva
+crescente até 1.000.000 e um portão exigindo os três upgrades; medi e a sétima rua estava
+a ~23 horas de jogo ativo. O portão saiu junto: com custo plano, exigir 5.050 em upgrades
+faria a primeira rua sair mais cara que as outras cinco somadas.
+
+**Contadores de drop no topo**, um por tipo, com o sprite do próprio drop. `S.recursos`
+acumulava em silêncio desde que os projetos especiais foram removidos.
+
+**`u4`, interruptor de teste**: grátis, ×100 no toque, para alcançar as ruas finais em
+~15 s em vez de 25 min. Vai para produção junto — num arquivo único sem build não existe
+"só em dev" — então está vestido de vermelho e escrito TEST.
+
+Duas vezes seguidas o teste do save adulterado pegou um campo novo (`S.cenario`, depois
+`u4`) antes de eu lembrar de atualizá-lo. Ele verifica que o save gravado carrega
+exatamente os campos que o carregador lê. Está pagando o próprio custo.
+
+**Próximo passo:** som. É o que falta de maior retorno por esforço, e não quebra nenhuma
+das regras invioláveis — WebAudio sintetizado, sem arquivo e sem rede.

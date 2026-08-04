@@ -52,11 +52,19 @@ ao passar por cima) e de pegar folhas no ar pulando. Três upgrades, e só:
 | `u1` | 150 | cada golpe conta 3× |
 | `u2` | 900 | o que você pega vale o dobro |
 | `u3` | 4.000 | vizinhos ajudam sozinhos, 2 golpes/s |
+| `u4` | **grátis** | ×100 no toque — **interruptor de teste**, ver abaixo |
 
 Existe também um bônus por dias distintos jogados (`bonusDias`). **Não há renda passiva,
-prestígio, projetos, cansaço nem fim de partida** — tudo isso existiu e foi removido.
-Depois dos três upgrades, o impacto acumula sem ralo. Se você for adicionar progressão,
-é aqui.
+prestígio, projetos nem cansaço** — tudo isso existiu e foi removido.
+
+**O que o impacto compra depois dos upgrades: a próxima rua.** Cada uma custa 3.000 de
+impacto acumulado, plano, sem curva — os seis limiares estão em `LIMIARES`. As sete ruas
+saem em ~18.000, cerca de 25 minutos golpeando.
+
+`u4` é um **interruptor de teste**: grátis, ×100 no toque, para alcançar as ruas finais
+em segundos em vez de meia hora. Num arquivo único sem build não existe "só em dev", então
+ele vai para produção junto — está vestido de vermelho e escrito TEST no painel para não
+ser confundido com upgrade. Quem pega, encerra a própria progressão.
 
 **Movimento.** O quadro do sprite é escolhido pela **distância percorrida**, não pelo
 tempo — é isso que impede o pé de deslizar em qualquer velocidade. `PASSO_PX` é a
@@ -64,10 +72,12 @@ passada da caminhada e `PASSO_CORRIDA` a da corrida. As velocidades são escolhi
 que um quadro de sprite dure um número **inteiro** de quadros de tela (cinco andando,
 três correndo), senão a cadência manca.
 
-**Cenário.** Sete pinturas em sequência, cada uma ~6 s de caminhada, repetindo depois da
-sétima. Rolam **1:1 com o mundo** — não use paralaxe aqui: o chão em que ela pisa faz
-parte da pintura, e qualquer fração diferente de 1 faz ela levitar. A emenda entre duas
-pinturas tem cross-fade.
+**Cenário.** Uma pintura por vez, replicada contra si mesma com cópias alternadas
+**espelhadas** — é o espelho que torna o loop sem emenda, porque uma borda só encontra o
+próprio reflexo. Trocar de rua é a recompensa, não algo que acontece andando.
+
+Rolam **1:1 com o mundo** — não use paralaxe aqui: o chão em que ela pisa faz parte da
+pintura, e qualquer fração diferente de 1 faz ela levitar.
 
 **Camadas de canvas.** `#fundoHD` (pintura, resolução do dispositivo) → `#scene`
 (mundo em baixa resolução, pixelado) → `#heroHD` (a personagem, resolução do
