@@ -35,7 +35,9 @@ function chromiumPath() {
     const antes = S.energiaTotal, comboAntes = combo;
     const cv = document.getElementById('scene');
     const r = cv.getBoundingClientRect();
-    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+    // the street is split down the middle now: left jumps, right swings. Aim well inside
+    // the left half, not at the boundary.
+    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: r.left + r.width * 0.25, clientY: r.top + r.height / 2 }));
     await new Promise(rr => setTimeout(rr, 60));
     const noAr = jumpT;
     cv.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
@@ -50,6 +52,22 @@ function chromiumPath() {
   // move the combo. What it must not do is stamp an attack pose over the leap.
   if (!(salto.ganho > 0)) errors.push('the jump landed no blow');
   if (salto.combo === 0) errors.push('the jump did not advance the combo');
+
+  // ...and the right half swings instead of jumping
+  const golpe = await page.evaluate(async () => {
+    fecharTudo();
+    mobs.length = 0; drops.length = 0; folhas.length = 0; jumpT = 0;
+    const antes = S.energiaTotal;
+    const cv = document.getElementById('scene');
+    const r = cv.getBoundingClientRect();
+    cv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: r.left + r.width * 0.75, clientY: r.top + r.height / 2 }));
+    await new Promise(rr => setTimeout(rr, 60));
+    return { pulou: jumpT, ganho: S.energiaTotal - antes, atacando: attackT };
+  });
+  console.log('tap on the right half -> jumpT', golpe.pulou, '| attackT', golpe.atacando,
+    '| earned', golpe.ganho.toFixed(2));
+  if (!(golpe.ganho > 0)) errors.push('the right half did not swing');
+  if (golpe.pulou > 0) errors.push('the right half jumped instead of swinging');
 
   // a leaf caught out of the air pays, and only while she is up there
   const folha = await page.evaluate(async () => {
