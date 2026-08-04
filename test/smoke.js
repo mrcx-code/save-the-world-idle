@@ -324,7 +324,7 @@ function chromiumPath() {
   // can never be mistaken for the sourced REAL DATA banner ----
   const digitos = await page.evaluate(() => {
     const s = [];
-    NOTAS_VOLTA.forEach(v => s.push(v[0], v[1]));
+    NOTAS_VOLTA.forEach(v => s.push(v));   // plain lines now: the cast that spoke them is gone
     return { total: s.length, ruins: s.filter(x => /[0-9]/.test(x)) };
   });
   console.log('fiction strings checked for digits ->', digitos.total, '| with a digit:', digitos.ruins.length);
@@ -332,32 +332,58 @@ function chromiumPath() {
 
   await page.evaluate(() => { localStorage.removeItem('proto_savetheworld_muro'); MURO = []; });
 
-  // obsolete: offline income came from projects, which were removed by owner request.
-  // The player who passed the torch and then quit: zero projects, so the night's summary
-  // is silent by design — and that is exactly the person worth greeting. The note has to
-  // fire independently of the gain banner.
-  await page.evaluate(() => {
+  // ---- the save is untrusted input ----
+  // localStorage can be edited by hand, by anything else that runs on this origin, and by
+  // whatever the player pastes into a console. The loader reads it through a schema; this is
+  // what proves it, because a game that trusts its save is a game anyone can break by typing.
+  const adulterado = await page.evaluate(async () => {
     salvar = function () {};   // the unload handler would write live state over the seed
     localStorage.setItem(CHAVE_JOGO, JSON.stringify({
-      energia: 0, energiaTotal: 0, poluicao: 0, geradores: 0, modo: 'carvao', tempoLimpo: 0,
-      u1: false, u2: false, u3: false, u4: false, u5: false, u6: false, u7: false,
-      inovacao: 4, transicoes: 1, introSeen: true, capVisto: 0, salvoEm: Date.now() - 12 * 3600 * 1000
+      energia: 'nao e um numero',        // wrong type
+      energiaTotal: Infinity,            // not finite
+      modo: 'sabotado',                  // outside the allowed set
+      u1: 'sim', u2: 1, u3: true,        // truthy, but not booleans
+      salvoEm: -5,                       // out of range
+      camposInventados: { a: 1 },        // not on the schema at all
+      geradores: 999                     // a field from a removed feature
     }));
+    return true;
   });
   await page.reload();
-  await page.waitForFunction(() => typeof S !== 'undefined' && S.transicoes === 1);
-  const semProjetos = await page.evaluate(() => {
-    const o = document.getElementById('offline');
-    return { visivel: o.style.display === 'block', txt: o.innerText, projetos: S.geradores };
+  await page.waitForFunction(() => typeof S !== 'undefined');
+  const depois = await page.evaluate(() => ({
+    energia: S.energia, total: S.energiaTotal, modo: S.modo,
+    u1: S.u1, u2: S.u2, u3: S.u3, salvoEm: S.salvoEm,
+    inventado: 'camposInventados' in S, geradores: 'geradores' in S,
+    ganho: ganhoClique(), desenhou: (desenhar(), true)
+  }));
+  console.log('tampered save ->', JSON.stringify(depois));
+  if (typeof depois.energia !== 'number' || !isFinite(depois.energia)) errors.push('a string got into energia');
+  if (!isFinite(depois.total)) errors.push('Infinity got into energiaTotal');
+  if (depois.modo !== 'limpo' && depois.modo !== 'carvao') errors.push('an unknown rhythm was accepted');
+  if (depois.u1 !== false || depois.u2 !== false) errors.push('a non-boolean was accepted as an upgrade');
+  if (depois.u3 !== true) errors.push('a real boolean was rejected');
+  if (depois.salvoEm < 0) errors.push('a negative timestamp was accepted');
+  if (depois.inventado) errors.push('an unknown field was copied into the game state');
+  if (depois.geradores) errors.push('a field from a removed feature was copied in');
+  if (!isFinite(depois.ganho) || depois.ganho <= 0) errors.push('the tap gain went NaN after a tampered save');
+
+  // and what it writes back carries only what it would read
+  const gravado = await page.evaluate(() => {
+    delete window.salvar;
+    location.reload();
+  }).catch(() => null);
+  await page.waitForFunction(() => typeof S !== 'undefined');
+  const chaves = await page.evaluate(() => {
+    S.energia = 12; salvar();
+    return Object.keys(JSON.parse(localStorage.getItem(CHAVE_JOGO))).sort();
   });
-  console.log('back after passing the torch (no projects) ->', semProjetos.visivel ? 'greeted' : 'SILENT',
-    '|', JSON.stringify(semProjetos.txt));
-  if (semProjetos.projetos !== 0) errors.push('the torch-then-quit seed did not load');
-  if (!semProjetos.visivel) errors.push('a player who passed the torch and quit came back to nothing');
-  if (!/—/.test(semProjetos.txt)) errors.push('the return greeting is not spoken by anybody');
-  if (/impact/.test(semProjetos.txt)) errors.push('the gain banner appeared with no projects');
+  console.log('save written ->', chaves.join(', '));
+  const esperadas = ['energia', 'energiaTotal', 'modo', 'salvoEm', 'u1', 'u2', 'u3'];
+  if (chaves.join(',') !== esperadas.join(',')) errors.push('the save carries fields the loader would discard');
 
   await page.evaluate(() => localStorage.removeItem(CHAVE_JOGO));
+
 
   // obsolete: the STREET bar was removed by owner request — element, style and test.
 

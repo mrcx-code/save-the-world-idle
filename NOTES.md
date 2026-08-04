@@ -1,376 +1,116 @@
-# NOTES — Save the World (3-day prototype)
+# NOTES — o jogo como ele é
 
-## Loop
+Este arquivo tem duas partes. Esta primeira descreve o **estado atual**; a partir de
+"## Diário" vem o histórico, uma entrada por sessão, e ele documenta features que já
+não existem. Se as duas discordarem, esta parte é a verdade.
 
-Generator cost `15 × 1.15^n`. **GO FAST** 3/s per project (6 with Big campaigns);
-**GO STEADY** 1/s ramping to 2/s over 120s (4/s and 2× ramp with Team training);
-switching modes resets the ramp. Tiredness: `+0.15/s` per project in fast mode
-(×1.5 with U1), heals ~0.5%/s — solved in closed form
-(`p = eq + (p − eq)·e^(−kt)`, `eq = emission/k`, `k = −ln(1 − decay)`), so the same
-equation covers offline time. Team health `= 100/(100+tiredness)` multiplies **all**
-output, taps included. Torch at 50K total impact: `wisdom = ⌊√(total/2500) × health⌋`,
-+10% forever per point. Offline integrates in 1s slices (12h cap, ~8ms) instead of
-billing one frozen rate, so the team wearing out — or resting — while you sleep counts.
+## O loop
 
-On top of that the world multiplies output three more ways, none of them touching
-tiredness: `bloqueioMundo()` (−10% per trouble standing in your way, three at most),
-`bonusMutirao()` (×1.35 for 20s after answering a community call) and `bonusDias()`
-(+2% per distinct day played, capped at ten days).
+Ela caminha por uma rua. Coisas aparecem e caminham na direção contrária. Você golpeia
+o que quiser golpear e ignora o resto — nada trava, nada espera. Impacto sobe. Três
+upgrades gastam esse impacto. Não há mais nada.
 
-## Upgrades (7)
+Isso é deliberado: o jogo foi enxugado de um protótipo idle até sobrar o núcleo de ação,
+para servir de base. O que **falta** para virar jogo está honestamente listado no fim
+desta seção.
 
-| # | name | cost | effect |
-|---|---|---|---|
-| U1 | Big campaigns | 100 | 2× fast output, 1.5× tiredness |
-| U2 | Friends help friends | 400 | taps heal 2 tiredness — **GO STEADY only** |
-| U3 | Team training | 1,200 | steady ramps 2× faster, cap 4/s |
-| U4 | Neighbors join in | 3,000 | auto-taps 2/s, no input needed |
-| U5 | Better tools for all | 8,000 | every tap counts 3× |
-| U6 | Fair share | 18,000 | +30% to production *and* taps |
-| U7 | Rest days | 30,000 | tiredness heals 3× faster |
+## Entrada
 
-All seven reset on prestige. Old saves without `u4..u7` load fine (missing keys read
-as falsy). U4 grew a second job on 2026-08-02: the neighbours' auto-taps also clear the
-troubles blocking the road, and they pick up what is left on the ground (at half value,
-after 5s). It is the purchasable answer for someone who does not want to watch.
-
-## Skills — a category apart
-
-Upgrades are this run. **Skills are forever.** One ships: **AUTO-FIRE**, the wand keeping
-watch and shooting on its own. It lives on its own sheet, reached from the torch, because
-the torch is where everything you keep lives.
-
-| | value | why |
-|---|---|---|
-| cost | 2,000 impact | the greedy-buy dynamic sets this, see below |
-| unlock | after your first torch | run 1 cannot have it — the second run is a different game |
-| survives prestige | **yes** | that is the category's whole identity |
-| focus to arm | 40 | trouble cleared +8 · drop picked up +5 · call answered +25 |
-| while armed | 10 shots/s for 10s | routed through the same `clicar(auto)` the player uses |
-| touches tiredness | **never** | `clicar(true)` skips U2's heal, by construction |
-
-**Why it is not a second U4.** "Neighbors join in" is a flat 2 taps/s that runs forever,
-free, whether or not anything is happening. AUTO-FIRE produces nothing by itself: it burns
-FOCUS, and focus only comes from showing up for the world — clearing a trouble, bending
-down for a drop, answering the kitchen. Measured: **focus while nothing happens stays at 0**,
-and a drop the neighbours pick up for you gives **0** focus. Put the phone on a table and
-the wand never fires. Its fuel is the world layer, which is rate-capped by design (one
-arrival per 7s, three alive at most), so it cannot become an income engine however long it
-is left alone — the exact opposite of the failure this game already survived.
-
-**What the price had to be, and why.** The sim's greedy buyer takes every project it can
-afford every tick, so the balance sits just under the *next project's* cost — which means a
-lump-sum item is only ever affordable once `15 × 1.15^n` has grown past it. That is why
-u5/u6/u7 are never bought in a 50K run, and it is why a 20,000 skill was measured being
-bought **never**. Two other models were tried and rejected: making the run save for it
-after its upgrade list (never fires — these runs never finish their list) and making it
-stop buying projects to save (run 2 went 4m44s → 26m44s and it *still* did not buy, because
-the upgrades ate the balance first). 2,000 is the price the economy actually admits.
-
-Measured over two torches back to back:
-
-| strategy | run 1 | run 2 | total | wand |
-|---|---|---|---|---|
-| rhythm + hold + world + **SKILL** | 6m41s | **4m43s** | 11m24s | 629 impact, 5 channels, 499 shots |
-| rhythm + hold + world | 6m41s | 4m44s | 11m25s | — |
-| STEADY + hold 25% + world + **SKILL** | 7m30s | 5m32s | 13m02s | 530 impact, 4 channels, 337 shots |
-| STEADY + hold 25% + world | 7m30s | 5m32s | 13m02s | — |
-
-Run 1 is identical to the second in every row, which is structural: the skill cannot be
-bought before a torch. Run 2 moves by **one second**. So the honest verdict is that
-AUTO-FIRE is worth about **1.3% of a run** and costs 4% of one — it pays for itself around
-the third torch and is upside after that, which is the right shape for something permanent
-and the wrong shape for anything that could threaten the eight-minute first torch.
-
-That ceiling is not a tuning failure, it is arithmetic already in this file: **taps are
-4–7% of total impact**, so no tap-shaped skill can ever be worth much here. A skill that
-wanted to matter more would have to pay in something other than swings.
-
-## The super — three combos land, and the next swing is not a swing
-
-| | value | why |
-|---|---|---|
-| arms after | 3 completed combos = 9 of **your own** swings | the owner's ask, literally |
-| what actually gates it | `superRecarga` **22s**, during which combos stop counting | nine swings is 1.3s while holding; without the cooldown it would fire every 1.3s |
-| pays in | the road clears (each trouble drops what it held) + **×1.15 for 4s** | *not* swing damage — see the 4–7% ceiling above |
-| where the multiplier lands | exactly where `bonusMutirao()` lands: production, drops, taps | one shape, one place to reason about |
-| charged by the wand / U4 | **never** | `clicar(auto)` and `clicar(false, true)` both skip the charge |
-| touches tiredness | **never**, in either direction | there is no path from `dispararSuper()` to `S.poluicao` |
-
-Measured: the winner goes **6m41s → 6m27s**, worth **3.5%** — about 2.7× what AUTO-FIRE is
-worth, which is the point: a tap-shaped payoff is capped at the 4–7% tap share, and this one
-is not tap-shaped. Every row keeps its place, the worst team health per row is unchanged
-(75% / 100% / 5%), and hands-off runs barely move (GO STEADY 12m02s → 12m01s) because they
-never swing. Split out with `superMult` forced to 1.0: **clearing the road alone is worth
-1 second** to someone who is already holding the button — they keep the road clear anyway —
-so the window is doing all the work and it is the only knob worth turning.
-`--patch=semSuper` reproduces the pre-super table to the second. The table as it stands:
-
-| strategy | time | worst team |
-|---|---|---|
-| rhythm + hold + world | **6m27s** | 75% |
-| projects STEADY + hold + world | 6m45s | 100% |
-| rhythm + hold | 7m17s | 75% |
-| STEADY + hold 25% + world | 7m22s | 100% |
-| projects STEADY + hold | 7m24s | 100% |
-| projects, GO STEADY + U4 | 10m57s | 100% |
-| projects, GO STEADY | 12m01s | 100% |
-| rhythm, hands off | 14m00s | 75% |
-| hold only, no projects | 41m59s | 100% |
-| projects FAST + hold + world | 47m43s | 5% |
-| projects FAST + hold | 52m40s | 5% |
-| projects, GO FAST | 1h25m29s | 5% |
-
-State the drawing side can read: `superFx = { t, dur, sx }` while the effect plays (`t`
-counts up in seconds, `t/dur` is the progress), `superT` (seconds of window left),
-`superCarga` (0..3), `superCd`, `superPronto()`, and the `#flash.super` wash.
-`desenharSuper()` is a self-contained placeholder meant to be replaced.
-
-## The rhythm, explained
-
-The prototype exists to measure one decision and the game never told the player what they
-were trading — `definirModo()` threw one floating word and that was the whole feedback.
-Everything below is *projected from the live formulas*, never written down twice, so a
-tuning change moves the explanation with it:
-
-| readout | where it comes from |
+| onde | o que faz |
 |---|---|
-| tiredness equilibrium | `cansacoEq(modo) = emission / k`, the `eq` term inside `simular()` |
-| tiredness in 60s | `cansacoEm(modo, t) = eq + (p − eq)·e^(−kt)` — the same closed form |
-| when the team is back to 90% | `segundosAteSaude(modo, 0.9)`, that equation solved for t |
-| rate under a rhythm | `taxaSe()` swaps `S.modo`/`tempoLimpo`/`poluicao`, calls the real `prodPorSegundo()`, restores |
-| what a rhythm *settles* at | `taxaAssentada()` — the rate once tiredness has reached equilibrium |
+| metade esquerda da tela | pula (e acerta um golpe na subida) |
+| metade direita da tela | golpeia |
+| botão dourado | golpeia; segurar repete |
+| card do ritmo | alterna andar / correr |
+| card UPGRADES | abre o painel; enquanto aberto, vira um ✕ vermelho |
 
-The projects sheet carries the trade side by side: **NOW · <rhythm>** against **SWITCH ·
-<the other>**, each with `now` / `settles` / `team now → settled`. At 43 projects with Big
-campaigns, from a fully-climbed GO STEADY, that reads:
+Nada é desenhado para marcar a divisão da tela. As duas metades são a interface inteira
+lá fora e se descobrem em um toque cada.
 
-| | now | settles | team |
-|---|---|---|---|
-| NOW · GO STEADY | 224/s | **224/s** | 100% → 100% |
-| SWITCH · GO FAST | **335/s** | 16.5/s | 100% → **5%** |
+## Combate
 
-+50% for a minute against 13× less forever. That sentence was always true and was never
-once shown. From the wrecked side it inverts — GO FAST reads 42/s now settling to 16.5/s,
-GO STEADY reads 7.2/s now (the ramp is back at ×1) settling to 224/s — which is exactly the
-"burst then recover" shape open question 6 describes.
+Alcance de 80 px. O combo tem cinco batidas: quatro conjurações alternando entre duas
+poses, e na quinta ela salta — alcance 96 e dano dobrado.
 
-The ramp reset gets its own red warning naming the multiplier being thrown away and how
-long it takes to climb back. The mode button in the menu row became a state readout
-(`FAST →5%` / `STEADY ×4.0`) that pulses while GO FAST is actively costing health, and the
-team chip carries the direction (`1m ↓ 9%` while tiring, `90% ↑ 14m` while resting).
+| monstro | vida |
+|---|---:|
+| smog | 5 |
+| cash | 8 |
+| barrel | 13 |
 
-Switching now lands: a full-frame wash (red for fast, green for steady), a pop on the chips
-that changed meaning, a column of sparks, a five-line float stack with the real numbers
-(`224/s > 335/s`, `SETTLES 16.5/s`, `TEAM 5%`, `RAMP LOST x4.00`) and a line in the strip
-that stays up for 4.5s.
+Eles **passam reto**. Chegam em intervalos sorteados entre 0,45× e 1,4× de
+`CFG.mobIntervalo`, para que a rua nunca caia num ritmo contável. Ao morrer largam um
+drop, recolhido ao passar por cima.
 
-None of it touches the economy: `node test/sim.js` is identical to the second, before and
-after. The smoke test checks the projection against reality by stepping `simular()` for 60
-real seconds and comparing — 501.34 vs 501.34.
+## Economia
 
-## The world answers back
+Rasa de propósito. Fontes de impacto: golpe, drop e folha pega no ar.
 
-| thing | number | where it lands |
-|---|---|---|
-| a trouble walks in | 34 world px/s, ~3.8s of warning | `atualizarMobs(dt)` |
-| how many hits it takes | smog **2**, money bag **3**, barrel **5** (`CFG.mobHp`) | 2 / 3 / 4 swings from the button |
-| how much is left | pips over its head, `desenharVidaMob()` | drawn from `m.hp` / `m.hpMax` |
-| arrivals | one per 7s ÷ (1+smog), 3 alive at most | a worn-out team draws more |
-| queue | 20px apart, at HX+26/+46/+66 | all inside a swing's reach (80/96) |
-| standing in the way | **−10% production each**, −30% at three | multiplier, *never* tiredness |
-| a drop | `3 + 0.55 × projects`, ×wisdom ×health ×fair-share | picked up by tapping it |
-| drop life | 9s (U4 auto-collects at 5s for half) | |
-| community call | every 110s, 12s window | missing it costs nothing |
-| mutirão | ×1.35 to everything for 20s, road cleared | doubled when a call was kept for you |
-| coming back | +2% per distinct day, cap 10 days | reads `R.dias`, the retention record |
+| upgrade | custo | efeito |
+|---|---:|---|
+| `u1` Stronger hands | 150 | cada golpe conta 3× |
+| `u2` Fuller hands | 900 | o que você pega vale o dobro |
+| `u3` Neighbours join in | 4.000 | ajudam sozinhos, 2 golpes/s |
 
-The whole scene is the attack button: a tap on it swings exactly like the CTA (same
-combo, same leap, same sprout) *and* hits whatever was under the thumb — an aimed tap
-deals 2 damage on top of the swing's 1. Both surfaces share **one** repeat timer, so
-holding the button and the world at once cannot double the hit rate. With a sheet open a
-scene tap only dismisses it, so "tap outside to close" never costs a stray swing.
+Mais `bonusDias()`, que cresce com dias distintos jogados.
 
-The one rule the whole layer obeys: **nothing here heals tiredness and nothing here
-changes how tiredness is made.** Tapping the team's exhaustion away is exactly what
-erased the GO FAST / GO STEADY decision once already (see below), so every reward is a
-multiplier on output or a lump of impact — both still multiplied by team health, so a
-worn-out team gets less out of the world too.
+**Não existe:** renda passiva, projetos, cansaço, rampa, prestígio, tocha, sabedoria,
+mutirão, projetos especiais, skills, super, capítulos, tutorial. Tudo isso existiu e foi
+removido a pedido do dono. O código correspondente foi varrido; a varredura só terminou
+quando a auditoria voltou vazia.
 
-## Balance: what holding the button actually did
+## Movimento — o que faz ele não deslizar
 
-`node test/sim.js` plays the whole economy headless — no browser, just the formulas in
-`test/formulas.js`, which reads `CFG` straight out of `index.html` so the tuning numbers
-cannot drift. `node test/sim.js --detail` shows where the impact came from;
-`--patch=<name>` re-runs the table under a candidate change before it is shipped.
+O quadro do sprite é escolhido pela **distância percorrida**, não pelo tempo. Essa é a
+única razão de o pé ficar preso no chão em qualquer velocidade: mude a velocidade e a
+cadência acompanha sozinha.
 
-Time to 50K, measured **before** the fix:
+| | passada | velocidade | ciclos/s | fps da animação |
+|---|---:|---:|---:|---:|
+| andar | 40,9 px | 40,9 px/s | 1,00 | 12 |
+| correr | 73,6 px | 92,0 px/s | 1,25 | 15 |
 
-| strategy | time | worst team health |
-|---|---|---|
-| projects FAST + hold | **4m40s** | 34% |
-| projects, GO STEADY | 8m37s | 100% |
-| hold only, no projects | 43m34s | 100% |
-| projects FAST + hold, **no U2** | 54m17s | 5% |
-| projects, GO FAST (hands off) | 56m58s | 5% |
+As velocidades não são arbitrárias: são `PASSO × 60 / n` com `n` inteiro, para que um
+quadro de sprite dure um número inteiro de quadros de tela. Com 88 px/s cada quadro
+durava 2,3 quadros de tela e a cadência saía 2-2-3-2-2-3, lendo como trepidação.
 
-The culprit was not tap income — taps were only **4%** of total impact. It was U2: at
-6.9 taps/s, "heals 2 tiredness per tap" healed 13.8/s (17.8/s once U4 auto-taps), more
-than the ~9.7/s that 43 projects emit in GO FAST. Tiredness was pinned at zero, so
-GO FAST cost nothing and the fast/steady decision stopped existing. The control proves
-it: the same run without buying U2 takes 54m17s, barely better than never holding at
-all (56m58s).
+A passada da caminhada foi **medida** na arte: na pose de maior abertura as duas solas
+ficam a 85,5 px de sprite, centro a centro, o que na escala 44/184 dá um passo de 20,45
+px e uma passada de 40,9. A da corrida é derivada, não medida — as duas medições
+automáticas falham numa corrida (na fase de voo não há segundo pé no chão), então é a da
+caminhada × 1,8.
 
-Fix shipped: **U2 heals only in GO STEADY**. Two other candidates were measured and
-rejected — making taps tire the team in fast mode (`--patch=tapCansa`) barely moved it
-(5m21s, U2 still out-heals the emission), and capping the heal at 3/s
-(`--patch=curaCap`) fixed the exploit but left the intended play losing to pure steady.
+## Camadas
 
-After the fix, the fastest run is the one that swaps modes:
+`#fundoHD` (pintura, resolução do dispositivo) → `#scene` (mundo, baixa resolução,
+pixelado) → `#heroHD` (a personagem, resolução do dispositivo).
 
-| strategy | time | worst team health |
-|---|---|---|
-| rhythm (fast/steady swap) + hold | **7m28s** | 75% |
-| projects STEADY + hold | 7m35s | 100% |
-| projects, GO STEADY | 8m37s | 100% |
-| rhythm, hands off | 9m59s | 75% |
-| projects FAST + hold | 54m18s | 5% |
+A personagem tem canvas próprio porque dentro do `#scene` a arte de 184 px era esmagada
+para 44 e depois ampliada de volta: seis vezes o tamanho guardado. Agora é escalada uma
+vez só, 1,43×.
 
-Holding is still worth doing (1.2× over the best hands-off run) but no longer replaces
-the decision. `--patch=u2Sempre` restores the old behaviour so the regression stays
-measurable.
+Os sete cenários rodam em sequência, ~6 s cada, com cross-fade na emenda. Rolam **1:1**
+com o mundo — o chão faz parte da pintura, então qualquer fração diferente de 1 faz a
+personagem levitar.
 
-### After the world started answering back (2026-08-02)
+## Segurança
 
-| strategy | time | worst team | world share |
-|---|---|---|---|
-| rhythm + hold + **world** | **6m41s** | 75% | 3% |
-| projects STEADY + hold + world | 6m57s | 100% | 2% |
-| rhythm + hold | 7m28s | 75% | 1% |
-| projects STEADY + hold | 7m35s | 100% | 1% |
-| projects, GO STEADY + U4 | 10m58s | 100% | 1% |
-| projects, GO STEADY | 12m02s | 100% | 0% |
-| rhythm, hands off | 14m01s | 75% | 0% |
-| hold only, no projects | 43m02s | 100% | 1% |
-| projects FAST + hold + world | 49m20s | 5% | 3% |
-| projects FAST + hold | 54m25s | 5% | 1% |
-| projects, GO FAST | 1h25m30s | 5% | 0% |
+- **CSP no `<head>`**: `default-src 'none'`, imagens só `data:`, `connect-src 'none'`.
+  O navegador cobra a regra de "zero rede" que antes era só convenção.
+- **O save é entrada não confiável.** `ESQUEMA_SAVE` lista os sete campos permitidos com
+  tipo e faixa; o que não está lá não entra, tipo errado cai no padrão, e a gravação
+  emite só esses campos. O smoke test alimenta um save adulterado e verifica que nada
+  vaza.
+- **Nenhum `eval`, `new Function`, `fetch`, `XMLHttpRequest` ou `document.write`.**
+- **Nenhum `innerHTML`.** O único que existia foi trocado por nós de texto.
 
-Read it as two columns. Playing the world is worth **1.12×** (7m28s → 6m41s) — enough to
-be worth a thumb, small enough that the run did not collapse. Ignoring it costs **1.4×**
-(8m37s → 12m02s for hands-off steady), because three troubles standing in the road take
-30% of the work. `--patch=semMundo` turns the whole layer off and reproduces the previous
-table to the second, so the delta stays measurable.
+## O que falta para virar jogo
 
-The fast/steady decision is untouched, by construction: every new term is a multiplier
-applied to both modes, so the health gap between them is exactly what it was — 100% for
-steady, 5% for fast, and the run that swaps modes still wins. `--patch=u2Sempre` still
-collapses the table to 4m17s with the team at 35%, so the detector for the old failure
-still fires.
-
-## Retention counters
-
-Long-press the torch icon (600ms) to open THREE-DAY TEST: distinct days played, total
-time played, torches passed, and the span from the first session. Stored under
-`proto_savetheworld_retencao`, separate from the game save, because passing the torch
-wipes `S` and the measurement has to outlive that. Time only accrues from the rAF loop
-with `dt` clamped, so a tab left open in the background counts as nothing. Nothing
-leaves the device and nothing personal is recorded — just dates, a duration and a count.
-
-A record that is corrupt, hand-edited or half-written is repaired on load rather than
-thrown: non-string days are filtered out, negative or non-finite numbers reset to zero.
-The smoke test covers the long-press, the suppressed tap and the corrupt-record case.
-
-## Feel
-
-Taps chain a 3-hit combo, all three cast rather than swung: a flat crescent of light
-thrown ahead → a spiral climbing off the wand tip → the **leap slam** (hero jumps ~52
-world px, gathers light overhead, drives a spear of it into the dirt, lands with a flash,
-an expanding wave and green things pushing up through the cracks). Three combos on top of
-that arm **the super** — see its own section. Holding the main button
-— or the scene — repeats at ~7 hits/s, from a **single shared timer**, so holding both
-surfaces at once cannot double the rate. Sprouts are capped at 40 so holding in steady
-mode doesn't flood the scene. The bolt is spawned from the drawing code off the attack
-state that already exists, so it is decoration only — what gets hit, how far and how hard
-is decided elsewhere.
-
-One line under the top chips says what the world wants right now, and only ever one
-thing: a call beats a mutirão beats a complaint. Drops carry a dark keyline and four
-breathing ticks; the pot carries a nodding chevron and a countdown bar that turns red
-under a third. All of that is drawn *after* the colour grade, on purpose — an affordance
-has to stay legible even when the frame is being tinted.
-
-## Art direction — C, CLEAR SKY
-
-High-key poster pixel art: saturated, flat, hard outlines, **no post-processing of any
-kind**. The measurement that set this: reference art in this genre has a *bigger* art pixel
-than ours and a shorter hero, so fidelity never came from resolution. It comes from 3–5
-tones per material, a dark 1px outline, one pixel grid, and a strict value architecture —
-light sky → mid background → a **light separator band on the horizon line** → dark ground,
-with the character straddling that boundary.
-
-**Sick is bleached, not dark.** Smoke scatters light, so a polluted sky is warm, opaque and
-too bright. The whole sick→healed arc runs on **saturation**, which is the fastest channel
-to read: it still works on a phone at 30% brightness, outdoors, at a glance. The hero's
-colours and the wand's magic do **not** desaturate with the world — in a sick frame the
-wand is the only warm saturated thing left, and that is the point.
-
-The magic is folk magic — tending and mending, the same hand that plants a sprout. White-
-gold core, warm amber body, green growth halo; never arcane blue or purple. One helper,
-`luz()`, lays every point of channelled light down as nested octagons built from crossed
-rectangles, so a glow stays a pixel shape instead of a soft photographic blob.
-
-Golden Hour (dusk) and The Lights Come On (night) are approved as **time-of-day variants
-off the same engine, later** — palette swaps, no new geometry.
-
-Presentation: fullscreen pixel side-scroller. The world renders at 1 world px = 2 screen px
-and **everything sits on that one grid** — the hero and the monsters used to carry an extra
-2× on top, so their pixels covered four screen pixels each while the scenery behind them
-covered one. Sprites are hand-shaded off a single light direction (sun up and to the right)
-and baked into offscreen canvases, so four times the pixel count still costs one
-`drawImage` per character per frame. The middle distance is three green planes separated by
-**value**, with the outline graded by distance: hard on the near band, soft on the middle,
-absent on the far ridge. Everything lerps from bleached to saturated off `worldHealth()`.
-
-**No webfont.** The chrome uses the system stack; the canvas has a 5×7 bitmap font authored
-in the file, 47 glyphs each baked once with an 8-direction outline. The HUD is poster
-chrome: solid cream `#fdf6e6`, 2px `#12242e` outline, hard 3px offset shadow, no
-transparency. Menus are floating sheets above the character; type scales with `clamp()`.
-
-## Open questions
-
-1. ~~Offline gain uses efficiency at save time~~ — fixed, and it was wrong in *both*
-   directions. See `node test/offline.js`.
-2. ~~First torch may pass 40 min if played 100% steady~~ — **measured: 8m37s**, not 40.
-   A greedy buyer reaches 44 projects and 50K in well under ten minutes of active play.
-   That is the whole first loop, and it is the single biggest threat to the three-day
-   question. The prestige target and the cost curve are off-limits without the owner,
-   so this is flagged, not touched.
-3. ~~Taps may outpace projects~~ — **measured: taps are 4–7% of total impact** in every
-   run that also builds projects. Tap income was never the problem; U2's healing was.
-4. Hold-to-attack at 7/s was picked by feel, not tuned against retention.
-5. **Monsters now cost 1.4× to ignore, and that cost lands hardest on the idle player.**
-   The block is a multiplier, so it does not touch the fast/steady maths — but a run that
-   never looks at the screen and never buys U4 eats −30% for the whole game. U4 is the
-   answer and it costs 3,000, which is late. Worth checking whether the block should
-   fade as the world heals (`worldHealth()` is right there) instead of holding at full
-   strength forever.
-6. **The GO STEADY ramp reset is harsher than it looks, and it does not live where you
-   think.** `definirModo()` sets `S.tempoLimpo = 0`, but that line is redundant: the real
-   reset is in `simular()`, which zeroes `tempoLimpo` on *every tick* spent in GO FAST.
-   Measured with two patches that keep the clock alive across the fast stretch:
-   `--patch=rampaMeia` (a switch keeps half the climb) moves the winner 6m41s → 6m39s and
-   the hands-off rhythm 14m01s → 13m17s; `--patch=rampaFica` (the ramp survives switching
-   entirely) takes the winner to **5m56s**, an 11% acceleration, and promotes both rhythm
-   runs *above* the pure-steady ones. So: full preservation turns the rhythm into a free
-   toggle and should not ship; half-credit costs the table almost nothing (0.5% on the
-   winner) while removing the "I tried GO FAST once and lost two minutes of climbing"
-   punishment. Neither is shipped — flagged for the owner, with the numbers.
-7. **GO FAST is dominated by GO STEADY once projects pile up.** At equilibrium a fast
-   project settles at `100/(100 + 44.9n)` health, so at n=43 it produces 0.3/s against
-   steady's 4/s. Fast only wins in short bursts before tiredness accumulates. The
-   fast/steady choice is really "burst then recover", not "pick a lane" — worth deciding
-   whether that is the intended shape.
+1. **Um ralo de economia.** Os três upgrades custam 5.050 no total. Depois disso o
+   impacto sobe sem ter onde ser gasto e o jogo não tem teto nem fim.
+2. **Um motivo para voltar amanhã.** `bonusDias` existe mas quase não aparece.
+3. **Variedade de inimigo.** Três tipos, mesmo comportamento: andar para a esquerda.
+4. **Som.** Não há nenhum.
 
 ## Diário
 
@@ -3059,3 +2799,41 @@ toda sessão começa lendo a última entrada.
 The REAL DATA rotation (keep one fixed) and the snow caps. ~~The `confirm()` on the
 torch~~ — done: PASS THE TORCH? is now a sheet like the others, and unlike a browser
 dialog it can show what you keep beside what you hand on.
+
+### 2026-08-03 · base endurecida, código morto varrido, documentação alinhada
+
+**Lente: Robustez + Subtração.**
+
+Varredura de código morto até a auditoria voltar vazia — o arquivo contra si mesmo:
+funções sem chamada, chaves de `CFG` sem leitura, CSS sem seletor correspondente,
+sprites sem desenho. Saíram 45 funções e ligações de topo, 34 regras de CSS, 10 chaves
+de `CFG` e os 4 quadros de `idle`. Duas coisas a varredura errou e precisaram voltar:
+`custoU1/U2/U3` (lidos só como `CFG["custoU" + n]`, então nenhum literal aparece) e
+`let floats/sprouts/parts`, levados junto por um removedor que achava o fim de função
+procurando o próximo `}` na coluna 0 — reescrito para exigir balanço de chaves.
+
+Aposentado o subsistema de renda passiva inteiro. `S.geradores` estava cravado em zero,
+então `prodPorSegundo()` dava 0, `eficiencia()` 1, `bonusInovacao()` 1, `multEspecial()`
+1 e `bonusJusto/Mutirao/Super` 1. Quem construísse em cima ligaria um readout a um deles
+e veria não mexer. Sobrou o que paga: o toque, o upgrade que o triplica e a sequência de
+dias. O estado salvo caiu de 18 campos para 7.
+
+**Segurança.** O save era carregado com `Object.assign(S, JSON.parse(...))`, confiando
+em `localStorage` por completo. Medido: `{"energia":"abc"}` fazia toda soma virar `NaN`.
+(Verifiquei também poluição de protótipo — **não** ocorre: `Object.assign` troca o
+protótipo do próprio `S`, não o global. Registro porque cheguei a afirmar o contrário.)
+Agora passa por `ESQUEMA_SAVE`, e o smoke test alimenta um save adulterado com tipo
+errado, `Infinity`, ritmo inválido, timestamp negativo e campo inventado, e verifica que
+nada entra. Adicionada CSP no `<head>`; `frame-ancestors` ficou de fora de propósito
+porque navegador ignora em `<meta>`. O único `innerHTML` virou nós de texto.
+
+**Ajustes.** Cross-fade na emenda dos cenários (12 passos numa faixa de 18% da pintura).
+Vida dos monstros de 8/12/20 para 5/8/13 — quatro vezes a original era demais depois que
+o salto passou a uma batida em cinco. As falas de volta perderam os nomes do elenco.
+
+**Documentação.** `CLAUDE.md` e as 374 linhas do `NOTES.md` acima do Diário descreviam
+sete upgrades, super, prestígio e cansaço — um jogo que não existe. Reescritos. O Diário
+ficou intacto: é honesto porque é datado.
+
+**Próximo passo:** o jogo não tem ralo de economia. Os três upgrades custam 5.050 no
+total e depois disso o impacto sobe sem destino. É a decisão de design que falta.

@@ -1,65 +1,102 @@
 # CLAUDE.md — instruções permanentes deste repositório
 
-Leia este arquivo, o `NOTES.md` e o `README.md` antes de tocar em qualquer coisa.
+Leia este arquivo e o `NOTES.md` antes de tocar em qualquer coisa.
 
 ## 1. O que é isto
 
-`SAVE THE WORLD` é um protótipo de jogo idle/ação para celular, feito para responder
-**uma única pergunta**: *o loop segura um jogador por três dias?* Tudo neste repositório
-existe para servir a essa pergunta. Recurso bonito que não ajude a respondê-la é ruído.
+`SAVE THE WORLD` é a **base de um jogo de ação lateral para celular**, em pixel art.
+Começou como protótipo idle e foi enxugado até sobrar só o núcleo: uma personagem
+caminha por uma rua brasileira, golpeia o que aparece, pula, e junta impacto.
 
 O jogo inteiro é **um arquivo**: `index.html`. Sem build, sem framework, sem dependência
-em runtime. Abrir o arquivo no navegador é rodar o jogo. Isso é uma decisão de projeto,
-não uma limitação — não a desfaça.
+em runtime, sem rede. Abrir o arquivo no navegador é rodar o jogo. Isso é decisão de
+projeto, não limitação — não a desfaça.
 
-Tema: um herói corre por um mundo quebrado em 2026 e o conserta. Meio ambiente e pautas
-sociais. A tensão é *forçar a barra e cansar o time* contra *ir firme e organizar*.
-O tom é solidário sem ser panfletário: cozinhas comunitárias no cenário, o monstro do
-dinheiro que estoura em "SHARED!", "nobody is saved alone" na abertura. Mantenha essa
-mão leve — se ficar com cara de palanque, foi longe demais.
+Tema: um mundo quebrado que vai sendo consertado. Meio ambiente e pautas sociais, com
+mão leve. Os inimigos são abstrações — fumaça, tambor tóxico, saco de dinheiro — e o
+monstro do dinheiro estoura em `SHARED!`. Se ficar com cara de palanque, foi longe demais.
 
 ## 2. Regras invioláveis
 
-1. **Números reais nunca entram nas fórmulas.** Fatos do mundo real vivem só no array
-   `dadosReais`, cada um com `fonte` e `data`, e aparecem só no banner REAL DATA.
-   Sem fonte verificável, o número não entra. Os números do jogo (`CFG`) existem para o
-   jogo ser divertido e não representam nada do mundo real. Nunca misture os dois.
-2. **Nenhuma empresa ou político real como vilão.** Os inimigos são abstrações: fumaça,
-   tambor tóxico, saco de dinheiro.
-3. **Mobile primeiro.** Sem zoom, sem seleção de texto, sem cara de site. O bloqueio de
-   gestos e o `user-select: none` estão lá de propósito.
-4. **Um arquivo só.** Nada de separar CSS/JS, nada de bundler, nada de CDN novo.
-5. **`main` é produção.** Todo push publica automático na Vercel. Nunca deixe a `main`
+1. **Um arquivo só.** Nada de separar CSS/JS, nada de bundler, nada de CDN.
+2. **Zero rede.** Nenhum `fetch`, nenhum recurso externo, nenhuma fonte de CDN. Toda arte
+   é base64 embutido. Há uma `Content-Security-Policy` no `<head>` que faz o navegador
+   cobrar isso — se você adicionar algo de fora, o navegador bloqueia e você vai ver no
+   console. Não relaxe a CSP para contornar; o bloqueio é o ponto.
+3. **O save é entrada não confiável.** `localStorage` é editável à mão. O carregamento
+   passa por `ESQUEMA_SAVE`: lista fixa de campos, cada um com tipo e faixa. Campo fora
+   da lista não entra; tipo errado ou fora de faixa cai no padrão. **Ao adicionar estado
+   persistente, adicione ao esquema** — se não estiver lá, não é lido nem gravado.
+4. **Nenhuma empresa ou político real como vilão.**
+5. **Mobile primeiro.** Sem zoom, sem seleção de texto. O bloqueio de gestos e o
+   `user-select: none` estão lá de propósito.
+6. **`main` é produção.** Todo push publica automático na Vercel. Nunca deixe a `main`
    quebrada.
 
-## 3. Estado atual
+## 3. O que o jogo faz hoje
 
-Loop testado: projeto custa `15 × 1,15^n`. **GO FAST** rende 3/s por projeto (6 com
-*Big campaigns*) e cansa o time; **GO STEADY** começa em 1/s e sobe até 2/s em 120s
-(4/s e rampa dobrada com *Team training*), sem cansar; trocar de modo zera a rampa.
-Cansaço decai em forma fechada (`p = eq + (p − eq)·e^(−kt)`), o que faz a mesma equação
-valer para o progresso offline. Saúde do time = `100/(100+cansaço)` multiplica **tudo**,
-inclusive toques. Aos 50 mil de impacto total dá pra passar a tocha:
-`sabedoria = ⌊√(total/2500) × saúde⌋`, +10% permanente por ponto.
+**Entrada.** A tela é dividida ao meio: metade esquerda **pula**, metade direita
+**golpeia**. O botão dourado embaixo também golpeia, e repete se você segurar. O pulo
+também acerta um golpe na subida.
 
-Sete upgrades (tabela completa no `NOTES.md`). Combo de três conjurações terminando em
-salto com baque e onda de choque. Segurar o botão principal repete a ~7 golpes/s. Mundo
-renderizado a 1 px de mundo = 2 px de tela, **e tudo vive nessa mesma grade** — herói e
-monstros já foram desenhados em 2× por cima e isso era o que deixava o jogo com cara de
-tosco; hoje são sprites assados em canvas offscreen, sombreados por uma direção de luz só
-(sol em cima e à direita).
+**Combate.** Cada golpe alcança 80 px; o quinto golpe do combo alcança 96 e causa dano
+dobrado, e é nele que ela salta. Os monstros caminham a rua e **passam reto** — se você
+não interagir, eles saem de quadro. Chegam em intervalos sorteados, nunca num ritmo
+contável.
 
-**Direção de arte: C — CLEAR SKY** (pôster de meio-dia, saturado, contorno duro, **zero
-pós-processamento**). O herói não é espadachim: carrega uma **varinha** e conjura. A magia é
-de cuidado — núcleo branco-quente, halo verde de crescimento, nunca azul arcano — e **não**
-dessatura com o mundo. **Doente é desbotado, não escuro**: o arco doente→curado roda em
-saturação, não em brilho. Sem fonte de CDN: o chrome usa a pilha do sistema e o canvas tem
-uma fonte bitmap 5×7 autorada no arquivo. Detalhes e o caminho de implementação restante
-estão na seção "Art direction" do `NOTES.md`.
+**Economia.** É deliberadamente rasa. Impacto vem de golpear, de recolher drops (pegos
+ao passar por cima) e de pegar folhas no ar pulando. Três upgrades, e só:
 
-## 4. Como trabalhar
+| | custo | efeito |
+|---|---:|---|
+| `u1` | 150 | cada golpe conta 3× |
+| `u2` | 900 | o que você pega vale o dobro |
+| `u3` | 4.000 | vizinhos ajudam sozinhos, 2 golpes/s |
 
-Ciclo obrigatório, sem exceção:
+Existe também um bônus por dias distintos jogados (`bonusDias`). **Não há renda passiva,
+prestígio, projetos, cansaço nem fim de partida** — tudo isso existiu e foi removido.
+Depois dos três upgrades, o impacto acumula sem ralo. Se você for adicionar progressão,
+é aqui.
+
+**Movimento.** O quadro do sprite é escolhido pela **distância percorrida**, não pelo
+tempo — é isso que impede o pé de deslizar em qualquer velocidade. `PASSO_PX` é a
+passada da caminhada e `PASSO_CORRIDA` a da corrida. As velocidades são escolhidas para
+que um quadro de sprite dure um número **inteiro** de quadros de tela (cinco andando,
+três correndo), senão a cadência manca.
+
+**Cenário.** Sete pinturas em sequência, cada uma ~6 s de caminhada, repetindo depois da
+sétima. Rolam **1:1 com o mundo** — não use paralaxe aqui: o chão em que ela pisa faz
+parte da pintura, e qualquer fração diferente de 1 faz ela levitar. A emenda entre duas
+pinturas tem cross-fade.
+
+**Camadas de canvas.** `#fundoHD` (pintura, resolução do dispositivo) → `#scene`
+(mundo em baixa resolução, pixelado) → `#heroHD` (a personagem, resolução do
+dispositivo). A personagem tem canvas próprio porque, desenhada dentro do `#scene`, a
+arte de 184 px era esmagada para 44 e depois ampliada de volta — seis vezes o tamanho
+guardado. **Não a mova de volta para o `#scene`.**
+
+## 4. Arte e pipeline de sprites
+
+Direção: pôster de meio-dia, saturado, contorno duro, **zero pós-processamento**. A
+personagem não é espadachim: carrega uma **varinha**. Doente é desbotado, não escuro.
+
+Folhas de sprite chegam de fora, em PNG/WebP com fundo **magenta `#FF00FF`**. O caminho
+que funciona está em `scratchpad/` (fora do repo) e vale reproduzir:
+
+1. Recortar em células iguais, **não** por colunas vazias — a varinha atravessa a linha
+   da célula e cola um quadro no outro.
+2. Preencher a mancha de cada personagem no sheet inteiro (a varinha vai junto), semeando
+   pela coluna com mais tinta dentro da célula — o corpo, nunca a ponta da varinha.
+3. Registrar todos os quadros pela **cabeça** (centro do quinto superior). Ancorar pelo pé
+   mais baixo faz ela avançar e recuar, porque numa passada o pé mais baixo é ora o da
+   frente ora o de trás.
+4. Uma **linha de base comum** para todos os quadros: o desenho ancora a borda inferior.
+5. Comparar a escala entre folhas pela **largura da cabeça**, não pela altura — uma pose
+   esticada é legitimamente mais alta.
+
+Conjuntos em uso: `walk` (12), `run` (12), `sp` (6, o pulo), `atk1`/`atk2` (4 cada).
+
+## 5. Como trabalhar
 
 ```bash
 node test/smoke.js     # tem que passar
@@ -67,110 +104,33 @@ git add -A && git commit -m "..." && git push
 ```
 
 O `test/smoke.js` roda headless num viewport 390×844 e falha se houver erro de console,
-se o segurar-pra-atacar parar de repetir, se algum upgrade não aplicar, se o terceiro
-golpe não pular ou se o baque não gerar onda de choque. Ele também mede FPS e salva
-prints `shot-*.png`. **Sempre olhe os prints** — o teste garante que não quebrou, não
-que ficou bonito.
+se o segurar-pra-atacar parar de repetir, se um upgrade não aplicar, se a metade errada
+da tela responder, se um save adulterado envenenar o estado, ou se os monstros pararem
+de andar. Ele salva prints `shot-*.png`. **Sempre olhe os prints** — o teste garante que
+não quebrou, não que ficou bonito.
 
 Ao mudar visual, tire print antes e depois e compare de verdade. Ao mudar mecânica,
-atualize a tabela e as fórmulas no `NOTES.md` no mesmo commit.
+atualize a tabela da seção 3 no mesmo commit.
 
-Se o smoke test falhar depois de um push, conserte ou reverta **imediatamente** —
-a produção está no ar.
+Se o smoke test falhar depois de um push, conserte ou reverta **imediatamente** — a
+produção está no ar.
 
-## 5. Autonomia e modo contínuo
+## 6. Armadilhas já pagas
 
-Você tem autonomia para escolher e executar o próximo trabalho **sem perguntar nada**.
-Não peça aprovação para tarefas da fila abaixo, nem para refatoração, teste, correção de
-bug ou polimento visual. O dono deste projeto pediu explicitamente que você trabalhe
-sozinho — tratar cada decisão como uma pergunta é desobedecer, não ser cuidadoso.
+Cada uma destas custou uma sessão. Não repita:
 
-### Protocolo de sessão
-
-Toda sessão, mesmo que a mensagem do humano seja só "continue" ou vazia:
-
-1. Leia a seção **Diário** no fim do `NOTES.md`. Ela diz onde a última sessão parou.
-2. Escolha a próxima tarefa: o primeiro item não concluído da fila da seção 6; se a fila
-   acabou, gere trabalho novo pelo critério da seção 6(f).
-3. Execute em incrementos pequenos. Cada incremento termina em `node test/smoke.js`
-   verde e um push.
-4. Acrescente uma entrada ao Diário do `NOTES.md`: o que fez, o que **mediu** (número,
-   não impressão), o que quebrou, que dúvida nova apareceu, e qual é o próximo passo.
-   Commite junto.
-5. **Não pare aqui.** Volte ao passo 2 e pegue a próxima tarefa. Continue até acabar o
-   contexto ou o orçamento da sessão. Só então escreva um resumo curto.
-
-Nunca encerre uma resposta com "o que você quer que eu faça agora?" ou "quer que eu
-continue?". Escolha e faça. Se estiver em dúvida entre duas tarefas, pegue a que estiver
-mais alta na fila e registre a dúvida no Diário.
-
-### Quando parar de verdade
-
-Pare e chame o humano só nestes casos:
-
-- Ia mexer nas regras invioláveis da seção 2.
-- Ia mudar o alvo do prestígio (50 mil) ou a curva de custo (`15 × 1,15^n`) — são o
-  coração do teste de 3 dias.
-- Ia adicionar dependência externa, backend, serviço de terceiros ou variável de ambiente.
-- Ia apagar ou renomear coisa **fora** do repositório (projeto na Vercel, repo no GitHub).
-- O mesmo teste falhou duas vezes seguidas e você não entende por quê. Reverta para o
-  último commit verde, deixe a produção sã, e só então relate.
-
-Fora disso: siga sozinho.
-
-## 6. Fila de trabalho, em ordem
-
-**(a) Medir se o segurar-pra-atacar matou a tensão do jogo.** É a tarefa mais
-importante e provavelmente a mais valiosa do repositório inteiro.
-
-O problema: segurar o botão rende impacto **sem gerar cansaço**. Com *Better tools for
-all* (3×) e *Fair share* (1,3×), segurar a 7 golpes/s dá ~27 de impacto/s, limpo. Um
-projeto em GO FAST com *Big campaigns* rende 7,8/s e suja o time. Se em boa parte da
-partida a jogada ótima for "segura o botão e ignora o ritmo", o jogo deixou de medir a
-decisão que ele existe para medir.
-
-Escreva uma simulação headless (sem navegador, só as fórmulas em Node) que jogue a
-partida com estratégias diferentes — só segurando, só projetos em fast, só projetos em
-steady, e misturas — e compare tempo até 50 mil de impacto total. Se segurar dominar,
-proponha e aplique a correção mínima. Candidatas: fazer o toque gerar um pouco de
-cansaço em modo fast; dar teto ao ganho por segundo vindo de toque; ou fazer *Fair
-share* valer só para projetos. **Escolha uma, não três.** Documente o número medido no
-`NOTES.md`.
-
-**(b) Instrumentar retenção.** O protótipo não sabe responder à própria pergunta. Grave
-no `localStorage` um conjunto de dias distintos em que houve sessão, o tempo total
-jogado e quantas vezes a tocha foi passada. Mostre isso numa tela discreta (um toque
-longo no ícone da tocha serve). Sem serviço externo, sem coleta de nada pessoal.
-
-**(c) Tirar o `confirm()` do prestígio.** É um diálogo do navegador no meio de um jogo
-pixel art em tela cheia; no celular quebra a imersão. Troque por um painel no estilo das
-sheets existentes.
-
-**(d) Corrigir o ganho offline.** Hoje usa a eficiência do momento do save, então uma
-noite inteira com o time sujo rende mais do que deveria. O cansaço já é resolvido em
-forma fechada; faça o ganho integrar junto, em vez de usar a taxa congelada.
-
-**(e) Apagar o `PUSH.md`.** Ensina a criar o repositório e conectar a Vercel — as duas
-coisas já feitas. Só confunde.
-
-**(f) Depois disso, você decide — e a fila nunca acaba.** Critério único: prefira o que
-aumenta a chance de alguém **voltar no dia seguinte**. Um motivo para voltar amanhã vale
-mais que um efeito visual novo. O visual já passou por muitas rodadas e está num patamar
-bom — só mexa nele se tiver um motivo claro, não por hábito.
-
-Quando precisar gerar trabalho novo, escolha uma destas lentes, alternando entre elas
-para não cair em monocultura:
-
-- **Medir**: que afirmação sobre o jogo você está aceitando sem número? Meça.
-- **Primeiros cinco minutos**: alguém que abre agora entende o que fazer? Onde trava?
-- **Volta no dia 2**: o que a pessoa encontra de novo ao voltar? Hoje é pouco.
-- **Fim de partida**: passar a tocha é satisfatório ou é só um reset?
-- **Robustez**: save corrompido, aba em segundo plano por horas, tela pequena, relógio
-  do sistema mudado — o jogo aguenta?
-- **Subtração**: o que dá pra tirar sem o jogo piorar? Protótipo bom é enxuto.
-
-Registre no Diário a lente que usou e por quê. Se três sessões seguidas não moverem a
-pergunta das três dias, pare de polir e volte para a lente **Medir**.
+- **Paralaxe no fundo.** A pintura rolava a 0,35× enquanto os pés andavam a 1,0×. Três
+  quartos de cada passo eram deslize.
+- **Ancorar sprite pelo pé mais baixo.** Injeta um vai-e-volta no ciclo. Ancore pela cabeça.
+- **Limpar a camada da heroína fora do desenho dela.** `drawHero()` roda numa função que
+  termina *antes* de `desenharMundo()`; limpar lá apaga ela no mesmo quadro.
+- **Velocidade que não dá quadro inteiro de tela por pose.** A cadência sai 2-2-3-2-2-3 e
+  lê como trepidação.
+- **`CFG["custoU" + n]`.** Não existe `CFG.custoU1` literal em lugar nenhum, então uma
+  varredura de código morto vai oferecer para apagar. Está vivo.
+- **Remover função procurando o próximo `}` na coluna 0.** Para um corpo que fecha em
+  chave indentada, isso corre centenas de linhas e leva declarações vizinhas junto.
+  Valide balanço de chaves, colchetes e parênteses antes de apagar.
 
 ## 7. Infraestrutura
 

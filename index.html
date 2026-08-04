@@ -7,6 +7,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- The game is one file and reaches for nothing. This makes the browser hold it to that:
+     no script, style, image or connection may come from anywhere but this document, and
+     there is no way to open a socket or fetch a URL even if code tried. 'unsafe-inline' is
+     required because the script and the styles live in the page itself, and data: is
+     required because every sprite is a base64 URI. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<!-- frame-ancestors is deliberately absent: a browser ignores it in a <meta> element and
+     logs a warning. Clickjacking protection has to come from an HTTP header, so if this is
+     ever hosted somewhere that matters, set X-Frame-Options or frame-ancestors there. -->
 <meta name="apple-mobile-web-app-title" content="Save the World">
 <title>SAVE THE WORLD</title>
 <style>
@@ -454,7 +463,8 @@ const CFG = {
   // arrival instead of carrying a hand-copied average.
   // owner: a jump lands a blow as well as the button, so they were falling almost as fast
   // as they arrived. Roughly four times the health.
-  mobHp: { smog: 8, cash: 12, barrel: 20 },
+  // owner: four times the old health was too much once the leap moved to one swing in five.
+  mobHp: { smog: 5, cash: 8, barrel: 13 },
   mobMix: { carvao: { smog: 0.45, barrel: 0.75 }, limpo: { smog: 0.20, barrel: 0.42 } },
   bloqueioPorMob: 0.10,    // production a trouble blocks while it stands in your way
   dropVida: 9,             // seconds a drop waits on the ground
@@ -494,100 +504,38 @@ const CFG = {
   ]
 };
 
+// Everything the game remembers. It is deliberately small: each field is read somewhere and
+// each one is on ESQUEMA_SAVE, so what is in memory, what is on disk and what the loader will
+// accept are the same seven things.
 let S = {
-  energia: 0, energiaTotal: 0, poluicao: 0,
+  energia: 0, energiaTotal: 0,
   // owner: opens at a walk. "carvao" is the running rhythm and starting there had her
   // sprinting the moment the page loaded.
-  geradores: 0, modo: "limpo", tempoLimpo: 0,
+  modo: "limpo",
   u1: false, u2: false, u3: false,
-  inovacao: 0, transicoes: 0,
-  // Resources: a drop still pays its impact, but on top of that it drops a thing of its
-  // kind that piles up — smog→flower, barrel→water, cash→meal. Special projects spend
-  // specific combos of these. Within-run, like projects and upgrades: the torch wipes them,
-  // because what they buy (special projects) is itself within-run.
+  // A drop still leaves a resource of its kind — smog to flower, barrel to water, cash to
+  // meal. Nothing spends them since special projects were removed, so they are a counter kept
+  // for whoever builds the next thing that does.
   recursos: { flor: 0, agua: 0, refeicao: 0 },
-  especiais: {},             // ids of special projects completed this run
-  qtdCompra: 1,              // vestigial: buying is now the 1-or-MAX pair, no remembered target
-  capVisto: 0,               // how many chapter cards this run has shown — reset by the torch
-  introSeen: false,
-  guiaVistos: [],            // ids of first-run hints already seen — NOT reset by the torch,
-                             // so passing the torch never replays the tutorial
   salvoEm: 0
 };
 
-// ---------- formulas ----------
-const eficiencia = () => 1;   // owner: tiredness ended with the projects that emitted it
-const bonusInovacao = () => 1 + 0.1 * S.inovacao;
-const bonusJusto = () => 1;                        // owner: kept at 1 so the formulas read the same
 const forcaToque = () => (S.u1 ? CFG.forcaToqueU1 : 1);   // U1: stronger hands
-// A trouble that reaches you stands in the way of the work until someone deals with it.
-// It is a *multiplier*, never tiredness — so it costs GO FAST and GO STEADY the same
-// share and cannot quietly pay for burning the team out.
-function bloqueioMundo() {
-  let n = 0;
-  for (let i = 0; i < mobs.length; i++) if (mobs[i].parado && mobs[i].dying <= 0) n++;
-  // Clean Water Works softens how much a parked trouble blocks (bloq < 1), never removes it.
-  return Math.max(0, 1 - Math.min(n, CFG.mobMax) * CFG.bloqueioPorMob * multEspecial("bloq"));
-}
-const bonusMutirao = () => (mutiraoT > 0 ? CFG.mutiraoMult : 1);   // the whole street shows up
-// the super's window: a smaller, shorter mutirão you earned by playing rather than by
-// being there when the pot came out. Same shape on purpose — a multiplier, never tiredness.
-const bonusSuper = () => 1;   // owner: the super is gone; this stays 1 so the formulas read the same
 // coming back on a new day is worth something: the neighbourhood knows you now
 const bonusDias = () => 1 + CFG.bonusDia * Math.min(Math.max(0, R.dias.length - 1), CFG.diasMax);
-// Completed special projects fold into a single multiplier per channel. Same shape as the
-// world bonuses: a factor on output, mode-neutral, never a term in the tiredness equation.
-function multEspecial(campo) {
-  let m = 1;
-  const feitos = S.especiais || {};
-  for (let i = 0; i < CFG.especiais.length; i++) {
-    const e = CFG.especiais[i];
-    if (feitos[e.id] && e[campo]) m *= e[campo];
-  }
-  return m;
-}
-const ganhoClique = () => 1 * forcaToque() * bonusInovacao() * eficiencia() * bonusJusto()
-  * bonusMutirao() * bonusSuper() * bonusDias() * multEspecial("tap");
+// What a tap is worth: the base, the upgrade that triples it, and the day streak. Every
+// other multiplier this used to carry belonged to a feature that no longer exists.
+const ganhoClique = () => forcaToque() * bonusDias();
 
-function tetoLimpoAtual() { return CFG.tetoLimpo; }
-function rampaAtual() {
-  const dur = S.u3 ? CFG.rampaLimpoSeg / 2 : CFG.rampaLimpoSeg;
-  return 1 + (tetoLimpoAtual() - 1) * Math.min(S.tempoLimpo / dur, 1);
-}
-function fracaoRampa() {
-  const dur = S.u3 ? CFG.rampaLimpoSeg / 2 : CFG.rampaLimpoSeg;
-  return Math.min(S.tempoLimpo / dur, 1);
-}
-function prodPorSegundo() {
-  let porGerador;
-  if (S.modo === "carvao") porGerador = CFG.prodCarvao;
-  else porGerador = CFG.prodLimpoBase * rampaAtual();
-  return S.geradores * porGerador * bonusInovacao() * eficiencia() * bonusJusto()
-    * bloqueioMundo() * bonusMutirao() * bonusSuper() * bonusDias() * multEspecial("prod");
-}
 function poluicaoPorSegundo() {
   if (S.modo !== "carvao") return 0;
-  return S.geradores * CFG.poluicaoPorGerador;
+  return 0;
 }
 function worldHealth() {
   const run = Math.min(1, S.energiaTotal / CFG.metaPrestigio);
-  return Math.max(0, Math.min(1, 0.04 + run * 0.72 + Math.min(S.inovacao, 12) * 0.02));
+  return Math.max(0, Math.min(1, 0.04 + run * 0.72));
 }
 
-// ============================================================
-// WHAT THE RHYTHM COSTS — projections, not descriptions
-// The whole prototype exists to measure one decision (burn the team out fast vs organise
-// steadily) and until now the game never told the player what they were trading. These
-// read the future straight out of the same closed form simular() steps with, so nothing
-// here is a hardcoded claim that can drift away from the economy.
-// ============================================================
-function kCansaco() { return -Math.log(1 - CFG.decaimentoPoluicao); }
-// where tiredness settles if you stay in this mode forever: emission / k
-function cansacoEq(modo) {
-  const emissao = modo === "carvao" ? S.geradores * CFG.poluicaoPorGerador : 0;
-  return emissao / kCansaco();
-}
-const saudeDe = p => 100 / (100 + p);
 // how long until team health reaches `alvo` (0..1) in this mode; Infinity if it never does
 function segundosAteSaude(modo, alvo) {
   const p = 100 / alvo - 100, eq = cansacoEq(modo), d = S.poluicao - eq;
@@ -597,20 +545,6 @@ function segundosAteSaude(modo, alvo) {
   const t = -Math.log(r) / kCansaco();
   return t > 0 ? t : 0;
 }
-// production under a hypothetical rhythm, run through the real prodPorSegundo() so the
-// preview can never disagree with what actually happens one frame later
-function taxaSe(modo, tempoLimpo, poluicao) {
-  const m = S.modo, tl = S.tempoLimpo, p = S.poluicao;
-  S.modo = modo; S.tempoLimpo = tempoLimpo;
-  if (poluicao !== undefined) S.poluicao = poluicao;
-  const v = prodPorSegundo();
-  S.modo = m; S.tempoLimpo = tl; S.poluicao = p;
-  return v;
-}
-const rampaCheia = () => (S.u3 ? CFG.rampaLimpoSeg / 2 : CFG.rampaLimpoSeg);
-function taxaAssentada(modo) {
-  return taxaSe(modo, modo === "limpo" ? rampaCheia() : 0, cansacoEq(modo));
-}
 function curto(seg) {
   if (!isFinite(seg)) return "never";
   if (seg < 1) return "now";
@@ -618,23 +552,7 @@ function curto(seg) {
   if (seg >= 600) return Math.round(seg / 60) + "m";     // past ten minutes the seconds are noise
   return Math.floor(seg / 60) + "m" + String(Math.round(seg % 60)).padStart(2, "0");
 }
-// rates are read at a glance, so keep them short whatever the order of magnitude
-function taxaCurta(n) {
-  if (n >= 1000) return fmt(n) + "/s";
-  return (n >= 100 ? Math.round(n) : n.toFixed(1)) + "/s";
-}
 
-// ---------- simulation ----------
-function simular(dt) {
-  S.tempoLimpo = (S.modo === "limpo") ? S.tempoLimpo + dt : 0;
-  const ganho = prodPorSegundo() * dt;
-  S.energia += ganho; S.energiaTotal += ganho;
-  const k = -Math.log(1 - CFG.decaimentoPoluicao);
-  const eq = poluicaoPorSegundo() / k;
-  S.poluicao = eq + (S.poluicao - eq) * Math.exp(-k * dt);
-  if (S.poluicao < 0.01) S.poluicao = 0;
-  return ganho;
-}
 
 // ---------- actions ----------
 let floats = [], sprouts = [], parts = [], lastFi = 0;
@@ -684,7 +602,7 @@ function atualizarFolhas(dt, alto) {
     if (sx < -16) { folhas.splice(i, 1); continue; }
     const fy = f.y + Math.sin(animT * 2 + f.fase) * 2;      // a slow drift, so they read as alive
     if (Math.abs(sx - HX) < 15 && fy > cabeca - 6 && fy < pes + 4) {
-      const g = CFG.folhaValor * bonusDias() * multEspecial("tap");
+      const g = CFG.folhaValor * bonusDias();
       S.energia += g; S.energiaTotal += g;
       floats.push({ x: Math.round(sx) - 8, y: Math.round(fy) - 12, txt: "+" + g.toFixed(1), life: 34 });
       burst(Math.round(sx), Math.round(fy), 7, ["#9bd44f", "#6fdd94", "#d8e88a"]);
@@ -809,9 +727,9 @@ let chamadaDobrada = false, diaNovo = false, voltouDepoisDe = 0;
 function soltarDrop(m, sx) {
   drops.push({
     wx: worldX + sx + 5, type: m.type, t: 0,
-    valor: (CFG.dropBase + CFG.dropPorProjeto * S.geradores)
-      * bonusInovacao() * eficiencia() * bonusJusto() * bonusMutirao() * bonusSuper() * bonusDias()
-      * multEspecial("drop")
+    // the day streak is the only multiplier left standing; the rest belonged to features
+    // that were removed
+    valor: CFG.dropBase * bonusDias()
   });
   if (drops.length > 8) drops.shift();
 }
@@ -945,31 +863,12 @@ function clicar(auto, naoConta, semAnim) {
 let modoAviso = null;
 function definirModo(m) {
   if (S.modo === m) return;
-  const taxaAntes = prodPorSegundo();
-  const rampaPerdida = S.modo === "limpo" ? rampaAtual() : 0;
-  const fracaoPerdida = S.modo === "limpo" ? fracaoRampa() : 0;
-
-  S.modo = m; S.tempoLimpo = 0;
-
-  const taxaDepois = prodPorSegundo();
-  const fim = taxaAssentada(m);
-  const saudeFim = saudeDe(cansacoEq(m));
-  const delta = taxaAntes > 0.05 ? (taxaDepois / taxaAntes - 1) * 100 : 0;
+  S.modo = m;
   const rapido = m === "carvao";
-
-  // the world reacts: a stack of floats, a fat burst, a screen flash, chips popping
-  let y = GROUND - 44;
-  floats.push({ x: HX - 10, y: y, txt: rapido ? "GO FAST!" : "GO STEADY!", life: 52 });
-  if (S.geradores > 0) {
-    floats.push({ x: HX - 10, y: y -= 13, life: 46,
-      txt: taxaCurta(taxaAntes) + " > " + taxaCurta(taxaDepois) });
-    floats.push({ x: HX - 10, y: y -= 13, life: 42, txt: "SETTLES " + taxaCurta(fim) });
-    floats.push({ x: HX - 10, y: y -= 13, life: 38,
-      txt: "TEAM " + Math.round(saudeFim * 100) + "%" });
-    if (fracaoPerdida > 0.02) {
-      floats.push({ x: HX - 10, y: y - 13, txt: "RAMP LOST x" + rampaPerdida.toFixed(2), life: 60 });
-    }
-  }
+  // The rhythm decides how fast the street goes past and which cycle she runs. It used to
+  // report a rate change, a settling rate and a team-health figure as well; those belonged to
+  // the passive economy and all of them read zero now.
+  floats.push({ x: HX - 10, y: GROUND - 44, txt: rapido ? "GO FAST!" : "GO STEADY!", life: 52 });
   burst(HX + 6, GROUND - 20, 26, rapido ? ["#ff6b57", "#ffcd75", "#ffe9b0"] : ["#38b764", "#6fdd94", "#b5e08c"]);
   for (let i = 0; i < 14; i++) {   // a column of sparks going up: revving, or exhaling
     parts.push({ x: HX + 4 + (Math.random() - 0.5) * 26, y: GROUND - 4,
@@ -1007,7 +906,7 @@ function simularOffline(total) {
   let ganho = 0, resto = total;
   while (resto > 0) {
     const p = Math.min(PASSO, resto);
-    ganho += simular(p);
+    // nothing accrues while away: passive income went with the projects
     resto -= p;
   }
   return ganho;
@@ -1016,44 +915,81 @@ function simularOffline(total) {
 // ---------- save / load / offline ----------
 function salvar() {
   S.salvoEm = Date.now();
-  try { localStorage.setItem(CHAVE_JOGO, JSON.stringify(S)); } catch (e) {}
+  // write only what the schema will read back: a save never carries a field the loader
+  // would discard, so what is on disk and what the game runs on are the same shape
+  const fora = {};
+  for (const chave in ESQUEMA_SAVE) fora[chave] = S[chave];
+  try { localStorage.setItem(CHAVE_JOGO, JSON.stringify(fora)); } catch (e) {}
+}
+// Every field a save is allowed to carry, with the shape it has to be in. num() clamps into
+// a range and rejects NaN and Infinity; bool() and um() speak for themselves. A field missing
+// from this table cannot enter the game, whatever the stored JSON says.
+const ESQUEMA_SAVE = {
+  energia:      { tipo: "num", min: 0, max: 1e15, pad: 0 },
+  energiaTotal: { tipo: "num", min: 0, max: 1e15, pad: 0 },
+  modo:         { tipo: "um", entre: ["limpo", "carvao"], pad: "limpo" },
+  u1:           { tipo: "bool", pad: false },
+  u2:           { tipo: "bool", pad: false },
+  u3:           { tipo: "bool", pad: false },
+  salvoEm:      { tipo: "num", min: 0, max: 4e12, pad: 0 }
+};
+function valida(regra, v) {
+  if (regra.tipo === "num") {
+    if (typeof v !== "number" || !isFinite(v)) return regra.pad;
+    return Math.min(regra.max, Math.max(regra.min, v));
+  }
+  if (regra.tipo === "bool") return v === true;
+  if (regra.tipo === "um") return regra.entre.indexOf(v) >= 0 ? v : regra.pad;
+  return regra.pad;
 }
 function carregar() {
   let bruto = null;
   try { bruto = localStorage.getItem(CHAVE_JOGO); } catch (e) {}
   if (!bruto) return;
-  try { Object.assign(S, JSON.parse(bruto)); } catch (e) { return; }
+  let lido;
+  try { lido = JSON.parse(bruto); } catch (e) { return; }
+  if (!lido || typeof lido !== "object" || Array.isArray(lido)) return;
+  for (const chave in ESQUEMA_SAVE) {
+    if (Object.prototype.hasOwnProperty.call(lido, chave)) {
+      S[chave] = valida(ESQUEMA_SAVE[chave], lido[chave]);
+    }
+  }
+  // impact can never be less than what is in hand: a save claiming otherwise is inconsistent
+  if (S.energiaTotal < S.energia) S.energiaTotal = S.energia;
   // A save from before the cleanup still carries a project count and the tiredness those
   // projects had built up. Neither exists now, so they are dropped on load rather than left
   // to quietly divide the tap gain with no readout to explain it.
-  S.geradores = 0; S.poluicao = 0;
   // old saves predate the resource layer; missing objects read back as their empty shape
   if (!S.recursos || typeof S.recursos !== "object") S.recursos = { flor: 0, agua: 0, refeicao: 0 };
-  if (!S.especiais || typeof S.especiais !== "object") S.especiais = {};
   const dt = Math.min((Date.now() - S.salvoEm) / 1000, CFG.capOfflineHoras * 3600);
   voltouDepoisDe = dt;
-  let texto = "";
-  if (dt > 60 && S.geradores > 0) {
-    const antes = S.poluicao;
-    const ganho = simularOffline(dt);
+  // Built as data, not as markup: each part is either a plain line or a line with a
+  // speaker, and the renderer below puts both in as text nodes. Nothing here can carry HTML
+  // into the page, whatever ends up in one of these strings later.
+  const partes = [];
+  if (dt > 60 && R.dias.length > 1) {
     const h = Math.floor(dt / 3600), m = Math.floor((dt % 3600) / 60);
-    texto = "🌙 WHILE YOU WERE AWAY (" + h + "h" + String(m).padStart(2, "0") + "): +" +
-      fmt(ganho) + " impact" +
-      (S.poluicao > antes ? ", +" + fmt(S.poluicao - antes) + " tiredness." : ".")
-      + (R.dias.length > 1 ? " DAY " + R.dias.length + " — the neighbourhood knows you: ×"
-        + bonusDias().toFixed(2) + " to everything." : "");
+    partes.push({ texto: "🌙 AWAY " + h + "h" + String(m).padStart(2, "0") + " — DAY "
+      + R.dias.length + ", the neighbourhood knows you: ×" + bonusDias().toFixed(2) });
   }
-  // The gain summary is gated on having projects, so the player who passed the torch and
-  // then quit used to come back to nothing at all. The greeting is not gated on anything.
   const nota = notaDeVolta();
-  if (nota) {
-    texto += (texto ? "<br>" : "")
-      + "<b>" + nota[0] + "</b> — &ldquo;" + nota[1] + "&rdquo;";
-  }
-  if (texto) {
+  if (nota) partes.push({ texto: nota });
+  if (partes.length) {
     const el = document.getElementById("offline");
+    el.textContent = "";
+    partes.forEach(function (parte, i) {
+      if (i) el.appendChild(document.createElement("br"));
+      // the speaker is bold, the line is not; both go in as TEXT, never as markup
+      if (parte.quem) {
+        const b = document.createElement("b");
+        b.textContent = parte.quem;
+        el.appendChild(b);
+        el.appendChild(document.createTextNode(" — \u201c" + parte.texto + "\u201d"));
+      } else {
+        el.appendChild(document.createTextNode(parte.texto));
+      }
+    });
     el.style.display = "block";
-    el.innerHTML = texto;
     setTimeout(function () { el.style.display = "none"; }, 12000);
   }
 }
@@ -1160,12 +1096,14 @@ function carregarMuro() {
 // The night's summary is gated on having projects, so somebody who passed the torch and
 // then quit came back to a completely silent screen — and that is exactly the player worth
 // greeting. This note fires on its own, whether or not anything was earned overnight.
+// One line for coming back, picked by how many days you have shown up. The cast that used
+// to speak these went with the rest of the names, so the street says them now.
 const NOTAS_VOLTA = [
-  ["RUI", "Nothing collapsed. Don't look so surprised."],
-  ["ODETE", "Second day. That's when people usually stop."],
-  ["MARA", "Three days. Your name's going on the wall."],
-  ["SAFI", "You keep coming back. So does everyone else."],
-  ["ODETE", "You've been at this a week. Sit. Eat something."]
+  "Nothing collapsed while you were gone.",
+  "Second day. That is when people usually stop.",
+  "Three days. The street is starting to notice.",
+  "You keep coming back. So does everyone else.",
+  "A week of this. Sit down, eat something."
 ];
 function notaDeVolta() {
   const d = R.dias.length;
@@ -1531,8 +1469,9 @@ function ritmoPasso() {
   const alvo = modo === "carvao" ? 1 : 0;
   if (ritmoUlt !== null && ritmoUlt !== modo) ritmoVirou = 1;   // one-shot: the air turns over
   ritmoUlt = modo;
-  // what the choice is costing: 0 with a rested team, 1 once the team is at half health
-  ritmoCusto = Math.min(1, (1 - eficiencia()) * 2);
+  // The weather used to lean on what the rhythm was costing the team. There is no team cost
+  // any more, so the choice itself is the whole of it: running is the expensive-looking air.
+  ritmoCusto = modo === "carvao" ? 1 : 0;
   if (primeira) ritmoV = alvo;      // a save loaded in GO FAST opens on the weather it left in
   if (dt) {
     const k = 1 - Math.pow(0.02, dt / 1.1);
@@ -2983,7 +2922,25 @@ function rolarFundo() {
     if (x > g.cw || x + g.dw < 0) continue;
     const im = CENARIO_FUNDO[((k % n) + n) % n];
     if (!im || !im.complete || !im.naturalWidth) continue;
+    fx.globalAlpha = 1;
     fx.drawImage(im, x, g.dy, g.dw, g.dh);
+    // Soften the join. Two different paintings meet on a hard vertical line; their ground is
+    // already aligned, so the cobbles run straight through, but the skyline changed in one
+    // pixel. The incoming picture is drawn again over a narrow band at its leading edge with
+    // a rising alpha, which turns the cut into a dissolve about a fifth of a screen wide.
+    const faixa = Math.min(g.dw * 0.18, g.cw * 0.22);
+    if (faixa > 4) {
+      const passos = 12;
+      for (let t = 0; t < passos; t++) {
+        const f0 = t / passos, f1 = (t + 1) / passos;
+        fx.globalAlpha = 1 - f0;                 // strongest at the seam, gone by the far side
+        const sx = im.naturalWidth * (f0 * faixa / g.dw);
+        const sw = im.naturalWidth * ((f1 - f0) * faixa / g.dw);
+        fx.drawImage(im, sx, 0, sw, im.naturalHeight,
+          x + f0 * faixa, g.dy, (f1 - f0) * faixa, g.dh);
+      }
+      fx.globalAlpha = 1;
+    }
   }
 }
 // Debug hook: force any of the seven paintings regardless of the coded scenario. n<0 clears
@@ -3814,7 +3771,7 @@ CENARIOS.rua = {
     }
     if (kind === 8) posteLuz(sx + 22, GROUND, h > 0.3 || acendeu(k * 5 + 1));
     // project buildings appear as you launch projects
-    if (S.geradores > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
+    if (S.energiaTotal > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
       // A project is a thing somebody built on their own roof. GO STEADY grows it a garden
       // and a water tank; GO FAST bolts a generator to it and it smokes. White wind turbines
       // were the loudest thing on screen that is nowhere on the board.
@@ -4359,7 +4316,7 @@ CENARIOS.praca = {
       // A PROJECT IS SOMETHING SOMEBODY BUILT, and on a square it is built on the square: a
       // raised bed with a water butt when the rhythm is GO STEADY, a generator smoking beside
       // it when it is GO FAST. Same two states, same mechanic, no new anything.
-      if (S.geradores > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
+      if (S.energiaTotal > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
         const px0 = sx + 14, py = GROUND - 3;
         cx.fillStyle = wc("#4a3524"); cx.fillRect(px0, py - 7, 22, 7);
         cx.fillStyle = wc("#6d4620"); cx.fillRect(px0, py - 7, 22, 1);
@@ -4994,7 +4951,7 @@ CENARIOS.mata = {
       // A PROJECT IS SOMETHING SOMEBODY BUILT, and in a forest it is a nursery: a shaded
       // frame of seedlings in GO STEADY, a generator smoking beside it in GO FAST. Same two
       // states, same mechanic, nothing new — the square's rule, in the square's place.
-      if (S.geradores > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
+      if (S.energiaTotal > 0 && Math.floor(hash01(k * 13 + 5) * 8) === 3) {
         const px0 = sx + 14, py = GROUND - 2;
         cx.fillStyle = wc("#3a2718"); cx.fillRect(px0, py - 6, 2, 6); cx.fillRect(px0 + 20, py - 6, 2, 6);
         cx.fillStyle = wc("#4a3524"); cx.fillRect(px0 - 1, py - 8, 24, 2);
@@ -5171,7 +5128,7 @@ function drawScene() {
   const R = ritmoPasso();           // 0 = GO STEADY, 1 = GO FAST, eased across ~1.1s
   const RQ = ritmoQ();              // the same choice, weighted by what it is costing
   const P = pal(h);                 // the whole world's colour, resolved once per health step
-  const smog = Math.min(0.8, (1 - eficiencia()) * 1.6);
+  const smog = 0;                   // tiredness is gone, and it was the only thing that made smog
   // The air in front of a world being pushed thickens BEFORE the team is worn: the old
   // `smog` only ever answered to tiredness, which lags the decision by minutes. Rhythm gets
   // its own share of it so the switch is felt now, and tiredness still stacks on top.
@@ -5663,7 +5620,6 @@ let anChamada = false, anMutirao = false, anSuper = false, anBloqueio = false, a
 function semearAnuncios() {          // adopt the current state without shouting, so a reload
   anChamada = !!chamada;             // or an offline jump does not fire a burst on the first frame
   anMutirao = mutiraoT > 0;
-  anBloqueio = bloqueioMundo() < 0.999;
   anTocha = S.energiaTotal >= CFG.metaPrestigio;
 }
 function verificarAnuncios() {
@@ -5675,7 +5631,7 @@ function verificarAnuncios() {
   if (temMutirao && !anMutirao) anunciar("MUTIRAO! Everyone's helping — ×" + CFG.mutiraoMult, "festa");
   anMutirao = temMutirao;
 
-  const bloqueado = bloqueioMundo() < 0.999;   // troubles are actively holding production back
+  const bloqueado = false;   // troubles no longer hold anything back: there is no production
   if (bloqueado && !anBloqueio) anunciar("TROUBLES IN THE WAY — tap them to clear", "perigo");
   anBloqueio = bloqueado;
 
@@ -5803,13 +5759,11 @@ document.addEventListener("DOMContentLoaded", () => {
   medirControles();
   window.addEventListener("resize", medirControles);
 
-  S.introSeen = true;   // owner: there is no opening card to see any more
 
   let ultimo = performance.now(), hudAcc = 0, autoAcc = 0, retAcc = 0;
   function frame(agora) {
     const dt = Math.max(0, Math.min(0.25, (agora - ultimo) / 1000));
     ultimo = agora;
-    simular(dt);
     atualizarMobs(dt);
     atualizarDrops(dt);
     atualizarChamada(dt);
