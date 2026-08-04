@@ -90,6 +90,12 @@
     /* a score plate, not a header bar: the street shows through it */
     background: linear-gradient(180deg, rgba(24,18,10,.72), rgba(24,18,10,.34));
     backdrop-filter: blur(1px); }
+  /* the three drop counters: small, quiet, and only as wide as their numbers */
+  #recursos { display: flex; align-items: center; gap: 9px; margin-left: 12px; }
+  .rec { display: flex; align-items: center; gap: 3px; }
+  .rec b { font-size: 11px; font-weight: 900; color: #d8c398; font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 0 rgba(0,0,0,.7); }
+  .pd { image-rendering: pixelated; width: 14px; height: 14px; }
   #barraTopo { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline;
     justify-content: center; gap: 10px; padding: 10px 14px 12px; }
   /* one line, no stacking: the leaf, the number, then what the number is */
@@ -375,8 +381,12 @@
   <div id="barraTopo">
     <div class="chip" id="chipTaxa"><canvas class="pi" data-i="leaf" width="12" height="12"></canvas>
       <div class="cInfo"><div class="valor" id="energia">0</div><div class="rotulo">IMPACT</div></div></div>
-    <!-- owner: the team-health chip is gone too — tiredness had no source left once the
-         projects that emitted it were removed. -->
+    <!-- what the street has given you, counted. The sprites are the drops themselves. -->
+    <div id="recursos">
+      <span class="rec"><canvas class="pd" id="pdFlor" width="12" height="12"></canvas><b id="nFlor">0</b></span>
+      <span class="rec"><canvas class="pd" id="pdAgua" width="12" height="12"></canvas><b id="nAgua">0</b></span>
+      <span class="rec"><canvas class="pd" id="pdRef" width="12" height="12"></canvas><b id="nRef">0</b></span>
+    </div>
     <!-- owner: the third chip (world %) is gone — the top row is impact and team only. -->
   </div>
 </div>
@@ -513,6 +523,7 @@ let S = {
   // sprinting the moment the page loaded.
   modo: "limpo",
   u1: false, u2: false, u3: false,
+  cenario: 0,                // which of the seven streets you have reached
   // A drop still leaves a resource of its kind — smog to flower, barrel to water, cash to
   // meal. Nothing spends them since special projects were removed, so they are a counter kept
   // for whoever builds the next thing that does.
@@ -931,6 +942,7 @@ const ESQUEMA_SAVE = {
   u1:           { tipo: "bool", pad: false },
   u2:           { tipo: "bool", pad: false },
   u3:           { tipo: "bool", pad: false },
+  cenario:      { tipo: "num", min: 0, max: 6, pad: 0 },
   salvoEm:      { tipo: "num", min: 0, max: 4e12, pad: 0 }
 };
 function valida(regra, v) {
@@ -2899,6 +2911,51 @@ function redesenharFundo() {
 // removes the seam: an edge only ever meets its own reflection, so there is no join to spot,
 // and the same trick works for any painting without needing it to tile.
 let fundoGeo = null;
+// ---------- the street you have reached ----------
+// Seven paintings, and you walk one of them until you have earned the next. The first advance
+// wants every upgrade bought AND 5000 impact; after that only the impact bar rises, because
+// there are no more upgrades to ask for. These numbers are the whole of the game's long arc,
+// so they live here, together, where they can be argued with.
+const LIMIARES = [5000, 18000, 55000, 150000, 400000, 1000000];
+function cenarioAtual() {
+  const n = Math.max(0, Math.min(CENARIO_FUNDO.length - 1, S.cenario | 0));
+  return n;
+}
+function todosUpgrades() { return S.u1 && S.u2 && S.u3; }
+function proximoLimiar() {
+  const i = cenarioAtual();
+  return i >= LIMIARES.length ? null : LIMIARES[i];
+}
+function verificarCenario() {
+  const alvo = proximoLimiar();
+  if (alvo === null) return;                       // the last street: nothing further to reach
+  if (!todosUpgrades()) return;                    // the first gate, and it never reopens
+  if (S.energiaTotal < alvo) return;
+  S.cenario = cenarioAtual() + 1;
+  redesenharFundo();
+  floats.push({ x: Math.max(4, Math.round(W / 2) - 46), y: GROUND - 58, life: 90,
+    txt: "A NEW STREET" });
+  burst(Math.round(W / 2), GROUND - 24, 30, ["#6fdd94", "#ffe08a", "#fffbe8"]);
+  salvar();
+}
+
+// The drop sprites are images, not pixel maps, so they cannot go through renderIcon. Painted
+// once each, the first frame after they have loaded.
+let iconesDropOk = false;
+function pintarIconesDrop() {
+  if (iconesDropOk) return;
+  const alvos = [["pdFlor", 0], ["pdAgua", 1], ["pdRef", 2]];
+  if (!alvos.every(function (a) { const im = DROP_SPR[a[1]]; return im && im.complete && im.naturalWidth; })) return;
+  alvos.forEach(function (a) {
+    const cn = $(a[0]); if (!cn) return;
+    const g2 = cn.getContext("2d");
+    g2.clearRect(0, 0, 12, 12);
+    g2.imageSmoothingEnabled = false;
+    g2.drawImage(DROP_SPR[a[1]], 0, 0, 12, 12);
+  });
+  iconesDropOk = true;
+}
+
 function rolarFundo() {
   const g = fundoGeo;
   if (!g) return;
@@ -2911,8 +2968,12 @@ function rolarFundo() {
   // the ground she stands on is part of that painting — so the street slid past at a third of
   // the speed her feet were covering, and she read as running while levitating. Mobs and drops
   // are already positioned at 1.0 (m.wx - worldX), so they were sliding over the cobbles too.
-  const n = CENARIO_FUNDO.length;
-  const volta = g.dw * n;                       // the whole tour, before it repeats
+  // ONE painting, tiled against itself. Every other copy is mirrored, which is what makes the
+  // loop seamless: an edge only ever meets its own reflection. Walking no longer changes the
+  // street — reaching the next one is earned, in avancarCenario() below.
+  const im = CENARIO_FUNDO[cenarioAtual()];
+  if (!im || !im.complete || !im.naturalWidth) return;
+  const volta = g.dw * 2;
   const desl = ((worldX * (g.cw / W)) % volta + volta) % volta;
   // The slice under the left edge of the screen. The loop has to START here: it used to run
   // k from -1 upward, which was fine while desl stayed under one painting width, but desl now
@@ -2925,27 +2986,17 @@ function rolarFundo() {
     const k = k0 + j;
     const x = k * g.dw - desl;
     if (x > g.cw || x + g.dw < 0) continue;
-    const im = CENARIO_FUNDO[((k % n) + n) % n];
-    if (!im || !im.complete || !im.naturalWidth) continue;
     fx.globalAlpha = 1;
-    fx.drawImage(im, x, g.dy, g.dw, g.dh);
-    // Soften the join. Two different paintings meet on a hard vertical line; their ground is
-    // already aligned, so the cobbles run straight through, but the skyline changed in one
-    // pixel. The incoming picture is drawn again over a narrow band at its leading edge with
-    // a rising alpha, which turns the cut into a dissolve about a fifth of a screen wide.
-    const faixa = Math.min(g.dw * 0.18, g.cw * 0.22);
-    if (faixa > 4) {
-      const passos = 12;
-      for (let t = 0; t < passos; t++) {
-        const f0 = t / passos, f1 = (t + 1) / passos;
-        fx.globalAlpha = 1 - f0;                 // strongest at the seam, gone by the far side
-        const sx = im.naturalWidth * (f0 * faixa / g.dw);
-        const sw = im.naturalWidth * ((f1 - f0) * faixa / g.dw);
-        fx.drawImage(im, sx, 0, sw, im.naturalHeight,
-          x + f0 * faixa, g.dy, (f1 - f0) * faixa, g.dh);
-      }
-      fx.globalAlpha = 1;
+    const espelhado = (((k % 2) + 2) % 2) === 1;
+    if (espelhado) {
+      fx.save();
+      fx.translate(x + g.dw, 0); fx.scale(-1, 1);
+      fx.drawImage(im, 0, g.dy, g.dw, g.dh);
+      fx.restore();
+    } else {
+      fx.drawImage(im, x, g.dy, g.dw, g.dh);
     }
+    // A mirrored join has nothing to soften: the edge meets its own reflection.
   }
 }
 // Debug hook: force any of the seven paintings regardless of the coded scenario. n<0 clears
@@ -5561,7 +5612,12 @@ function fmt(n) {
   return Math.floor(n).toLocaleString("en-US");
 }
 function desenhar() {
+  verificarCenario();
   $("energia").textContent = fmt(S.energia);
+  $("nFlor").textContent = S.recursos.flor | 0;
+  $("nAgua").textContent = S.recursos.agua | 0;
+  $("nRef").textContent = S.recursos.refeicao | 0;
+  pintarIconesDrop();
   $("ganhoClique").textContent = ganhoClique().toFixed(1);
 
   // the rhythm card: icon, name and colour follow S.modo. This used to live in
